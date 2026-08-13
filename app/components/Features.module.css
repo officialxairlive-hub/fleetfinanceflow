@@ -1,0 +1,126 @@
+.featuresSection {
+  composes: section from global;
+}
+
+.imageContainer {
+  width: 100%;
+  max-width: 1000px;
+  margin: var(--space-2xl) auto;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--color-border);
+}
+
+.featureImage {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.container {
+  composes: container from global;
+}
+
+.header {
+  composes: section-header from global;
+}
+
+.label {
+  composes: section-label from global;
+}
+
+.title {
+  composes: section-title from global;
+}
+
+.subtitle {
+  composes: section-subtitle from global;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-xl);
+  margin-top: var(--space-2xl);
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+.card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.cardIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.cardTitle {
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.subFeatures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.subFeature {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.subFeatureIcon {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.subFeatureContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.subFeatureTitle {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.subFeatureDesc {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}

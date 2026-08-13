@@ -1,0 +1,225 @@
+.hero {
+  position: relative;
+  min-height: calc(100vh - 72px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: var(--space-24, 5rem);
+  overflow: hidden;
+}
+
+.glow {
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 800px;
+  background: radial-gradient(circle, rgba(37, 99, 255, 0.12) 0%, rgba(255, 255, 255, 0) 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+}
+
+.labelWrapper {
+  margin-bottom: var(--space-6, 1.5rem);
+}
+
+.title {
+  font-family: var(--font-heading, "Manrope", sans-serif);
+  font-size: var(--text-6xl, 4rem);
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: var(--space-6, 1.5rem);
+}
+
+.subtitle {
+  font-size: var(--text-lg, 1.125rem);
+  color: var(--color-text-secondary, #475569);
+  max-width: 620px;
+  margin: 0 auto var(--space-10, 2.5rem);
+  line-height: 1.6;
+}
+
+.ctas {
+  display: flex;
+  gap: var(--space-4, 1rem);
+  justify-content: center;
+  margin-bottom: var(--space-12, 2.5rem);
+  flex-wrap: wrap;
+}
+
+.stats {
+  display: flex;
+  gap: var(--space-4, 1rem);
+  justify-content: center;
+  margin-bottom: var(--space-16, 3.5rem);
+  flex-wrap: wrap;
+}
+
+.statPill {
+  background: var(--color-surface, #F8F9FA);
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: 9999px;
+  padding: 8px 16px;
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--color-text, #0F172A);
+  font-weight: 500;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.statPill:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 14px rgba(37, 99, 255, 0.15);
+}
+
+.statIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+/* Dual Hero Visual Component */
+.heroVisualContainer {
+  position: relative;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.heroImageCard {
+  position: relative;
+  border-radius: var(--radius-xl, 1.25rem);
+  overflow: hidden;
+  border: 1px solid var(--color-border, #E2E8F0);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+  background: #000;
+}
+
+.heroTruckImg {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.floatingDashboardCard {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  width: 440px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  border-radius: var(--radius-lg, 0.75rem);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+  padding: 12px;
+  text-align: left;
+}
+
+.floatingHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 700;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.floatingIcon {
+  color: var(--color-primary);
+}
+
+.miniDashboardImg {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm, 0.375rem);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.imageFade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  background: linear-gradient(to bottom, transparent, var(--color-bg));
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .floatingDashboardCard {
+    position: relative;
+    bottom: auto;
+    right: auto;
+    width: calc(100% - 24px);
+    margin: 12px auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .title {
+    font-size: clamp(2rem, 8vw, 3rem);
+  }
+  
+  .hero {
+    padding-top: var(--space-16, 2.5rem);
+  }
+  
+  .ctas {
+    flex-direction: column;
+    width: 100%;
+    max-width: 320px;
+  }
+  
+  .ctas button {
+    width: 100%;
+  }
+
+  .stats {
+    gap: 8px;
+  }
+
+  .statPill {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 1.75rem;
+    line-height: 1.2;
+  }
+
+  .subtitle {
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .floatingDashboardCard {
+    width: calc(100% - 16px);
+    margin: 8px auto;
+    padding: 8px;
+  }
+}
