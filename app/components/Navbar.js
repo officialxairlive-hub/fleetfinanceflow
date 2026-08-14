@@ -51,7 +51,10 @@ const Navbar = () => {
           </div>
 
           <div className={styles.desktopActions}>
-            <Link href="#demo" className="btn btn-primary">
+            <Link href="/login" className={styles.navLink} style={{ marginRight: '1rem', fontWeight: 600 }}>
+              Sign In
+            </Link>
+            <Link href="/login" className="btn btn-primary">
               Book Demo
             </Link>
           </div>
