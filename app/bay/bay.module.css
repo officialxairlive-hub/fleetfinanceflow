@@ -1,0 +1,515 @@
+/* ============================================
+   STAFF / TECHNICIAN BAY DASHBOARD STYLES
+   ============================================ */
+
+.bayContainer {
+  min-height: 100vh;
+  background-color: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background: #FFFFFF;
+  border-bottom: 1px solid var(--color-border);
+  padding: 12px 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.headerContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-xl);
+}
+
+.techProfileBox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #FFFFFF;
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.techName {
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+.shiftStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.shiftDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22C55E;
+  box-shadow: 0 0 8px #22C55E;
+}
+
+.logoutBtn {
+  color: var(--color-text-muted);
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+}
+
+.logoutBtn:hover {
+  color: #DC2626;
+}
+
+.mainContent {
+  padding: var(--space-2xl) 0;
+  flex-grow: 1;
+}
+
+/* Active Job Hero Card */
+.activeJobCard {
+  background: #FFFFFF;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2xl);
+  box-shadow: 0 12px 36px rgba(37, 99, 255, 0.12);
+  margin-bottom: var(--space-2xl);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.roBadge {
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--color-primary);
+  letter-spacing: 0.06em;
+}
+
+.statusPill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1D4ED8;
+  background: #DBEAFE;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+}
+
+.truckName {
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.fleetCustomer {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-md);
+}
+
+.issueBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  margin-bottom: var(--space-2xl);
+}
+
+.issueIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+/* Touch Timer Box */
+.timerContainer {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2xl);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.timerLabel {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  margin-bottom: var(--space-xs);
+}
+
+.timerClock {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: clamp(3rem, 8vw, 5rem);
+  font-weight: 800;
+  color: var(--color-primary);
+  letter-spacing: 0.05em;
+  line-height: 1;
+  margin-bottom: var(--space-xl);
+}
+
+.timerControls {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: center;
+  width: 100%;
+  max-width: 600px;
+  flex-wrap: wrap;
+}
+
+.timerControlBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  flex: 1;
+  min-width: 200px;
+}
+
+.pauseBtn {
+  background: #FEF3C7;
+  color: #D97706;
+  border: 1px solid #FCD34D;
+}
+
+.playBtn {
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #86EFAC;
+}
+
+.completeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 700;
+  background: var(--color-primary);
+  color: #FFFFFF;
+  cursor: pointer;
+  border: none;
+  flex: 1;
+  min-width: 200px;
+  box-shadow: 0 4px 14px rgba(37, 99, 255, 0.3);
+}
+
+/* Quick Tools Bar */
+.toolsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-lg);
+  margin-bottom: var(--space-2xl);
+}
+
+.toolBtn {
+  background: #FFFFFF;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.toolBtn:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+}
+
+.toolIconWrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toolTitle {
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.toolDesc {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+/* Dual Layout Grid */
+.bayLayoutGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2xl);
+}
+
+.notesCard, .queueCard {
+  background: #FFFFFF;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.sectionTitle {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--space-lg);
+}
+
+.noteForm {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.noteInput {
+  flex-grow: 1;
+  padding: 12px 14px;
+  font-size: var(--text-sm);
+  font-family: var(--font-body);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+}
+
+.noteInput:focus {
+  border-color: var(--color-primary);
+  background: #FFFFFF;
+}
+
+.savedNotesList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.noteItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  color: var(--color-text);
+}
+
+.noteCheckIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Queue List */
+.queueList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.queueItem {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+.queueHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.queueUnit {
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.priorityBadge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: #FFFFFF;
+  border: 1px solid var(--color-border);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.queueCustomer {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.queueIssue {
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  margin: 6px 0;
+}
+
+.queueFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 6px;
+  border-top: 1px dashed var(--color-border);
+}
+
+.queueEst {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.startJobBtn {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+/* Modal */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+}
+
+.modalContent {
+  width: 100%;
+  max-width: 480px;
+  background: #FFFFFF;
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+}
+
+.modalHeader h3 {
+  font-size: var(--text-base);
+}
+
+.closeModalBtn {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.uploadArea {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3xl);
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  margin-bottom: var(--space-lg);
+}
+
+.uploadIcon {
+  color: var(--color-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.fileInput {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 900px) {
+  .toolsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .bayLayoutGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .activeJobCard {
+    padding: var(--space-lg);
+  }
+
+  .timerControls {
+    flex-direction: column;
+  }
+}
