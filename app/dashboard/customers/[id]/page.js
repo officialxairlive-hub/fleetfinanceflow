@@ -1,0 +1,303 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft, Edit2, MapPin, Mail, Phone, CreditCard, Percent, FileText, Settings, History } from 'lucide-react';
+import { getCustomerById, getTrucksByCustomer, getWorkOrdersByCustomer, getInvoicesByCustomer } from '../../../lib/demoData';
+import styles from '../customers.module.css';
+
+export default function CustomerDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const customerId = params.id;
+  
+  const customer = getCustomerById(customerId);
+  const fleet = getTrucksByCustomer(customerId);
+  const workOrders = getWorkOrdersByCustomer(customerId);
+  const invoices = getInvoicesByCustomer(customerId);
+  
+  const [activeTab, setActiveTab] = useState('fleet');
+  
+  if (!customer) {
+    return (
+      <div className={styles.container}>
+        <Link href="/dashboard/customers" className={styles.backLink}>
+          <ArrowLeft size={16} /> Back to Customers
+        </Link>
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <h2>Customer not found</h2>
+        </div>
+      </div>
+    );
+  }
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(amount);
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-CA');
+  };
+
+  return (
+    <div className={styles.container}>
+      <Link href="/dashboard/customers" className={styles.backLink}>
+        <ArrowLeft size={16} /> Back to Customers
+      </Link>
+      
+      <div className={styles.detailHeader}>
+        <div>
+          <div className={styles.customerTitle}>
+            <h1>{customer.company}</h1>
+            <span className={`${styles.statusPill} ${styles[customer.status] || styles.inactive}`}>
+              {customer.status}
+            </span>
+          </div>
+          <p className={styles.customerSubtitle}>
+            <span>{customer.contact}</span>
+            <span>Customer since {formatDate(customer.createdAt)}</span>
+          </p>
+        </div>
+        <button className={styles.btnOutline}>
+          <Edit2 size={16} /> Edit Customer
+        </button>
+      </div>
+
+      <div className={styles.infoGrid}>
+        <div className={styles.infoCard}>
+          <h3>Contact Details</h3>
+          <div className={styles.infoList}>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}><MapPin size={14} style={{display:'inline', marginRight: 4}}/> Address</span>
+              <span className={styles.infoValue}>{customer.address}</span>
+            </div>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}><Mail size={14} style={{display:'inline', marginRight: 4}}/> Email</span>
+              <span className={styles.infoValue}>{customer.email}</span>
+            </div>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}><Phone size={14} style={{display:'inline', marginRight: 4}}/> Phone</span>
+              <span className={styles.infoValue}>{customer.phone}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.infoCard}>
+          <h3>Financial Terms</h3>
+          <div className={styles.infoList}>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}><CreditCard size={14} style={{display:'inline', marginRight: 4}}/> Credit Limit</span>
+              <span className={styles.infoValue}>{formatCurrency(customer.creditLimit)}</span>
+            </div>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}>Balance</span>
+              <span className={`${styles.infoValue} ${customer.balance > 0 ? styles.overdue : ''}`}>
+                {formatCurrency(customer.balance)}
+              </span>
+            </div>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}>Terms</span>
+              <span className={styles.infoValue}>{customer.paymentTerms}</span>
+            </div>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}>Tax</span>
+              <span className={styles.infoValue}>{customer.taxSetting}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.infoCard}>
+          <h3>Rate Settings</h3>
+          <div className={styles.infoList}>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}><Settings size={14} style={{display:'inline', marginRight: 4}}/> Custom Labour Rate</span>
+              <span className={styles.infoValue}>{formatCurrency(customer.labourRate)} /hr</span>
+            </div>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}><Percent size={14} style={{display:'inline', marginRight: 4}}/> Custom Parts Markup</span>
+              <span className={styles.infoValue}>{customer.partsMarkup}%</span>
+            </div>
+          </div>
+          <h3 style={{ marginTop: '1rem' }}>Notes</h3>
+          <textarea 
+            className={styles.notesArea} 
+            defaultValue={customer.notes}
+            placeholder="Add customer notes here..."
+          />
+        </div>
+      </div>
+
+      <div className={styles.tabs}>
+        <button 
+          className={`${styles.tab} ${activeTab === 'fleet' ? styles.active : ''}`}
+          onClick={() => setActiveTab('fleet')}
+        >
+          Fleet ({fleet.length})
+        </button>
+        <button 
+          className={`${styles.tab} ${activeTab === 'workOrders' ? styles.active : ''}`}
+          onClick={() => setActiveTab('workOrders')}
+        >
+          Work Orders ({workOrders.length})
+        </button>
+        <button 
+          className={`${styles.tab} ${activeTab === 'invoices' ? styles.active : ''}`}
+          onClick={() => setActiveTab('invoices')}
+        >
+          Invoices ({invoices.length})
+        </button>
+        <button 
+          className={`${styles.tab} ${activeTab === 'history' ? styles.active : ''}`}
+          onClick={() => setActiveTab('history')}
+        >
+          Service History
+        </button>
+      </div>
+
+      <div className={styles.tabContent}>
+        {activeTab === 'fleet' && (
+          <div className={styles.tableContainer} style={{ border: 'none', boxShadow: 'none' }}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Unit #</th>
+                  <th>VIN</th>
+                  <th>Make / Model</th>
+                  <th>Year</th>
+                  <th>Mileage</th>
+                  <th>Next PM</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fleet.length > 0 ? fleet.map(truck => (
+                  <tr key={truck.id}>
+                    <td data-label="Unit #"><strong>{truck.unitNumber}</strong></td>
+                    <td data-label="VIN"><small>{truck.vin}</small></td>
+                    <td data-label="Make / Model">{truck.make} {truck.model}</td>
+                    <td data-label="Year">{truck.year}</td>
+                    <td data-label="Mileage">{truck.mileage.toLocaleString()} km</td>
+                    <td data-label="Next PM">
+                      {truck.nextPM ? (
+                        <div>
+                          {truck.nextPM.type}<br/>
+                          <small style={{ color: truck.nextPM.urgency === 'overdue' ? '#DC2626' : 'var(--color-text-secondary)' }}>
+                            Due in {truck.nextPM.dueIn}
+                          </small>
+                        </div>
+                      ) : 'N/A'}
+                    </td>
+                    <td data-label="Status">
+                      <span className={`${styles.statusPill} ${truck.status === 'ready' || truck.status === 'active' ? styles.active : styles.inactive}`}>
+                        {truck.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan="7" style={{textAlign: 'center', padding: '2rem'}}>No fleet units found.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeTab === 'workOrders' && (
+          <div className={styles.tableContainer} style={{ border: 'none', boxShadow: 'none' }}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>WO #</th>
+                  <th>Unit</th>
+                  <th>Status</th>
+                  <th>Tech</th>
+                  <th>Date</th>
+                  <th>Est. Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {workOrders.length > 0 ? workOrders.map(wo => (
+                  <tr key={wo.id}>
+                    <td data-label="WO #"><strong>{wo.id}</strong></td>
+                    <td data-label="Unit">{wo.unitDisplay.split(' - ')[0]}</td>
+                    <td data-label="Status">
+                      <span className={`${styles.statusPill} ${styles[wo.status] || styles.inactive}`}>
+                        {wo.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td data-label="Tech">{wo.techName || 'Unassigned'}</td>
+                    <td data-label="Date">{formatDate(wo.createdAt)}</td>
+                    <td data-label="Est. Total">{formatCurrency(wo.estimatedCost)}</td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan="6" style={{textAlign: 'center', padding: '2rem'}}>No work orders found.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeTab === 'invoices' && (
+          <div className={styles.tableContainer} style={{ border: 'none', boxShadow: 'none' }}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>INV #</th>
+                  <th>Date</th>
+                  <th>Due Date</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Paid Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.length > 0 ? invoices.map(inv => (
+                  <tr key={inv.id}>
+                    <td data-label="INV #"><strong>{inv.id}</strong></td>
+                    <td data-label="Date">{formatDate(inv.issueDate)}</td>
+                    <td data-label="Due Date">{formatDate(inv.dueDate)}</td>
+                    <td data-label="Amount">{formatCurrency(inv.total)}</td>
+                    <td data-label="Status">
+                      <span className={`${styles.statusPill} ${inv.status === 'paid' ? styles.active : (inv.status === 'overdue' ? styles.overdue : styles.inactive)}`}>
+                        {inv.status}
+                      </span>
+                    </td>
+                    <td data-label="Paid Date">{formatDate(inv.paymentDate)}</td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan="6" style={{textAlign: 'center', padding: '2rem'}}>No invoices found.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeTab === 'history' && (
+          <div style={{ padding: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+              <History size={24} color="var(--color-text-secondary)" />
+              <h3 style={{ margin: 0 }}>Recent Service History</h3>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {workOrders.filter(wo => wo.status === 'invoiced' || wo.status === 'paid' || wo.status === 'ready_invoice').length > 0 ? 
+                workOrders.filter(wo => wo.status === 'invoiced' || wo.status === 'paid' || wo.status === 'ready_invoice').map(wo => (
+                <div key={wo.id} style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <strong>{wo.unitDisplay}</strong>
+                    <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>{formatDate(wo.updatedAt)}</span>
+                  </div>
+                  <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem' }}><strong>Issue:</strong> {wo.complaint}</p>
+                  <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}><strong>Resolution:</strong> {wo.correction}</p>
+                </div>
+              )) : (
+                <p style={{ textAlign: 'center', color: 'var(--color-text-secondary)' }}>No completed service history available.</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -19,18 +19,30 @@ import {
   User,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  Users,
+  Map,
+  FileText,
+  Shield,
+  ClipboardList,
+  BarChart3,
+  Settings
 } from 'lucide-react';
 import styles from './dashboard.module.css';
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Repair Jobs', href: '/dashboard/jobs', icon: Wrench, badge: '12' },
-  { label: 'Tech Time Clocks', href: '/dashboard/techs', icon: Clock, badge: '4 Active' },
-  { label: 'Parts & Inventory', href: '/dashboard/parts', icon: PackageCheck },
-  { label: 'Invoices & Estimates', href: '/dashboard/invoices', icon: Receipt },
-  { label: 'Fleet Accounts', href: '/dashboard/fleets', icon: Truck },
-  { label: 'Profit Intelligence', href: '/dashboard/profit', icon: TrendingUp },
+  { label: 'Work Orders', href: '/dashboard/jobs', icon: Wrench, badge: '7' },
+  { label: 'Customers & Fleets', href: '/dashboard/customers', icon: Users },
+  { label: 'Dispatch Board', href: '/dashboard/dispatch', icon: Map },
+  { label: 'Parts & Inventory', href: '/dashboard/parts', icon: PackageCheck, badge: '1 Low' },
+  { label: 'Invoices', href: '/dashboard/invoices', icon: Receipt },
+  { label: 'Estimates', href: '/dashboard/estimates', icon: FileText },
+  { label: 'Fleet Maintenance', href: '/dashboard/maintenance', icon: Shield },
+  { label: 'Inspections', href: '/dashboard/inspections', icon: ClipboardList },
+  { label: 'Labour Tracking', href: '/dashboard/labour', icon: Clock },
+  { label: 'Reports', href: '/dashboard/reports', icon: BarChart3 },
+  { label: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 
 export default function DashboardLayout({ children }) {

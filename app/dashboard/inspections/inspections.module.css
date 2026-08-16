@@ -1,0 +1,262 @@
+.container {
+  padding: var(--space-4);
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.templateSelector {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+}
+
+.templateBtn {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.templateBtn.active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 4px rgba(37, 99, 255, 0.2);
+}
+
+.templateBtn:hover:not(.active) {
+  background: var(--color-border);
+}
+
+.formCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  margin-bottom: var(--space-6);
+}
+
+.formHeader {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.formGroup label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.input, .select {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.input:focus, .select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 255, 0.2);
+}
+
+.sectionTitle {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-text);
+  margin: var(--space-6) 0 var(--space-4) 0;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.checklistItem {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1fr 2fr;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+  background: #fafafa;
+}
+
+.itemDesc {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.toggleGroup {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.toggleBtn {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  background: #fff;
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btnPass { color: #166534; }
+.btnPass.active {
+  background: #16a34a;
+  color: white;
+  border-color: #16a34a;
+  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
+}
+
+.btnFail { color: #991b1b; }
+.btnFail.active {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+}
+
+.signatureArea {
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 2px dashed var(--color-border);
+}
+
+.overallResult {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.resultBtn {
+  flex: 1;
+  padding: var(--space-4);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.resultBtn.pass { color: #16a34a; }
+.resultBtn.fail { color: #dc2626; }
+.resultBtn.conditional { color: #d97706; }
+
+.resultBtn.pass.active { background: #dcfce7; border-color: #16a34a; }
+.resultBtn.fail.active { background: #fee2e2; border-color: #dc2626; }
+.resultBtn.conditional.active { background: #fef3c7; border-color: #d97706; }
+
+.signBox {
+  height: 150px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: #f9fafb;
+  margin-bottom: var(--space-4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  cursor: pointer;
+}
+
+.actionButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+@media (max-width: 900px) {
+  .checklistItem {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+  
+  .itemDesc {
+    margin-bottom: var(--space-2);
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .templateSelector {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .formHeader {
+    grid-template-columns: 1fr;
+  }
+  
+  .toggleBtn {
+    padding: var(--space-4);
+    font-size: var(--text-base);
+  }
+  
+  .overallResult {
+    flex-direction: column;
+  }
+  
+  .actionButtons {
+    flex-direction: column;
+  }
+  
+  .actionButtons button {
+    width: 100%;
+  }
+}
