@@ -3,8 +3,8 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '../../lib/supabaseClient';
-import { statusLabels } from '../../lib/demoData';
+import { supabase } from '../lib/supabaseClient';
+import { statusLabels } from '../lib/demoData';
 import { Wrench, Receipt, Truck, CreditCard, ExternalLink, Download } from 'lucide-react';
 import styles from './portal.module.css';
 
