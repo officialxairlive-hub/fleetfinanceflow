@@ -140,7 +140,7 @@ export default function CustomersPage() {
                 <tr key={customer.id} onClick={() => router.push(`/dashboard/customers/${customer.id}`)}>
                   <td data-label="Company">
                     {customer.company}
-                    {customer.company.includes('[LIVE]') && <span style={{marginLeft:'8px', fontSize:'10px', background:'var(--color-primary)', color:'white', padding:'2px 6px', borderRadius:'12px'}}>SUPABASE</span>}
+                    <span style={{marginLeft:'8px', fontSize:'10px', background:'var(--color-primary)', color:'white', padding:'2px 6px', borderRadius:'12px'}}>SUPABASE</span>
                   </td>
                   <td data-label="Contact">{customer.contact}<br/><small style={{color: 'var(--color-text-secondary)'}}>{customer.email}</small></td>
                   <td data-label="Phone">{customer.phone}</td>

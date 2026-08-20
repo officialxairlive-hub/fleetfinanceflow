@@ -171,7 +171,7 @@ export default function WorkOrdersPage() {
                     <td data-label="WO#"><strong>{wo.id}</strong></td>
                     <td data-label="Customer">
                       {wo.customer_name}
-                      {wo.customer_name?.includes('[LIVE]') && <span style={{marginLeft:'8px', fontSize:'10px', background:'var(--color-primary)', color:'white', padding:'2px 6px', borderRadius:'12px'}}>DB</span>}
+                      <span style={{marginLeft:'8px', fontSize:'10px', background:'var(--color-primary)', color:'white', padding:'2px 6px', borderRadius:'12px'}}>SUPABASE</span>
                     </td>
                     <td data-label="Unit">{wo.unit_display}</td>
                     <td data-label="Status">
