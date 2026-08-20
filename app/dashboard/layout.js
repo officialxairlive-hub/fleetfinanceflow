@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Logo from '../components/Logo';
+import { workOrders, customers, technicians, partsInventory } from '../lib/demoData';
 import {
   LayoutDashboard,
   Wrench,
@@ -47,9 +48,29 @@ const navItems = [
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+
+  // Search logic
+  const searchLower = searchQuery.toLowerCase();
+  
+  const searchResults = {
+    jobs: searchQuery ? workOrders.filter(wo => wo.id.toLowerCase().includes(searchLower) || (wo.customer || '').toLowerCase().includes(searchLower)) : [],
+    customers: searchQuery ? customers.filter(c => c.company.toLowerCase().includes(searchLower) || c.id.toLowerCase().includes(searchLower)) : [],
+    techs: searchQuery ? technicians.filter(t => t.name.toLowerCase().includes(searchLower)) : [],
+    parts: searchQuery ? partsInventory.filter(p => p.partNumber.toLowerCase().includes(searchLower) || p.description.toLowerCase().includes(searchLower)) : []
+  };
+
+  const hasResults = Object.values(searchResults).some(arr => arr.length > 0);
+
+  const handleSearchNav = (url) => {
+    setSearchModalOpen(false);
+    setSearchQuery('');
+    router.push(url);
+  };
 
   return (
     <div className={styles.dashboardShell}>
@@ -128,10 +149,68 @@ export default function DashboardLayout({ children }) {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setSearchModalOpen(true);
+                }}
+                onFocus={() => setSearchModalOpen(true)}
                 placeholder="Search repair orders, VINs, units, fleet accounts, or techs..."
                 className={styles.searchInput}
               />
+              
+              {searchModalOpen && searchQuery && (
+                <>
+                  <div className={styles.searchBackdrop} onClick={() => setSearchModalOpen(false)}></div>
+                  <div className={styles.searchResults}>
+                    {!hasResults ? (
+                      <div className={styles.noResults}>No results found for "{searchQuery}"</div>
+                    ) : (
+                      <>
+                        {searchResults.jobs.length > 0 && (
+                          <div className={styles.searchGroup}>
+                            <div className={styles.searchGroupTitle}>Work Orders</div>
+                            {searchResults.jobs.slice(0,3).map(job => (
+                              <div key={job.id} className={styles.searchItem} onClick={() => handleSearchNav(`/dashboard/jobs/${job.id}`)}>
+                                <strong>{job.id}</strong> - {job.customer}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {searchResults.customers.length > 0 && (
+                          <div className={styles.searchGroup}>
+                            <div className={styles.searchGroupTitle}>Customers</div>
+                            {searchResults.customers.slice(0,3).map(cust => (
+                              <div key={cust.id} className={styles.searchItem} onClick={() => handleSearchNav(`/dashboard/customers/${cust.id}`)}>
+                                <strong>{cust.company}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {searchResults.techs.length > 0 && (
+                          <div className={styles.searchGroup}>
+                            <div className={styles.searchGroupTitle}>Technicians</div>
+                            {searchResults.techs.slice(0,3).map(tech => (
+                              <div key={tech.id} className={styles.searchItem} onClick={() => handleSearchNav(`/dashboard/labour`)}>
+                                <strong>{tech.name}</strong> - {tech.role}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {searchResults.parts.length > 0 && (
+                          <div className={styles.searchGroup}>
+                            <div className={styles.searchGroupTitle}>Parts</div>
+                            {searchResults.parts.slice(0,3).map(part => (
+                              <div key={part.id} className={styles.searchItem} onClick={() => handleSearchNav(`/dashboard/parts`)}>
+                                <strong>{part.partNumber}</strong> - {part.description}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
