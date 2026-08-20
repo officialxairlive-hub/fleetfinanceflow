@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, Plus, Clock, AlertTriangle } from 'lucide-react';
-import { workOrders, statusLabels, priorityLabels } from '../../lib/demoData';
+import { supabase } from '../../lib/supabaseClient';
+import { statusLabels, priorityLabels } from '../../lib/demoData';
 import styles from './jobs.module.css';
 
 const TABS = ['All', 'New', 'Diagnosing', 'Waiting Parts', 'Repairing', 'Completed', 'Ready to Invoice', 'Invoiced', 'Paid'];
@@ -11,14 +12,39 @@ const TABS = ['All', 'New', 'Diagnosing', 'Waiting Parts', 'Repairing', 'Complet
 export default function WorkOrdersPage() {
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [workOrders, setWorkOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function fetchWorkOrders() {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('work_orders')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (error) throw error;
+        setWorkOrders(data || []);
+      } catch (err) {
+        console.error("Error fetching work orders:", err);
+        setError(err.message || 'Failed to fetch data from Supabase');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchWorkOrders();
+  }, []);
 
   const filteredOrders = workOrders.filter(wo => {
     const matchesTab = activeTab === 'All' || (statusLabels[wo.status] || {}).label === activeTab;
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch = 
-      wo.id.toLowerCase().includes(searchLower) ||
-      (wo.customer || '').toLowerCase().includes(searchLower) ||
-      (wo.unitDisplay || '').toLowerCase().includes(searchLower);
+      (wo.id || '').toLowerCase().includes(searchLower) ||
+      (wo.customer_name || '').toLowerCase().includes(searchLower) ||
+      (wo.unit_display || '').toLowerCase().includes(searchLower);
     
     return matchesTab && matchesSearch;
   });
@@ -46,6 +72,10 @@ export default function WorkOrdersPage() {
     return map[priority] || '';
   };
 
+  const activeJobsCount = workOrders.filter(wo => !['invoiced', 'paid'].includes(wo.status)).length;
+  const waitingPartsCount = workOrders.filter(wo => wo.status === 'waiting_parts').length;
+  const readyToInvoiceCount = workOrders.filter(wo => wo.status === 'ready_to_invoice').length;
+
   return (
     <div className={styles.pageContainer}>
       <header className={styles.header}>
@@ -64,15 +94,15 @@ export default function WorkOrdersPage() {
       <div className={styles.statsRow}>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Active Jobs</span>
-          <span className={styles.statValue}>{workOrders.filter(wo => !['invoiced', 'paid'].includes(wo.status)).length}</span>
+          <span className={styles.statValue}>{isLoading ? '...' : activeJobsCount}</span>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Waiting on Parts</span>
-          <span className={styles.statValue}>{workOrders.filter(wo => wo.status === 'waiting_parts').length}</span>
+          <span className={styles.statValue}>{isLoading ? '...' : waitingPartsCount}</span>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Ready to Invoice</span>
-          <span className={styles.statValue}>{workOrders.filter(wo => wo.status === 'ready_to_invoice').length}</span>
+          <span className={styles.statValue}>{isLoading ? '...' : readyToInvoiceCount}</span>
         </div>
       </div>
 
@@ -113,7 +143,17 @@ export default function WorkOrdersPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredOrders.length === 0 ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>Loading data from Supabase...</td>
+              </tr>
+            ) : error ? (
+              <tr>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'red' }}>
+                  <strong>Data fetch failed:</strong> {error}
+                </td>
+              </tr>
+            ) : filteredOrders.length === 0 ? (
               <tr>
                 <td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>
                   No work orders found matching your criteria.
@@ -129,14 +169,17 @@ export default function WorkOrdersPage() {
                     onClick={() => window.location.href = `/dashboard/jobs/${wo.id}`}
                   >
                     <td data-label="WO#"><strong>{wo.id}</strong></td>
-                    <td data-label="Customer">{wo.customer}</td>
-                    <td data-label="Unit">{wo.unitDisplay}</td>
+                    <td data-label="Customer">
+                      {wo.customer_name}
+                      {wo.customer_name?.includes('[LIVE]') && <span style={{marginLeft:'8px', fontSize:'10px', background:'var(--color-primary)', color:'white', padding:'2px 6px', borderRadius:'12px'}}>DB</span>}
+                    </td>
+                    <td data-label="Unit">{wo.unit_display}</td>
                     <td data-label="Status">
                       <span className={`${styles.pill} ${getStatusClass(wo.status)}`}>
                         {(statusLabels[wo.status] || {}).label || wo.status}
                       </span>
                     </td>
-                    <td data-label="Tech">{wo.techName || 'Unassigned'}</td>
+                    <td data-label="Tech">{wo.tech_name || 'Unassigned'}</td>
                     <td data-label="Priority">
                       <span className={`${styles.pill} ${getPriorityClass(wo.priority)}`}>
                         {isEmergency && <AlertTriangle size={14} style={{ marginRight: '4px' }} />}
