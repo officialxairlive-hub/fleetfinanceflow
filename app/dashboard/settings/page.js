@@ -15,11 +15,65 @@ import {
   ToggleRight
 } from 'lucide-react';
 import styles from './settings.module.css';
-import { shopSettings, labourRateTypes, technicians } from '../../lib/demoData';
+import { supabase } from '../../lib/supabaseClient';
+import { shopSettings, labourRateTypes } from '../../lib/demoData';
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('shop');
   const [settings, setSettings] = useState(shopSettings);
+  
+  // User Management State
+  const [techs, setTechs] = useState([]);
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [newUser, setNewUser] = useState({ fullName: '', email: '', password: '' });
+  const [addUserLoading, setAddUserLoading] = useState(false);
+  const [addUserError, setAddUserError] = useState(null);
+
+  // Profile
+  const [shopId, setShopId] = useState(null);
+
+  React.useEffect(() => {
+    async function fetchUsers() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: profile } = await supabase.from('profiles').select('shop_id').eq('id', session.user.id).single();
+      if (profile?.shop_id) {
+        setShopId(profile.shop_id);
+        const { data: t } = await supabase.from('technicians').select('*').eq('shop_id', profile.shop_id);
+        setTechs(t || []);
+      }
+    }
+    fetchUsers();
+  }, []);
+
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    setAddUserLoading(true);
+    setAddUserError(null);
+    try {
+      const res = await fetch('/api/mechanics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newUser, shopId, role: 'mechanic' })
+      });
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || 'Failed to create user');
+      
+      alert('Mechanic added successfully!');
+      setShowAddUser(false);
+      setNewUser({ fullName: '', email: '', password: '' });
+      
+      // Refresh techs
+      const { data: t } = await supabase.from('technicians').select('*').eq('shop_id', shopId);
+      setTechs(t || []);
+    } catch (err) {
+      setAddUserError(err.message);
+    } finally {
+      setAddUserLoading(false);
+    }
+  };
 
   const handleSave = (e) => {
     e.preventDefault();
@@ -281,8 +335,34 @@ export default function SettingsPage() {
               </div>
               <div className={styles.card}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-                  <button className="btn btn-primary"><Plus size={16}/> Add User</button>
+                  <button className="btn btn-primary" onClick={() => setShowAddUser(true)}><Plus size={16}/> Add Mechanic</button>
                 </div>
+                
+                {showAddUser && (
+                  <div style={{ padding: '1.5rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', marginBottom: '1rem', background: 'var(--color-background)' }}>
+                    <h3 style={{marginTop:0, marginBottom:'1rem'}}>Add New Mechanic</h3>
+                    {addUserError && <p style={{color:'red', marginBottom:'1rem'}}>{addUserError}</p>}
+                    <form onSubmit={handleAddUser} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                      <div className={styles.formGroup} style={{marginBottom:0, flex: 1, minWidth: '200px'}}>
+                        <label>Full Name</label>
+                        <input type="text" required className={styles.input} value={newUser.fullName} onChange={e => setNewUser({...newUser, fullName: e.target.value})} />
+                      </div>
+                      <div className={styles.formGroup} style={{marginBottom:0, flex: 1, minWidth: '200px'}}>
+                        <label>Email</label>
+                        <input type="email" required className={styles.input} value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} />
+                      </div>
+                      <div className={styles.formGroup} style={{marginBottom:0, flex: 1, minWidth: '200px'}}>
+                        <label>Password</label>
+                        <input type="password" required className={styles.input} minLength={6} value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} />
+                      </div>
+                      <div style={{display: 'flex', gap: '0.5rem'}}>
+                        <button type="button" className="btn btn-outline" onClick={() => setShowAddUser(false)}>Cancel</button>
+                        <button type="submit" className="btn btn-primary" disabled={addUserLoading}>{addUserLoading ? 'Adding...' : 'Create'}</button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
                 <table className={styles.table}>
                   <thead>
                     <tr>
@@ -294,22 +374,24 @@ export default function SettingsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {technicians.map((tech, idx) => (
+                    {techs.length > 0 ? techs.map((tech, idx) => (
                       <tr key={tech.id}>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div className={styles.avatar}>{tech.name[0]}</div>
-                            {tech.name}
+                            <div className={styles.avatar}>{(tech.name || 'M')[0]}</div>
+                            {tech.full_name || tech.name}
                           </div>
                         </td>
                         <td>{tech.role}</td>
-                        <td>{tech.name.split(' ')[0].toLowerCase()}@fleetfinance.demo</td>
+                        <td>{tech.email || 'N/A'}</td>
                         <td>
-                          {idx === 0 ? <ToggleRight size={24} className={styles.toggleActive} /> : <ToggleRight size={24} className={styles.toggleActive} />}
+                          <ToggleRight size={24} className={styles.toggleActive} />
                         </td>
                         <td><button className="btn btn-outline" style={{ padding: '4px 8px' }}>Edit</button></td>
                       </tr>
-                    ))}
+                    )) : (
+                      <tr><td colSpan="5" style={{textAlign: 'center'}}>No mechanics found for your shop.</td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>

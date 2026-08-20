@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Logo from '../components/Logo';
+import { supabase } from '../lib/supabaseClient';
 import { workOrders, customers, technicians, partsInventory } from '../lib/demoData';
 import {
   LayoutDashboard,
@@ -27,7 +28,8 @@ import {
   Shield,
   ClipboardList,
   BarChart3,
-  Settings
+  Settings,
+  Loader
 } from 'lucide-react';
 import styles from './dashboard.module.css';
 
@@ -49,10 +51,62 @@ const navItems = [
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
+  
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  
+  // Auth & Profile State
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [profile, setProfile] = useState(null);
+  const [shop, setShop] = useState(null);
+
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          router.push('/login');
+          return;
+        }
+
+        // Fetch user profile
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError) throw profileError;
+        setProfile(profileData);
+
+        // Fetch shop details
+        if (profileData?.shop_id) {
+          const { data: shopData } = await supabase
+            .from('shops')
+            .select('*')
+            .eq('id', profileData.shop_id)
+            .single();
+            
+          setShop(shopData);
+        }
+
+        setLoadingAuth(false);
+      } catch (err) {
+        console.error("Auth error:", err);
+        router.push('/login');
+      }
+    }
+
+    checkAuth();
+  }, [router]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   // Search logic
   const searchLower = searchQuery.toLowerCase();
@@ -71,6 +125,21 @@ export default function DashboardLayout({ children }) {
     setSearchQuery('');
     router.push(url);
   };
+
+  if (loadingAuth) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--color-background)', color: 'var(--color-text)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+          <Loader className="spin" size={32} color="var(--color-primary)" />
+          <p>Loading Dashboard...</p>
+        </div>
+        <style jsx>{`
+          .spin { animation: spin 1s linear infinite; }
+          @keyframes spin { 100% { transform: rotate(360deg); } }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.dashboardShell}>
@@ -95,8 +164,8 @@ export default function DashboardLayout({ children }) {
             <Truck size={18} />
           </div>
           <div className={styles.shopInfo}>
-            <div className={styles.shopName}>Thompson Diesel Repair</div>
-            <div className={styles.shopMeta}>Bay 1-8 · Main Location</div>
+            <div className={styles.shopName}>{shop?.name || 'Your Shop'}</div>
+            <div className={styles.shopMeta}>Main Location</div>
           </div>
         </div>
 
@@ -125,12 +194,12 @@ export default function DashboardLayout({ children }) {
             <User size={18} />
           </div>
           <div className={styles.userInfo}>
-            <div className={styles.userName}>Vince Pallotta</div>
-            <div className={styles.userRole}>Shop Owner</div>
+            <div className={styles.userName}>{profile?.full_name || 'User'}</div>
+            <div className={styles.userRole} style={{textTransform: 'capitalize'}}>{profile?.role || 'Staff'}</div>
           </div>
-          <Link href="/login" className={styles.logoutBtn} title="Log Out">
+          <button onClick={handleLogout} className={styles.logoutBtn} title="Log Out" style={{background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer'}}>
             <LogOut size={16} />
-          </Link>
+          </button>
         </div>
       </aside>
 

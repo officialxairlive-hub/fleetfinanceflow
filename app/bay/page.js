@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
 import Logo from '../components/Logo';
 import {
@@ -40,10 +41,27 @@ export default function TechBayPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const router = useRouter();
+  const [profile, setProfile] = useState(null);
+
   useEffect(() => {
     async function fetchTechJobs() {
       setIsLoading(true);
       try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          router.push('/login');
+          return;
+        }
+
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+          
+        setProfile(profileData);
         const { data, error } = await supabase
           .from('work_orders')
           .select('*')
@@ -110,14 +128,14 @@ export default function TechBayPage() {
           <div className={styles.techProfileBox}>
             <div className={styles.avatar}>SL</div>
             <div>
-              <div className={styles.techName}>Sarah L.</div>
+              <div className={styles.techName}>{profile?.full_name || 'Mechanic'}</div>
               <div className={styles.shiftStatus}>
-                <span className={styles.shiftDot} /> Clocked In · 07:30 AM
+                <span className={styles.shiftDot} /> Clocked In
               </div>
             </div>
-            <Link href="/login" className={styles.logoutBtn} title="End Shift & Log Out">
+            <button onClick={async () => { await supabase.auth.signOut(); router.push('/login'); }} className={styles.logoutBtn} title="End Shift & Log Out" style={{background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer'}}>
               <LogOut size={18} />
-            </Link>
+            </button>
           </div>
         </div>
       </header>
