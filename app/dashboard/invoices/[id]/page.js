@@ -1,41 +1,127 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { invoices, customers, shopSettings } from '../../../lib/demoData';
-import { Mail, DollarSign, Printer, CheckCircle, X } from 'lucide-react';
-import styles from '../invoices.module.css';
+import Link from 'next/link';
+import { supabase } from '../../../../lib/supabaseClient';
+import { shopSettings } from '../../../../lib/demoData';
+import { Mail, DollarSign, Printer, CheckCircle, X, ArrowLeft } from 'lucide-react';
+import styles from '../../invoices.module.css';
 
 export default function InvoiceDetail() {
   const params = useParams();
   const invoiceId = params.id;
   
-  const invoice = invoices.find(i => i.id === invoiceId) || invoices[0];
-  const customer = customers.find(c => c.id === invoice?.customerId) || customers[0];
   const shop = shopSettings;
+
+  const [invoice, setInvoice] = useState(null);
+  const [customer, setCustomer] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
-    amount: invoice?.amount || 0,
+    amount: 0,
     method: 'Credit Card',
     date: new Date().toISOString().split('T')[0],
     reference: '',
     notes: ''
   });
 
-  if (!invoice) return <div>Invoice not found</div>;
+  useEffect(() => {
+    async function fetchInvoiceDetails() {
+      setIsLoading(true);
+      try {
+        const { data: invData, error: invError } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('id', invoiceId)
+          .single();
 
-  const handleRecordPayment = (e) => {
+        if (invError) throw invError;
+        
+        setInvoice({
+          ...invData,
+          issueDate: invData.issue_date,
+          dueDate: invData.due_date,
+          amount: invData.total
+        });
+        
+        setPaymentForm(prev => ({ ...prev, amount: invData.total }));
+
+        if (invData.customer_id) {
+          const { data: custData, error: custError } = await supabase
+            .from('customers')
+            .select('*')
+            .eq('id', invData.customer_id)
+            .single();
+            
+          if (custError) throw custError;
+          setCustomer({
+            ...custData,
+            companyName: custData.company_name,
+            contactName: custData.contact_name
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching invoice details:", err);
+        setError(err.message || 'Failed to load invoice from Supabase.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (invoiceId) {
+      fetchInvoiceDetails();
+    }
+  }, [invoiceId]);
+
+  const handleRecordPayment = async (e) => {
     e.preventDefault();
-    // Simulate recording payment
-    alert(`Payment of $${paymentForm.amount} recorded!`);
-    setShowPaymentModal(false);
+    try {
+      // Optimistic update
+      setInvoice(prev => ({ ...prev, status: 'paid' }));
+      setShowPaymentModal(false);
+      
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status: 'paid', payment_date: paymentForm.date })
+        .eq('id', invoiceId);
+        
+      if (error) throw error;
+      alert(`Payment of $${paymentForm.amount} recorded!`);
+    } catch (err) {
+      alert(`Error recording payment: ${err.message}`);
+      // Revert optimistic update
+      setInvoice(prev => ({ ...prev, status: 'unpaid' }));
+    }
   };
+
+  if (isLoading) {
+    return <div className={styles.container} style={{ padding: '3rem', textAlign: 'center' }}>Loading invoice details...</div>;
+  }
+
+  if (error || !invoice) {
+    return (
+      <div className={styles.container}>
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <h2 style={{ color: 'red' }}>{error || 'Invoice not found'}</h2>
+          <Link href="/dashboard/invoices" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>Back to Invoices</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Invoice {invoice.id}</h1>
+        <Link href="/dashboard/invoices" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', textDecoration: 'none', marginBottom: '8px' }}>
+          <ArrowLeft size={16} /> Back to Invoices
+        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <h1 className={styles.title}>Invoice {invoice.id}</h1>
+          <span style={{fontSize:'10px', background:'var(--color-primary)', color:'white', padding:'3px 6px', borderRadius:'10px', alignSelf: 'center'}}>SUPABASE</span>
+        </div>
       </div>
 
       <div className={styles.detailLayout}>
@@ -54,12 +140,12 @@ export default function InvoiceDetail() {
                 <div className={styles.metaLabel}>Invoice #:</div>
                 <div className={styles.metaValue}>{invoice.id}</div>
                 <div className={styles.metaLabel}>Date:</div>
-                <div className={styles.metaValue}>{new Date(invoice.issueDate).toLocaleDateString()}</div>
+                <div className={styles.metaValue}>{new Date(invoice.issueDate || Date.now()).toLocaleDateString()}</div>
                 <div className={styles.metaLabel}>Due Date:</div>
-                <div className={styles.metaValue}>{new Date(invoice.dueDate).toLocaleDateString()}</div>
+                <div className={styles.metaValue}>{new Date(invoice.dueDate || Date.now()).toLocaleDateString()}</div>
                 <div className={styles.metaLabel}>Status:</div>
                 <div className={styles.metaValue}>
-                  <span className={`${styles.pill} ${styles[invoice.status.toLowerCase()]}`}>
+                  <span className={`${styles.pill} ${styles[invoice.status?.toLowerCase()] || ''}`}>
                     {invoice.status}
                   </span>
                 </div>
@@ -70,10 +156,10 @@ export default function InvoiceDetail() {
           {/* Bill To */}
           <div className={styles.billTo}>
             <h3>Bill To</h3>
-            <strong>{customer.companyName}</strong>
-            <p>Attn: {customer.contactName}</p>
-            <p>{customer.email}</p>
-            <p>{customer.phone}</p>
+            <strong>{customer?.companyName || 'Unknown Company'}</strong>
+            <p>Attn: {customer?.contactName || 'N/A'}</p>
+            <p>{customer?.email || 'N/A'}</p>
+            <p>{customer?.phone || 'N/A'}</p>
           </div>
 
           {/* Items */}
@@ -87,7 +173,7 @@ export default function InvoiceDetail() {
               </tr>
             </thead>
             <tbody>
-              {/* Dummy Items for demo */}
+              {/* Dummy Items for demo, this should theoretically come from invoice line items */}
               <tr>
                 <td>General Labour - Diagnostic</td>
                 <td className={styles.right}>2.5</td>
@@ -113,25 +199,25 @@ export default function InvoiceDetail() {
           <div className={styles.totals}>
             <div className={styles.totalRow}>
               <span>Subtotal</span>
-              <span>$677.50</span>
+              <span>${((invoice.amount || 0) / (1 + shop.taxRate / 100)).toFixed(2)}</span>
             </div>
             <div className={styles.totalRow}>
               <span>Tax ({shop.taxRate}%)</span>
-              <span>${(677.5 * (shop.taxRate / 100)).toFixed(2)}</span>
+              <span>${((invoice.amount || 0) - ((invoice.amount || 0) / (1 + shop.taxRate / 100))).toFixed(2)}</span>
             </div>
             <div className={`${styles.totalRow} ${styles.grand}`}>
               <span>TOTAL</span>
-              <span>${invoice.amount.toFixed(2)}</span>
+              <span>${Number(invoice.amount || 0).toFixed(2)}</span>
             </div>
             {invoice.status === 'paid' && (
               <div className={styles.totalRow}>
                 <span>Amount Paid</span>
-                <span>-${invoice.amount.toFixed(2)}</span>
+                <span>-${Number(invoice.amount || 0).toFixed(2)}</span>
               </div>
             )}
             <div className={styles.totalRow} style={{fontWeight: 600}}>
               <span>Balance Due</span>
-              <span>${invoice.status === 'paid' ? '0.00' : invoice.amount.toFixed(2)}</span>
+              <span>${invoice.status === 'paid' ? '0.00' : Number(invoice.amount || 0).toFixed(2)}</span>
             </div>
           </div>
 

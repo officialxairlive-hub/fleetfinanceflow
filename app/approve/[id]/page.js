@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Check, X, Calculator, ShieldAlert, CheckCircle } from 'lucide-react';
-import { workOrders } from '../../lib/demoData';
+import { supabase } from '../../../lib/supabaseClient';
 import styles from '../approve.module.css';
 
 export default function ApprovalPage() {
@@ -11,26 +11,69 @@ export default function ApprovalPage() {
   const { id } = params;
   
   const [order, setOrder] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
   const [signature, setSignature] = useState('');
   const [name, setName] = useState('');
   const [isApproved, setIsApproved] = useState(false);
 
   useEffect(() => {
-    // In a real app, we'd fetch from Supabase here
-    const found = workOrders.find(wo => wo.id === id);
-    if (found) {
-      setOrder(found);
+    async function fetchOrder() {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('work_orders')
+          .select('*')
+          .eq('id', id)
+          .single();
+          
+        if (error) throw error;
+        
+        setOrder({
+          ...data,
+          unitDisplay: data.unit_display,
+          estimatedCost: data.estimated_cost
+        });
+        
+        // If already approved, show success state
+        if (data.status === 'ready_to_invoice' || data.status === 'invoiced' || data.status === 'paid') {
+          // You could optionally show it's already approved
+        }
+      } catch (err) {
+        console.error("Error fetching approval order:", err);
+        setError(err.message || "Failed to load order.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    if (id) {
+      fetchOrder();
     }
   }, [id]);
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!name.trim()) {
       alert("Please enter your name to approve.");
       return;
     }
     
-    // Simulate API call to save approval
-    setIsApproved(true);
+    try {
+      // Optimistic update
+      setIsApproved(true);
+      
+      const { error } = await supabase
+        .from('work_orders')
+        .update({ status: 'ready_to_invoice' })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+    } catch (err) {
+      alert(`Error saving approval: ${err.message}`);
+      setIsApproved(false);
+    }
   };
 
   const handleDecline = () => {
@@ -38,19 +81,29 @@ export default function ApprovalPage() {
     alert("Repair declined. The shop will contact you to discuss options.");
   };
 
-  if (!order) {
+  if (isLoading) {
     return (
       <div className={styles.container}>
         <div className={styles.main} style={{ textAlign: 'center', paddingTop: '100px' }}>
-          <h2>Work Order Not Found</h2>
+          <h2>Loading work order details...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !order) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.main} style={{ textAlign: 'center', paddingTop: '100px' }}>
+          <h2 style={{ color: 'red' }}>{error || 'Work Order Not Found'}</h2>
           <p>Please check the link and try again.</p>
         </div>
       </div>
     );
   }
 
-  const labourTotal = (order.labour || []).reduce((sum, l) => sum + (l.hours * l.rate), 0);
-  const partsTotal = (order.parts || []).reduce((sum, p) => sum + (p.qty * p.sell), 0);
+  const labourTotal = (order.labour || []).reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0);
+  const partsTotal = (order.parts || []).reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.price || 0)), 0);
   const total = labourTotal + partsTotal;
 
   if (isApproved) {
@@ -66,7 +119,7 @@ export default function ApprovalPage() {
           <div className={styles.successState}>
             <CheckCircle size={64} className={styles.successIcon} />
             <h1 className={styles.successTitle}>Repair Approved</h1>
-            <p>Thank you, {name}. Your approval has been securely logged.</p>
+            <p>Thank you, {name}. Your approval has been securely logged via Supabase.</p>
             <p style={{ marginTop: '16px', color: 'var(--color-text-secondary)' }}>
               We will proceed with the repairs and notify you when your vehicle is ready.
             </p>
@@ -83,6 +136,7 @@ export default function ApprovalPage() {
           <Calculator size={24} color="var(--color-primary)" />
           Fleet Finance <span>Flow</span>
         </div>
+        <span style={{fontSize:'10px', background:'rgba(255,255,255,0.2)', color:'white', padding:'3px 6px', borderRadius:'10px', alignSelf: 'center'}}>SUPABASE</span>
       </header>
 
       <main className={styles.main}>

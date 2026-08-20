@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Clock, Printer, Mail, CheckCircle, Plus, ChevronRight } from 'lucide-react';
-import { workOrders, statusLabels, priorityLabels, technicians, partsInventory, calculateWOTotal } from '../../../lib/demoData';
-import styles from '../jobs.module.css';
+import { supabase } from '../../../../lib/supabaseClient';
+import { statusLabels } from '../../../../lib/demoData';
+import styles from '../../jobs.module.css';
 
 const WORKFLOW_STEPS = ['new', 'diagnosing', 'waiting_parts', 'repairing', 'completed', 'ready_to_invoice', 'invoiced', 'paid'];
 
@@ -13,24 +14,57 @@ export default function WorkOrderDetailPage() {
   const params = useParams();
   const id = params.id;
   
-  // Find WO
-  const initialWO = workOrders.find(w => w.id === id);
-  const [wo, setWo] = useState(initialWO);
+  const [wo, setWo] = useState(null);
+  const [technicians, setTechnicians] = useState([]);
   const [activeNotesTab, setActiveNotesTab] = useState('internal');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  if (!wo) {
-    return (
-      <div className={styles.pageContainer}>
-        <div className={styles.card}>
-          <h2>Work Order Not Found</h2>
-          <Link href="/dashboard/jobs" className="btn btn-primary">Back to Work Orders</Link>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    async function fetchJob() {
+      setIsLoading(true);
+      try {
+        const [woRes, techRes] = await Promise.all([
+          supabase.from('work_orders').select('*').eq('id', id).single(),
+          supabase.from('technicians').select('*')
+        ]);
 
-  const handleStatusAdvance = (step) => {
+        if (woRes.error) throw woRes.error;
+        if (techRes.error) throw techRes.error;
+
+        const data = woRes.data;
+        // Map data to component state
+        const hours = Math.floor((data.timer || 0) / 3600);
+        const mins = Math.floor(((data.timer || 0) % 3600) / 60);
+        
+        setWo({
+          ...data,
+          customerName: data.customer_name,
+          unitNumber: data.unit_display,
+          technicianId: data.technician_id,
+          timerDisplay: `${hours}:${mins.toString().padStart(2, '0')}`,
+          labour: data.labour || [],
+          parts: data.parts || []
+        });
+
+        setTechnicians(techRes.data || []);
+      } catch (err) {
+        console.error("Error fetching job details:", err);
+        setError(err.message || 'Failed to load work order from Supabase.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (id) {
+      fetchJob();
+    }
+  }, [id]);
+
+  const handleStatusAdvance = async (step) => {
     setWo(prev => ({ ...prev, status: step }));
+    // Optimistic update, but you'd typically await the supabase update here
+    await supabase.from('work_orders').update({ status: step }).eq('id', id);
   };
 
   const getStatusClass = (status) => {
@@ -47,7 +81,41 @@ export default function WorkOrderDetailPage() {
     return map[status] || '';
   };
 
-  const totals = calculateWOTotal ? calculateWOTotal(wo) : { labourTotal: 0, partsTotal: 0, shopSupplies: 0, subtotal: 0, tax: 0, total: 0 };
+  const calculateTotals = () => {
+    if (!wo) return { labourTotal: 0, partsTotal: 0, shopSupplies: 0, subtotal: 0, tax: 0, total: 0 };
+    
+    const labourTotal = (wo.labour || []).reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0);
+    const partsTotal = (wo.parts || []).reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.price || 0)), 0);
+    const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50); // 5% capped at $50
+    const subtotal = labourTotal + partsTotal + shopSupplies;
+    const tax = subtotal * 0.05; // 5% tax
+    
+    return {
+      labourTotal,
+      partsTotal,
+      shopSupplies,
+      subtotal,
+      tax,
+      total: subtotal + tax
+    };
+  };
+
+  if (isLoading) {
+    return <div className={styles.pageContainer} style={{ padding: '3rem', textAlign: 'center' }}>Loading work order details...</div>;
+  }
+
+  if (error || !wo) {
+    return (
+      <div className={styles.pageContainer}>
+        <div className={styles.card} style={{ textAlign: 'center', padding: '3rem' }}>
+          <h2 style={{ color: 'red' }}>{error || 'Work Order Not Found'}</h2>
+          <Link href="/dashboard/jobs" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>Back to Work Orders</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const totals = calculateTotals();
 
   return (
     <div className={styles.pageContainer}>
@@ -58,7 +126,8 @@ export default function WorkOrderDetailPage() {
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <h1>{wo.id}</h1>
-            <span className={`${styles.pill} ${getStatusClass(wo.status)}`}>{statusLabels[wo.status]}</span>
+            <span className={`${styles.pill} ${getStatusClass(wo.status)}`}>{(statusLabels[wo.status] || {}).label || wo.status}</span>
+            <span style={{fontSize:'10px', background:'var(--color-primary)', color:'white', padding:'3px 6px', borderRadius:'10px'}}>SUPABASE</span>
           </div>
           <p>{wo.customerName} - {wo.unitNumber}</p>
         </div>
@@ -84,7 +153,7 @@ export default function WorkOrderDetailPage() {
                 onClick={() => handleStatusAdvance(step)}
               >
                 {isCompleted ? <CheckCircle size={16} /> : <span style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid currentColor' }}></span>}
-                {statusLabels[step]}
+                {(statusLabels[step] || {}).label || step}
               </div>
               {idx < WORKFLOW_STEPS.length - 1 && <ChevronRight size={16} className={styles.workflowDivider} />}
             </React.Fragment>
@@ -150,7 +219,7 @@ export default function WorkOrderDetailPage() {
                         <td>{l.description}</td>
                         <td>{l.hours}</td>
                         <td>${l.rate}</td>
-                        <td>${(l.hours * l.rate).toFixed(2)}</td>
+                        <td>${((l.hours || 0) * (l.rate || 0)).toFixed(2)}</td>
                       </tr>
                     ))
                   ) : (
@@ -182,11 +251,11 @@ export default function WorkOrderDetailPage() {
                   {wo.parts && wo.parts.length > 0 ? (
                     wo.parts.map((p, i) => (
                       <tr key={i}>
-                        <td>{p.partNumber}</td>
+                        <td>{p.partNumber || p.part_number}</td>
                         <td>{p.description}</td>
                         <td>{p.quantity}</td>
-                        <td>${p.sellPrice}</td>
-                        <td>${(p.quantity * p.sellPrice).toFixed(2)}</td>
+                        <td>${p.sellPrice || p.price}</td>
+                        <td>${((p.quantity || 0) * (p.sellPrice || p.price || 0)).toFixed(2)}</td>
                       </tr>
                     ))
                   ) : (
@@ -206,7 +275,7 @@ export default function WorkOrderDetailPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h2 className={styles.cardTitle}>Assignment</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}>
-                <Clock size={18} /> {wo.timer || '0:00'}
+                <Clock size={18} /> {wo.timerDisplay || '0:00'}
               </div>
             </div>
             <div className={styles.formGroup}>
@@ -223,27 +292,27 @@ export default function WorkOrderDetailPage() {
             <h2 className={styles.cardTitle}>Financial Summary</h2>
             <div className={styles.summaryRow}>
               <span>Labour</span>
-              <span>${totals.labourTotal?.toFixed(2) || '0.00'}</span>
+              <span>${totals.labourTotal.toFixed(2)}</span>
             </div>
             <div className={styles.summaryRow}>
               <span>Parts</span>
-              <span>${totals.partsTotal?.toFixed(2) || '0.00'}</span>
+              <span>${totals.partsTotal.toFixed(2)}</span>
             </div>
             <div className={styles.summaryRow}>
               <span>Shop Supplies</span>
-              <span>${totals.shopSupplies?.toFixed(2) || '0.00'}</span>
+              <span>${totals.shopSupplies.toFixed(2)}</span>
             </div>
             <div className={styles.summaryRow} style={{ borderTop: '1px solid var(--color-border)', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
               <span>Subtotal</span>
-              <span>${totals.subtotal?.toFixed(2) || '0.00'}</span>
+              <span>${totals.subtotal.toFixed(2)}</span>
             </div>
             <div className={styles.summaryRow}>
               <span>Tax</span>
-              <span>${totals.tax?.toFixed(2) || '0.00'}</span>
+              <span>${totals.tax.toFixed(2)}</span>
             </div>
             <div className={`${styles.summaryRow} ${styles.summaryTotal}`}>
               <span>Total</span>
-              <span>${totals.total?.toFixed(2) || '0.00'}</span>
+              <span>${totals.total.toFixed(2)}</span>
             </div>
           </div>
 

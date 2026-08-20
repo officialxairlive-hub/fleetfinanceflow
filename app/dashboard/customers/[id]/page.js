@@ -1,45 +1,110 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Edit2, MapPin, Mail, Phone, CreditCard, Percent, FileText, Settings, History } from 'lucide-react';
-import { getCustomerById, getTrucksByCustomer, getWorkOrdersByCustomer, getInvoicesByCustomer } from '../../../lib/demoData';
-import styles from '../customers.module.css';
+import { supabase } from '../../../../lib/supabaseClient';
+import styles from '../../customers.module.css';
 
 export default function CustomerDetailPage() {
   const params = useParams();
   const router = useRouter();
   const customerId = params.id;
   
-  const customer = getCustomerById(customerId);
-  const fleet = getTrucksByCustomer(customerId);
-  const workOrders = getWorkOrdersByCustomer(customerId);
-  const invoices = getInvoicesByCustomer(customerId);
+  const [customer, setCustomer] = useState(null);
+  const [fleet, setFleet] = useState([]);
+  const [workOrders, setWorkOrders] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   const [activeTab, setActiveTab] = useState('fleet');
   
-  if (!customer) {
-    return (
-      <div className={styles.container}>
-        <Link href="/dashboard/customers" className={styles.backLink}>
-          <ArrowLeft size={16} /> Back to Customers
-        </Link>
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-          <h2>Customer not found</h2>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    async function fetchCustomerDetails() {
+      setIsLoading(true);
+      try {
+        const [custRes, fleetRes, woRes, invRes] = await Promise.all([
+          supabase.from('customers').select('*').eq('id', customerId).single(),
+          supabase.from('units').select('*').eq('customer_id', customerId),
+          supabase.from('work_orders').select('*').eq('customer_id', customerId).order('created_at', { ascending: false }),
+          supabase.from('invoices').select('*').eq('customer_id', customerId).order('issue_date', { ascending: false })
+        ]);
+
+        if (custRes.error) throw custRes.error;
+
+        setCustomer({
+          ...custRes.data,
+          company: custRes.data.company_name,
+          contact: custRes.data.contact_name,
+          creditLimit: custRes.data.credit_limit,
+          paymentTerms: custRes.data.payment_terms,
+          taxSetting: custRes.data.tax_setting,
+          labourRate: custRes.data.custom_labour_rate,
+          partsMarkup: custRes.data.custom_parts_markup,
+          createdAt: custRes.data.created_at
+        });
+        
+        setFleet((fleetRes.data || []).map(u => ({
+          ...u,
+          unitNumber: u.unit_number,
+          nextPM: u.next_pm
+        })));
+        
+        setWorkOrders((woRes.data || []).map(wo => ({
+          ...wo,
+          unitDisplay: wo.unit_display,
+          techName: wo.tech_name,
+          estimatedCost: wo.estimated_cost,
+          createdAt: wo.created_at,
+          updatedAt: wo.updated_at
+        })));
+        
+        setInvoices((invRes.data || []).map(inv => ({
+          ...inv,
+          issueDate: inv.issue_date,
+          dueDate: inv.due_date,
+          paymentDate: inv.payment_date
+        })));
+      } catch (err) {
+        console.error("Error fetching customer details:", err);
+        setError(err.message || 'Failed to load customer details from Supabase.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (customerId) {
+      fetchCustomerDetails();
+    }
+  }, [customerId]);
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(amount);
+    return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(amount || 0);
   };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return 'N/A';
     return new Date(dateStr).toLocaleDateString('en-CA');
   };
+
+  if (isLoading) {
+    return <div className={styles.container} style={{ padding: '3rem', textAlign: 'center' }}>Loading customer details...</div>;
+  }
+
+  if (error || !customer) {
+    return (
+      <div className={styles.container}>
+        <Link href="/dashboard/customers" className={styles.backLink}>
+          <ArrowLeft size={16} /> Back to Customers
+        </Link>
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <h2 style={{ color: 'red' }}>{error || 'Customer not found'}</h2>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -54,6 +119,7 @@ export default function CustomerDetailPage() {
             <span className={`${styles.statusPill} ${styles[customer.status] || styles.inactive}`}>
               {customer.status}
             </span>
+            <span style={{fontSize:'10px', background:'var(--color-primary)', color:'white', padding:'3px 6px', borderRadius:'10px', alignSelf: 'center'}}>SUPABASE</span>
           </div>
           <p className={styles.customerSubtitle}>
             <span>{customer.contact}</span>
@@ -71,15 +137,15 @@ export default function CustomerDetailPage() {
           <div className={styles.infoList}>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}><MapPin size={14} style={{display:'inline', marginRight: 4}}/> Address</span>
-              <span className={styles.infoValue}>{customer.address}</span>
+              <span className={styles.infoValue}>{customer.address || '-'}</span>
             </div>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}><Mail size={14} style={{display:'inline', marginRight: 4}}/> Email</span>
-              <span className={styles.infoValue}>{customer.email}</span>
+              <span className={styles.infoValue}>{customer.email || '-'}</span>
             </div>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}><Phone size={14} style={{display:'inline', marginRight: 4}}/> Phone</span>
-              <span className={styles.infoValue}>{customer.phone}</span>
+              <span className={styles.infoValue}>{customer.phone || '-'}</span>
             </div>
           </div>
         </div>
@@ -93,17 +159,17 @@ export default function CustomerDetailPage() {
             </div>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}>Balance</span>
-              <span className={`${styles.infoValue} ${customer.balance > 0 ? styles.overdue : ''}`}>
+              <span className={`${styles.infoValue} ${(customer.balance || 0) > 0 ? styles.overdue : ''}`}>
                 {formatCurrency(customer.balance)}
               </span>
             </div>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}>Terms</span>
-              <span className={styles.infoValue}>{customer.paymentTerms}</span>
+              <span className={styles.infoValue}>{customer.paymentTerms || '-'}</span>
             </div>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}>Tax</span>
-              <span className={styles.infoValue}>{customer.taxSetting}</span>
+              <span className={styles.infoValue}>{customer.taxSetting || '-'}</span>
             </div>
           </div>
         </div>
@@ -117,13 +183,13 @@ export default function CustomerDetailPage() {
             </div>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}><Percent size={14} style={{display:'inline', marginRight: 4}}/> Custom Parts Markup</span>
-              <span className={styles.infoValue}>{customer.partsMarkup}%</span>
+              <span className={styles.infoValue}>{customer.partsMarkup || 0}%</span>
             </div>
           </div>
           <h3 style={{ marginTop: '1rem' }}>Notes</h3>
           <textarea 
             className={styles.notesArea} 
-            defaultValue={customer.notes}
+            defaultValue={customer.notes || ''}
             placeholder="Add customer notes here..."
           />
         </div>
@@ -175,10 +241,10 @@ export default function CustomerDetailPage() {
                 {fleet.length > 0 ? fleet.map(truck => (
                   <tr key={truck.id}>
                     <td data-label="Unit #"><strong>{truck.unitNumber}</strong></td>
-                    <td data-label="VIN"><small>{truck.vin}</small></td>
+                    <td data-label="VIN"><small>{truck.vin || '-'}</small></td>
                     <td data-label="Make / Model">{truck.make} {truck.model}</td>
-                    <td data-label="Year">{truck.year}</td>
-                    <td data-label="Mileage">{truck.mileage.toLocaleString()} km</td>
+                    <td data-label="Year">{truck.year || '-'}</td>
+                    <td data-label="Mileage">{(truck.mileage || 0).toLocaleString()} km</td>
                     <td data-label="Next PM">
                       {truck.nextPM ? (
                         <div>
@@ -191,7 +257,7 @@ export default function CustomerDetailPage() {
                     </td>
                     <td data-label="Status">
                       <span className={`${styles.statusPill} ${truck.status === 'ready' || truck.status === 'active' ? styles.active : styles.inactive}`}>
-                        {truck.status.replace('_', ' ')}
+                        {truck.status?.replace('_', ' ')}
                       </span>
                     </td>
                   </tr>
@@ -219,11 +285,13 @@ export default function CustomerDetailPage() {
               <tbody>
                 {workOrders.length > 0 ? workOrders.map(wo => (
                   <tr key={wo.id}>
-                    <td data-label="WO #"><strong>{wo.id}</strong></td>
-                    <td data-label="Unit">{wo.unitDisplay.split(' - ')[0]}</td>
+                    <td data-label="WO #">
+                      <Link href={`/dashboard/jobs/${wo.id}`}><strong>{wo.id}</strong></Link>
+                    </td>
+                    <td data-label="Unit">{wo.unitDisplay?.split(' - ')[0]}</td>
                     <td data-label="Status">
                       <span className={`${styles.statusPill} ${styles[wo.status] || styles.inactive}`}>
-                        {wo.status.replace('_', ' ')}
+                        {wo.status?.replace('_', ' ')}
                       </span>
                     </td>
                     <td data-label="Tech">{wo.techName || 'Unassigned'}</td>
@@ -254,7 +322,9 @@ export default function CustomerDetailPage() {
               <tbody>
                 {invoices.length > 0 ? invoices.map(inv => (
                   <tr key={inv.id}>
-                    <td data-label="INV #"><strong>{inv.id}</strong></td>
+                    <td data-label="INV #">
+                      <Link href={`/dashboard/invoices/${inv.id}`}><strong>{inv.id}</strong></Link>
+                    </td>
                     <td data-label="Date">{formatDate(inv.issueDate)}</td>
                     <td data-label="Due Date">{formatDate(inv.dueDate)}</td>
                     <td data-label="Amount">{formatCurrency(inv.total)}</td>
@@ -288,8 +358,8 @@ export default function CustomerDetailPage() {
                     <strong>{wo.unitDisplay}</strong>
                     <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>{formatDate(wo.updatedAt)}</span>
                   </div>
-                  <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem' }}><strong>Issue:</strong> {wo.complaint}</p>
-                  <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}><strong>Resolution:</strong> {wo.correction}</p>
+                  <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem' }}><strong>Issue:</strong> {wo.complaint || 'No complaint specified'}</p>
+                  <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}><strong>Resolution:</strong> {wo.correction || 'No correction recorded'}</p>
                 </div>
               )) : (
                 <p style={{ textAlign: 'center', color: 'var(--color-text-secondary)' }}>No completed service history available.</p>
