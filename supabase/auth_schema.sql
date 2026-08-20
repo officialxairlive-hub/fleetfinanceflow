@@ -39,77 +39,93 @@ DROP POLICY IF EXISTS "Enable all access for parts" ON parts;
 DROP POLICY IF EXISTS "Enable all access for work_orders" ON work_orders;
 DROP POLICY IF EXISTS "Enable all access for invoices" ON invoices;
 
--- 6. Create strict RLS policies (Users can only see data belonging to their shop)
+-- Drop old recursive policies if they exist
+DROP POLICY IF EXISTS "Users can view profiles in their shop" ON profiles;
+DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
+DROP POLICY IF EXISTS "Allow authenticated to insert their own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can view their own shop" ON shops;
+DROP POLICY IF EXISTS "Allow anon/authenticated to create shop during signup" ON shops;
+DROP POLICY IF EXISTS "Shop access for customers" ON customers;
+DROP POLICY IF EXISTS "Shop access for units" ON units;
+DROP POLICY IF EXISTS "Shop access for technicians" ON technicians;
+DROP POLICY IF EXISTS "Shop access for parts" ON parts;
+DROP POLICY IF EXISTS "Shop access for work_orders" ON work_orders;
+DROP POLICY IF EXISTS "Shop access for invoices" ON invoices;
+
+-- 6. Helper Function to prevent infinite recursion
+-- This SECURITY DEFINER function bypasses RLS to safely look up the shop_id
+CREATE OR REPLACE FUNCTION get_user_shop_id()
+RETURNS UUID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT shop_id FROM profiles WHERE id = auth.uid();
+$$;
+
+-- 7. Create strict RLS policies using the helper function
 
 -- Profiles
 CREATE POLICY "Users can view profiles in their shop" 
 ON profiles FOR SELECT USING (
-  shop_id = (SELECT shop_id FROM profiles WHERE id = auth.uid()) OR id = auth.uid()
+  shop_id = get_user_shop_id() OR id = auth.uid()
 );
 CREATE POLICY "Users can update their own profile" 
 ON profiles FOR UPDATE USING (id = auth.uid());
+CREATE POLICY "Allow authenticated to insert their own profile" 
+ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Shops
 CREATE POLICY "Users can view their own shop" 
 ON shops FOR SELECT USING (
-  id = (SELECT shop_id FROM profiles WHERE id = auth.uid())
+  id = get_user_shop_id()
 );
-
--- Customers
-CREATE POLICY "Shop access for customers" 
-ON customers FOR ALL USING (
-  shop_id = (SELECT shop_id FROM profiles WHERE id = auth.uid())
-);
-
--- Units
-CREATE POLICY "Shop access for units" 
-ON units FOR ALL USING (
-  shop_id = (SELECT shop_id FROM profiles WHERE id = auth.uid())
-);
-
--- Technicians
-CREATE POLICY "Shop access for technicians" 
-ON technicians FOR ALL USING (
-  shop_id = (SELECT shop_id FROM profiles WHERE id = auth.uid())
-);
-
--- Parts
-CREATE POLICY "Shop access for parts" 
-ON parts FOR ALL USING (
-  shop_id = (SELECT shop_id FROM profiles WHERE id = auth.uid())
-);
-
--- Work Orders
-CREATE POLICY "Shop access for work_orders" 
-ON work_orders FOR ALL USING (
-  shop_id = (SELECT shop_id FROM profiles WHERE id = auth.uid())
-);
-
--- Invoices
-CREATE POLICY "Shop access for invoices" 
-ON invoices FOR ALL USING (
-  shop_id = (SELECT shop_id FROM profiles WHERE id = auth.uid())
-);
-
--- Allow inserting into shops and profiles during signup (when user has no profile yet)
--- This is required because when an owner signs up, they need to create a shop and profile.
 CREATE POLICY "Allow anon/authenticated to create shop during signup" 
 ON shops FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "Allow authenticated to insert their own profile" 
-ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
+-- Customers
+CREATE POLICY "Shop access for customers" 
+ON customers FOR ALL USING (shop_id = get_user_shop_id());
 
--- Function to automatically assign shop_id on insert for regular tables
+-- Units
+CREATE POLICY "Shop access for units" 
+ON units FOR ALL USING (shop_id = get_user_shop_id());
+
+-- Technicians
+CREATE POLICY "Shop access for technicians" 
+ON technicians FOR ALL USING (shop_id = get_user_shop_id());
+
+-- Parts
+CREATE POLICY "Shop access for parts" 
+ON parts FOR ALL USING (shop_id = get_user_shop_id());
+
+-- Work Orders
+CREATE POLICY "Shop access for work_orders" 
+ON work_orders FOR ALL USING (shop_id = get_user_shop_id());
+
+-- Invoices
+CREATE POLICY "Shop access for invoices" 
+ON invoices FOR ALL USING (shop_id = get_user_shop_id());
+
+-- 8. Function to automatically assign shop_id on insert for regular tables
 CREATE OR REPLACE FUNCTION set_shop_id()
 RETURNS TRIGGER AS $$
 BEGIN
     -- If shop_id is not provided, fetch it from the user's profile
     IF NEW.shop_id IS NULL THEN
-        SELECT shop_id INTO NEW.shop_id FROM profiles WHERE id = auth.uid();
+        NEW.shop_id := get_user_shop_id();
     END IF;
     RETURN NEW;
 END;
 $$ language 'plpgsql';
+
+-- Drop old triggers before recreating them to avoid duplicates
+DROP TRIGGER IF EXISTS auto_set_shop_id_customers ON customers;
+DROP TRIGGER IF EXISTS auto_set_shop_id_units ON units;
+DROP TRIGGER IF EXISTS auto_set_shop_id_technicians ON technicians;
+DROP TRIGGER IF EXISTS auto_set_shop_id_parts ON parts;
+DROP TRIGGER IF EXISTS auto_set_shop_id_work_orders ON work_orders;
+DROP TRIGGER IF EXISTS auto_set_shop_id_invoices ON invoices;
 
 -- Add triggers to auto-inject shop_id so the frontend doesn't have to send it manually
 CREATE TRIGGER auto_set_shop_id_customers BEFORE INSERT ON customers FOR EACH ROW EXECUTE PROCEDURE set_shop_id();
