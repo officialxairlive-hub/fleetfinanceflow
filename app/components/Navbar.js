@@ -55,7 +55,7 @@ const Navbar = () => {
               Sign In
             </Link>
             <Link href="/login" className="btn btn-primary">
-              Book Demo
+              Sign Up
             </Link>
           </div>
 
@@ -91,7 +91,7 @@ const Navbar = () => {
                 style={{ width: '100%', textAlign: 'center', display: 'block' }}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Book Demo
+                Sign Up
               </Link>
             </div>
           </motion.div>

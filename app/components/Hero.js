@@ -48,7 +48,7 @@ export default function Hero() {
           className={styles.ctas}
         >
           <button className="btn btn-primary btn-lg">
-            Book Free Walkthrough
+            Start 30-Day Free Trial
             <ArrowRight size={18} />
           </button>
           <button className="btn btn-outline btn-lg">

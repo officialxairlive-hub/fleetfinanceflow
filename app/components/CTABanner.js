@@ -4,7 +4,7 @@
 import { Check } from 'lucide-react';
 import styles from './CTABanner.module.css';
 
-const MARQUEE_TEXT = "Free walkthrough ✦ No long-term contracts ✦ No per-user fees ✦ No pressure ✦ Jobs & tech time ✦ Parts & invoices ✦ Profit in one system ✦ ";
+const MARQUEE_TEXT = "30-Day Free Trial ✦ No long-term contracts ✦ No per-user fees ✦ No pressure ✦ Jobs & tech time ✦ Parts & invoices ✦ Profit in one system ✦ ";
 
 export default function CTABanner() {
   return (
@@ -24,14 +24,14 @@ export default function CTABanner() {
             <div className={styles.glow}></div>
             <h2 className={styles.headline}>Ready to see where your shop is losing money?</h2>
             <p className={styles.subtitle}>
-              Book a free walkthrough — jobs, tech time, parts, invoices, and profit in one system.
+              Start your 30-day free trial — jobs, tech time, parts, invoices, and profit in one system.
             </p>
-            <button className="btn btn-primary btn-lg">Book Demo</button>
+            <button className="btn btn-primary btn-lg">Sign Up Now</button>
             
             <div className={styles.features}>
               <div className={styles.featureItem}>
                 <Check className={styles.icon} size={16} />
-                <span>Free walkthrough</span>
+                <span>30-Day Free Trial</span>
               </div>
               <span className={styles.dot}>·</span>
               <div className={styles.featureItem}>

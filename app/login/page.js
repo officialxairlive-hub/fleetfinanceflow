@@ -182,7 +182,7 @@ export default function LoginPage() {
 
         {/* Footer info */}
         <div className={styles.cardFooter}>
-          <p>Don't have a shop account yet? <Link href="/" className={styles.footerLink}>Book a Walkthrough</Link></p>
+          <p>Don't have a shop account yet? <Link href="/" className={styles.footerLink}>Sign Up for Free</Link></p>
           <Link href="/" className={styles.backHome}>← Back to main site</Link>
         </div>
       </div>
