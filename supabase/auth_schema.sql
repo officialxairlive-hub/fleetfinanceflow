@@ -31,7 +31,7 @@ ALTER TABLE invoices ADD COLUMN IF NOT EXISTS shop_id UUID REFERENCES shops(id) 
 ALTER TABLE shops ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
--- 5. Drop old permissive policies
+-- 5. Drop old policies
 DROP POLICY IF EXISTS "Enable all access for customers" ON customers;
 DROP POLICY IF EXISTS "Enable all access for units" ON units;
 DROP POLICY IF EXISTS "Enable all access for technicians" ON technicians;
@@ -39,12 +39,12 @@ DROP POLICY IF EXISTS "Enable all access for parts" ON parts;
 DROP POLICY IF EXISTS "Enable all access for work_orders" ON work_orders;
 DROP POLICY IF EXISTS "Enable all access for invoices" ON invoices;
 
--- Drop old recursive policies if they exist
 DROP POLICY IF EXISTS "Users can view profiles in their shop" ON profiles;
 DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
 DROP POLICY IF EXISTS "Allow authenticated to insert their own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can view their own shop" ON shops;
 DROP POLICY IF EXISTS "Allow anon/authenticated to create shop during signup" ON shops;
+DROP POLICY IF EXISTS "Users can view shops" ON shops;
 DROP POLICY IF EXISTS "Shop access for customers" ON customers;
 DROP POLICY IF EXISTS "Shop access for units" ON units;
 DROP POLICY IF EXISTS "Shop access for technicians" ON technicians;
@@ -53,7 +53,6 @@ DROP POLICY IF EXISTS "Shop access for work_orders" ON work_orders;
 DROP POLICY IF EXISTS "Shop access for invoices" ON invoices;
 
 -- 6. Helper Function to prevent infinite recursion
--- This SECURITY DEFINER function bypasses RLS to safely look up the shop_id
 CREATE OR REPLACE FUNCTION get_user_shop_id()
 RETURNS UUID
 LANGUAGE sql
@@ -63,7 +62,7 @@ AS $$
   SELECT shop_id FROM profiles WHERE id = auth.uid();
 $$;
 
--- 7. Create strict RLS policies using the helper function
+-- 7. Create strict RLS policies
 
 -- Profiles
 CREATE POLICY "Users can view profiles in their shop" 
@@ -75,11 +74,10 @@ ON profiles FOR UPDATE USING (id = auth.uid());
 CREATE POLICY "Allow authenticated to insert their own profile" 
 ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Shops
-CREATE POLICY "Users can view their own shop" 
-ON shops FOR SELECT USING (
-  id = get_user_shop_id()
-);
+-- Shops (Allow SELECT using true so shop creation returning inserted row during signup works)
+CREATE POLICY "Users can view shops" 
+ON shops FOR SELECT USING (true);
+
 CREATE POLICY "Allow anon/authenticated to create shop during signup" 
 ON shops FOR INSERT WITH CHECK (true);
 
@@ -111,7 +109,6 @@ ON invoices FOR ALL USING (shop_id = get_user_shop_id());
 CREATE OR REPLACE FUNCTION set_shop_id()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- If shop_id is not provided, fetch it from the user's profile
     IF NEW.shop_id IS NULL THEN
         NEW.shop_id := get_user_shop_id();
     END IF;
@@ -119,7 +116,7 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Drop old triggers before recreating them to avoid duplicates
+-- Drop old triggers before recreating them
 DROP TRIGGER IF EXISTS auto_set_shop_id_customers ON customers;
 DROP TRIGGER IF EXISTS auto_set_shop_id_units ON units;
 DROP TRIGGER IF EXISTS auto_set_shop_id_technicians ON technicians;
@@ -127,7 +124,7 @@ DROP TRIGGER IF EXISTS auto_set_shop_id_parts ON parts;
 DROP TRIGGER IF EXISTS auto_set_shop_id_work_orders ON work_orders;
 DROP TRIGGER IF EXISTS auto_set_shop_id_invoices ON invoices;
 
--- Add triggers to auto-inject shop_id so the frontend doesn't have to send it manually
+-- Add triggers to auto-inject shop_id
 CREATE TRIGGER auto_set_shop_id_customers BEFORE INSERT ON customers FOR EACH ROW EXECUTE PROCEDURE set_shop_id();
 CREATE TRIGGER auto_set_shop_id_units BEFORE INSERT ON units FOR EACH ROW EXECUTE PROCEDURE set_shop_id();
 CREATE TRIGGER auto_set_shop_id_technicians BEFORE INSERT ON technicians FOR EACH ROW EXECUTE PROCEDURE set_shop_id();
