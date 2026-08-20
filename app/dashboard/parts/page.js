@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import styles from './parts.module.css';
-import { partsInventory } from '../../lib/demoData';
+import { supabase } from '../../lib/supabaseClient';
 import { Search, Plus, Package, DollarSign, AlertTriangle, ArrowUpDown, Edit, History, X, ChevronUp, ChevronDown } from 'lucide-react';
 
 const CATEGORIES = ['All', 'Brakes', 'Engine', 'Drivetrain', 'Air System', 'Suspension', 'HVAC', 'Fluids', 'Filters'];
 
 export default function PartsPage() {
-  const [parts, setParts] = useState(partsInventory || []);
+  const [parts, setParts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   
@@ -20,6 +22,40 @@ export default function PartsPage() {
 
   // Sorting
   const [sortConfig, setSortConfig] = useState({ key: 'partNumber', direction: 'asc' });
+
+  useEffect(() => {
+    async function fetchParts() {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('parts')
+          .select('*')
+          .order('part_number', { ascending: true });
+          
+        if (error) throw error;
+        
+        // Map snake_case from DB to camelCase used by component
+        const mappedParts = (data || []).map(p => ({
+          ...p,
+          partNumber: p.part_number,
+          qtyOnHand: p.qty_on_hand,
+          minStock: p.min_stock,
+          maxStock: p.min_stock * 2, // approximation for UI since it's not in DB
+          coreCharge: p.core_charge,
+          sellPrice: p.price,
+          binLocation: p.location || '-'
+        }));
+        
+        setParts(mappedParts);
+      } catch (err) {
+        console.error("Error fetching parts:", err);
+        setError(err.message || 'Failed to fetch data from Supabase');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchParts();
+  }, []);
 
   const handleSort = (key) => {
     let direction = 'asc';
@@ -43,7 +79,7 @@ export default function PartsPage() {
       filtered = filtered.filter(p => 
         p.partNumber.toLowerCase().includes(q) ||
         p.description.toLowerCase().includes(q) ||
-        p.supplier.toLowerCase().includes(q)
+        (p.supplier || '').toLowerCase().includes(q)
       );
     }
 
@@ -54,7 +90,7 @@ export default function PartsPage() {
       
       if (typeof aVal === 'string') {
         aVal = aVal.toLowerCase();
-        bVal = bVal.toLowerCase();
+        bVal = bVal?.toLowerCase() || '';
       }
 
       if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -67,9 +103,9 @@ export default function PartsPage() {
 
   // KPIs
   const totalParts = parts.length;
-  const totalValue = parts.reduce((sum, p) => sum + ((p.cost || 0) * (p.qtyOnHand || 0)), 0);
-  const lowStockCount = parts.filter(p => p.qtyOnHand < p.minStock).length;
-  const coreChargeCount = parts.filter(p => p.coreCharge > 0).length;
+  const totalValue = parts.reduce((sum, p) => sum + ((Number(p.cost) || 0) * (Number(p.qtyOnHand) || 0)), 0);
+  const lowStockCount = parts.filter(p => Number(p.qtyOnHand) < Number(p.minStock)).length;
+  const coreChargeCount = parts.filter(p => Number(p.coreCharge) > 0).length;
 
   const openEditModal = (part) => {
     setSelectedPart(part);
@@ -101,7 +137,7 @@ export default function PartsPage() {
           </div>
           <div className={styles.kpiContent}>
             <p className={styles.kpiLabel}>Total Parts</p>
-            <p className={styles.kpiValue}>{totalParts}</p>
+            <p className={styles.kpiValue}>{isLoading ? '...' : totalParts}</p>
           </div>
         </div>
         <div className={styles.kpiCard}>
@@ -110,7 +146,7 @@ export default function PartsPage() {
           </div>
           <div className={styles.kpiContent}>
             <p className={styles.kpiLabel}>Total Inventory Value</p>
-            <p className={styles.kpiValue}>{formatCurrency(totalValue)}</p>
+            <p className={styles.kpiValue}>{isLoading ? '...' : formatCurrency(totalValue)}</p>
           </div>
         </div>
         <div className={styles.kpiCard}>
@@ -119,7 +155,7 @@ export default function PartsPage() {
           </div>
           <div className={styles.kpiContent}>
             <p className={styles.kpiLabel}>Low Stock Items</p>
-            <p className={styles.kpiValue}>{lowStockCount}</p>
+            <p className={styles.kpiValue}>{isLoading ? '...' : lowStockCount}</p>
           </div>
         </div>
         <div className={styles.kpiCard}>
@@ -128,7 +164,7 @@ export default function PartsPage() {
           </div>
           <div className={styles.kpiContent}>
             <p className={styles.kpiLabel}>Items with Core Charges</p>
-            <p className={styles.kpiValue}>{coreChargeCount}</p>
+            <p className={styles.kpiValue}>{isLoading ? '...' : coreChargeCount}</p>
           </div>
         </div>
       </div>
@@ -182,52 +218,66 @@ export default function PartsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredParts.map(part => (
-                <tr key={part.id || part.partNumber} className={styles.tr}>
-                  <td className={styles.td}>
-                    <div className={styles.partInfo}>
-                      <span className={styles.partNumber}>{part.partNumber}</span>
-                      <span className={styles.partDesc}>{part.description}</span>
-                    </div>
-                  </td>
-                  <td className={styles.td}>{part.supplier}</td>
-                  <td className={styles.td}>{part.category}</td>
-                  <td className={styles.td}>{formatCurrency(part.cost)}</td>
-                  <td className={styles.td}>{formatCurrency(part.sellPrice)}</td>
-                  <td className={styles.td}>{Math.round((((part.sellPrice || 0) - (part.cost || 0)) / (part.cost || 1)) * 100)}%</td>
-                  <td className={styles.td}>
-                    <span className={`${styles.badge} ${part.qtyOnHand < part.minStock ? styles.red : styles.green}`}>
-                      {part.qtyOnHand}
-                    </span>
-                  </td>
-                  <td className={styles.td}>{part.minStock} / {part.maxStock}</td>
-                  <td className={styles.td}>{part.binLocation}</td>
-                  <td className={styles.td}>
-                    {part.coreCharge > 0 ? (
-                      <span className={`${styles.badge} ${styles.gray}`}>{formatCurrency(part.coreCharge)}</span>
-                    ) : '-'}
-                  </td>
-                  <td className={styles.td}>
-                    <div className={styles.actions}>
-                      <button className={`${styles.actionBtn} ${styles.edit}`} onClick={() => openEditModal(part)} title="Edit">
-                        <Edit size={16} />
-                      </button>
-                      <button className={`${styles.actionBtn} ${styles.adjust}`} onClick={() => openAdjustModal(part)} title="Adjust Stock">
-                        <Plus size={16} />
-                      </button>
-                      <button className={styles.actionBtn} title="History">
-                        <History size={16} />
-                      </button>
-                    </div>
+              {isLoading ? (
+                <tr>
+                  <td colSpan="11" className={styles.td} style={{ textAlign: 'center', padding: '2rem' }}>Loading data from Supabase...</td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan="11" className={styles.td} style={{ textAlign: 'center', padding: '2rem', color: 'red' }}>
+                    <strong>Data fetch failed:</strong> {error}
                   </td>
                 </tr>
-              ))}
-              {filteredParts.length === 0 && (
+              ) : filteredParts.length === 0 ? (
                 <tr>
                   <td colSpan="11" className={styles.td} style={{ textAlign: 'center', padding: '2rem' }}>
-                    No parts found matching your filters.
+                    No parts found matching your criteria.
                   </td>
                 </tr>
+              ) : (
+                filteredParts.map(part => (
+                  <tr key={part.id || part.partNumber} className={styles.tr}>
+                    <td className={styles.td}>
+                      <div className={styles.partInfo}>
+                        <span className={styles.partNumber}>
+                          {part.partNumber}
+                          <span style={{marginLeft:'8px', fontSize:'9px', background:'var(--color-primary)', color:'white', padding:'2px 5px', borderRadius:'10px'}}>SUPABASE</span>
+                        </span>
+                        <span className={styles.partDesc}>{part.description}</span>
+                      </div>
+                    </td>
+                    <td className={styles.td}>{part.supplier}</td>
+                    <td className={styles.td}>{part.category}</td>
+                    <td className={styles.td}>{formatCurrency(part.cost)}</td>
+                    <td className={styles.td}>{formatCurrency(part.sellPrice)}</td>
+                    <td className={styles.td}>{Math.round((((part.sellPrice || 0) - (part.cost || 0)) / (part.cost || 1)) * 100)}%</td>
+                    <td className={styles.td}>
+                      <span className={`${styles.badge} ${part.qtyOnHand < part.minStock ? styles.red : styles.green}`}>
+                        {part.qtyOnHand}
+                      </span>
+                    </td>
+                    <td className={styles.td}>{part.minStock} / {part.maxStock}</td>
+                    <td className={styles.td}>{part.binLocation}</td>
+                    <td className={styles.td}>
+                      {part.coreCharge > 0 ? (
+                        <span className={`${styles.badge} ${styles.gray}`}>{formatCurrency(part.coreCharge)}</span>
+                      ) : '-'}
+                    </td>
+                    <td className={styles.td}>
+                      <div className={styles.actions}>
+                        <button className={`${styles.actionBtn} ${styles.edit}`} onClick={() => openEditModal(part)} title="Edit">
+                          <Edit size={16} />
+                        </button>
+                        <button className={`${styles.actionBtn} ${styles.adjust}`} onClick={() => openAdjustModal(part)} title="Adjust Stock">
+                          <Plus size={16} />
+                        </button>
+                        <button className={styles.actionBtn} title="History">
+                          <History size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -235,46 +285,55 @@ export default function PartsPage() {
 
         {/* Mobile List */}
         <div className={styles.mobileList}>
-          {filteredParts.map(part => (
-            <div key={part.id || part.partNumber} className={styles.mobileCard}>
-              <div className={styles.mobileCardHeader}>
-                <div className={styles.partInfo}>
-                  <span className={styles.partNumber}>{part.partNumber}</span>
-                  <span className={styles.partDesc}>{part.description}</span>
+          {isLoading ? (
+            <div style={{ textAlign: 'center', padding: '2rem' }}>Loading data from Supabase...</div>
+          ) : error ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'red' }}><strong>Error:</strong> {error}</div>
+          ) : (
+            filteredParts.map(part => (
+              <div key={part.id || part.partNumber} className={styles.mobileCard}>
+                <div className={styles.mobileCardHeader}>
+                  <div className={styles.partInfo}>
+                    <span className={styles.partNumber}>
+                      {part.partNumber}
+                      <span style={{marginLeft:'8px', fontSize:'9px', background:'var(--color-primary)', color:'white', padding:'2px 5px', borderRadius:'10px'}}>SUPABASE</span>
+                    </span>
+                    <span className={styles.partDesc}>{part.description}</span>
+                  </div>
+                  <span className={`${styles.badge} ${part.qtyOnHand < part.minStock ? styles.red : styles.green}`}>
+                    Qty: {part.qtyOnHand}
+                  </span>
                 </div>
-                <span className={`${styles.badge} ${part.qtyOnHand < part.minStock ? styles.red : styles.green}`}>
-                  Qty: {part.qtyOnHand}
-                </span>
+                <div className={styles.mobileCardBody}>
+                  <div className={styles.mobileDataGroup}>
+                    <span className={styles.mobileDataLabel}>Category</span>
+                    <span className={styles.mobileDataValue}>{part.category}</span>
+                  </div>
+                  <div className={styles.mobileDataGroup}>
+                    <span className={styles.mobileDataLabel}>Bin Loc</span>
+                    <span className={styles.mobileDataValue}>{part.binLocation}</span>
+                  </div>
+                  <div className={styles.mobileDataGroup}>
+                    <span className={styles.mobileDataLabel}>Cost</span>
+                    <span className={styles.mobileDataValue}>{formatCurrency(part.cost)}</span>
+                  </div>
+                  <div className={styles.mobileDataGroup}>
+                    <span className={styles.mobileDataLabel}>Sell</span>
+                    <span className={styles.mobileDataValue}>{formatCurrency(part.sellPrice)}</span>
+                  </div>
+                </div>
+                <div className={styles.mobileCardFooter}>
+                  <button className={`btn btn-outline`} onClick={() => openEditModal(part)} style={{display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', fontSize: 'var(--text-sm)'}}>
+                    <Edit size={14} /> Edit
+                  </button>
+                  <button className={`btn btn-outline`} onClick={() => openAdjustModal(part)} style={{display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', fontSize: 'var(--text-sm)'}}>
+                    <Plus size={14} /> Adjust
+                  </button>
+                </div>
               </div>
-              <div className={styles.mobileCardBody}>
-                <div className={styles.mobileDataGroup}>
-                  <span className={styles.mobileDataLabel}>Category</span>
-                  <span className={styles.mobileDataValue}>{part.category}</span>
-                </div>
-                <div className={styles.mobileDataGroup}>
-                  <span className={styles.mobileDataLabel}>Bin Loc</span>
-                  <span className={styles.mobileDataValue}>{part.binLocation}</span>
-                </div>
-                <div className={styles.mobileDataGroup}>
-                  <span className={styles.mobileDataLabel}>Cost</span>
-                  <span className={styles.mobileDataValue}>{formatCurrency(part.cost)}</span>
-                </div>
-                <div className={styles.mobileDataGroup}>
-                  <span className={styles.mobileDataLabel}>Sell</span>
-                  <span className={styles.mobileDataValue}>{formatCurrency(part.sellPrice)}</span>
-                </div>
-              </div>
-              <div className={styles.mobileCardFooter}>
-                <button className={`btn btn-outline`} onClick={() => openEditModal(part)} style={{display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', fontSize: 'var(--text-sm)'}}>
-                  <Edit size={14} /> Edit
-                </button>
-                <button className={`btn btn-outline`} onClick={() => openAdjustModal(part)} style={{display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', fontSize: 'var(--text-sm)'}}>
-                  <Plus size={14} /> Adjust
-                </button>
-              </div>
-            </div>
-          ))}
-          {filteredParts.length === 0 && (
+            ))
+          )}
+          {!isLoading && !error && filteredParts.length === 0 && (
             <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>
               No parts found matching your filters.
             </div>
