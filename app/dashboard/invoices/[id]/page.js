@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '../../../../lib/supabaseClient';
-import { shopSettings } from '../../../../lib/demoData';
+import { supabase } from '../../../lib/supabaseClient';
+import { shopSettings } from '../../../lib/demoData';
 import { Mail, DollarSign, Printer, CheckCircle, X, ArrowLeft } from 'lucide-react';
-import styles from '../../invoices.module.css';
+import styles from '../invoices.module.css';
 
 export default function InvoiceDetail() {
   const params = useParams();

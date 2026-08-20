@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Edit2, MapPin, Mail, Phone, CreditCard, Percent, FileText, Settings, History } from 'lucide-react';
-import { supabase } from '../../../../lib/supabaseClient';
-import styles from '../../customers.module.css';
+import { supabase } from '../../../lib/supabaseClient';
+import styles from '../customers.module.css';
 
 export default function CustomerDetailPage() {
   const params = useParams();

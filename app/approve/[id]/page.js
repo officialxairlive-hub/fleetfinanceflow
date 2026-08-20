@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Check, X, Calculator, ShieldAlert, CheckCircle } from 'lucide-react';
-import { supabase } from '../../../lib/supabaseClient';
+import { supabase } from '../../lib/supabaseClient';
 import styles from '../approve.module.css';
 
 export default function ApprovalPage() {
