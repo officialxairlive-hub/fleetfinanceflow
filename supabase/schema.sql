@@ -76,6 +76,9 @@ CREATE TABLE technicians (
   pay_frequency TEXT DEFAULT 'Bi-Weekly',
   next_pay_date DATE,
   direct_deposit_notes TEXT,
+  can_create_estimates BOOLEAN DEFAULT TRUE,
+  can_approve_estimates BOOLEAN DEFAULT FALSE,
+  can_create_work_orders BOOLEAN DEFAULT FALSE,
   hours_today NUMERIC DEFAULT 0,
   status TEXT DEFAULT 'off', -- 'off', 'active', 'repairing', 'waiting_parts', 'break'
   active_job TEXT,
@@ -124,6 +127,9 @@ CREATE TABLE work_orders (
   is_emergency BOOLEAN DEFAULT FALSE,
   is_roadside BOOLEAN DEFAULT FALSE,
   status TEXT DEFAULT 'new',
+  estimate_status TEXT DEFAULT 'draft', -- 'pending_owner_approval', 'sent', 'approved', 'declined'
+  needs_owner_approval BOOLEAN DEFAULT FALSE,
+  estimate_created_by TEXT,
   labour JSONB DEFAULT '[]'::jsonb, -- Array of labour objects
   parts JSONB DEFAULT '[]'::jsonb,  -- Array of parts objects
   photos JSONB DEFAULT '[]'::jsonb, -- Array of photo URLs

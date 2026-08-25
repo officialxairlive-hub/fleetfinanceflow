@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Clock, Printer, Mail, CheckCircle, Plus, ChevronRight, Receipt, X, Wrench, Package, Trash2 } from 'lucide-react';
+import { ArrowLeft, Clock, Printer, Mail, CheckCircle, Plus, ChevronRight, Receipt, X, Wrench, Package, Trash2, ExternalLink } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { statusLabels } from '../../../lib/demoData';
 import styles from '../jobs.module.css';
@@ -436,6 +436,18 @@ export default function WorkOrderDetailPage() {
           <p>{wo.customerName} - {wo.unitNumber}</p>
         </div>
         <div className={styles.headerActions}>
+          <button 
+            className="btn btn-outline" 
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}
+            onClick={() => {
+              const liveLink = `${window.location.origin}/approve/${wo.id}`;
+              navigator.clipboard?.writeText(liveLink);
+              alert(`📋 Live Customer Tracking & Approval Link copied to clipboard:\n${liveLink}`);
+            }}
+            title="Copy live customer tracking and payment link"
+          >
+            <ExternalLink size={18} /> Copy Customer Link
+          </button>
           <button className="btn btn-outline" onClick={() => window.print()}><Printer size={18} /> Print</button>
           <button className="btn btn-outline" onClick={() => alert(`Emailing WO #${wo.id} summary to customer...`)}><Mail size={18} /> Email</button>
           {wo.status === 'invoiced' || wo.status === 'paid' ? (

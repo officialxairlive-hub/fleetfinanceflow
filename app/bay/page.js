@@ -23,6 +23,8 @@ import {
   Plus,
   Receipt,
   DollarSign,
+  Calculator,
+  ExternalLink,
   X
 } from 'lucide-react';
 import styles from './bay.module.css';
@@ -47,6 +49,31 @@ export default function TechBayPage() {
   const [showPartsModal, setShowPartsModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showTechProfileModal, setShowTechProfileModal] = useState(false);
+  
+  // Estimate & WO Modals State
+  const [showCreateEstimateModal, setShowCreateEstimateModal] = useState(false);
+  const [showCreateWoModal, setShowCreateWoModal] = useState(false);
+  const [savingEstimate, setSavingEstimate] = useState(false);
+  const [savingWo, setSavingWo] = useState(false);
+  
+  const [estimateForm, setEstimateForm] = useState({
+    customerId: '',
+    unitId: '',
+    description: '',
+    labourHours: '2.5',
+    labourRate: '145.00',
+    partsAmount: '0',
+    notes: 'Valid for 14 days'
+  });
+
+  const [newWoForm, setNewWoForm] = useState({
+    customerId: '',
+    unitId: '',
+    complaint: '',
+    cause: '',
+    correction: '',
+    priority: 'normal'
+  });
 
   const [notes, setNotes] = useState('');
   const [savedNotes, setSavedNotes] = useState([
@@ -56,6 +83,9 @@ export default function TechBayPage() {
 
   const [activeJob, setActiveJob] = useState(null);
   const [assignedQueue, setAssignedQueue] = useState([]);
+  const [allWorkOrders, setAllWorkOrders] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [units, setUnits] = useState([]);
   const [availableParts, setAvailableParts] = useState([]);
   const [partsModalMode, setPartsModalMode] = useState('stock'); // 'stock' | 'special_order'
   const [selectedPartId, setSelectedPartId] = useState('');
@@ -104,19 +134,23 @@ export default function TechBayPage() {
         return;
       }
 
-      const [profileRes, woRes, partsRes, techRes] = await Promise.all([
+      const [profileRes, woRes, partsRes, techRes, custRes, unitRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', session.user.id).single(),
         supabase.from('work_orders').select('*').order('created_at', { ascending: false }),
         supabase.from('parts').select('*'),
-        supabase.from('technicians').select('*')
+        supabase.from('technicians').select('*'),
+        supabase.from('customers').select('*').order('company'),
+        supabase.from('units').select('*').order('unit_number')
       ]);
 
       if (profileRes.error) throw profileRes.error;
       const userProfile = profileRes.data;
       setProfile(userProfile);
       setAvailableParts(partsRes.data || []);
+      setCustomers(custRes.data || []);
+      setUnits(unitRes.data || []);
 
-      // Find matching technician record for payroll and bank info
+      // Find matching technician record for payroll and permissions
       const allTechs = techRes.data || [];
       const matchedTech = allTechs.find(t => 
         (t.email && t.email.toLowerCase() === session.user.email?.toLowerCase()) ||
@@ -127,6 +161,7 @@ export default function TechBayPage() {
       setTechDetails(matchedTech);
 
       const data = woRes.data || [];
+      setAllWorkOrders(data);
       
       // Find a repairing/diagnosing or first active job
       const repairing = data.find(wo => ['repairing', 'diagnosing', 'waiting_parts', 'new'].includes(wo.status));
@@ -146,6 +181,161 @@ export default function TechBayPage() {
       setError(err.message || 'Failed to fetch data from Supabase');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCopyCustomerLink = (woId) => {
+    const link = `${window.location.origin}/approve/${woId}`;
+    navigator.clipboard?.writeText(link);
+    alert(`📋 Live Customer Link Copied to Clipboard:\n${link}\n\nYou can SMS/text or email this to the customer.`);
+  };
+
+  const handleCreateTechEstimate = async (e) => {
+    e.preventDefault();
+    if (!estimateForm.customerId || !estimateForm.description.trim()) {
+      alert('Please select a customer and provide a description.');
+      return;
+    }
+
+    const canCreate = techDetails?.can_create_estimates ?? true;
+    if (!canCreate) {
+      alert('⚠️ You do not have owner permission to generate estimates. Please contact shop management.');
+      return;
+    }
+
+    const canApprove = techDetails?.can_approve_estimates ?? false;
+    const techName = techDetails?.full_name || profile?.full_name || 'Mechanic';
+
+    setSavingEstimate(true);
+    try {
+      const cust = customers.find(c => c.id === estimateForm.customerId);
+      const selectedUnit = units.find(u => u.id === estimateForm.unitId);
+      
+      const newWoId = `WO-${Date.now().toString().slice(-4)}`;
+      const hoursNum = parseFloat(estimateForm.labourHours) || 0;
+      const rateNum = parseFloat(estimateForm.labourRate) || 145.00;
+      const partsNum = parseFloat(estimateForm.partsAmount) || 0;
+      
+      const labourTotal = hoursNum * rateNum;
+      const supplies = Math.min((labourTotal + partsNum) * 0.05, 50);
+      const subtotal = labourTotal + partsNum + supplies;
+      const total = subtotal * 1.05;
+
+      const payload = {
+        id: newWoId,
+        customer_id: estimateForm.customerId,
+        customer_name: cust ? (cust.company || cust.company_name) : 'Fleet Customer',
+        unit_id: estimateForm.unitId || null,
+        unit_display: selectedUnit ? `#${selectedUnit.unit_number} - ${selectedUnit.make} ${selectedUnit.model}` : 'Shop Unit',
+        complaint: estimateForm.description,
+        tech_id: techDetails?.id || null,
+        tech_name: techName,
+        estimate_created_by: techName,
+        status: canApprove ? 'diagnosing' : 'pending_owner_approval',
+        estimate_status: canApprove ? 'sent' : 'pending_owner_approval',
+        needs_owner_approval: !canApprove,
+        estimated_cost: total,
+        customer_notes: estimateForm.notes,
+        labour: [{
+          description: estimateForm.description,
+          hours: hoursNum,
+          rate: rateNum,
+          technician: techName
+        }],
+        parts: partsNum > 0 ? [{
+          partNumber: 'EST-PARTS',
+          description: 'Estimated replacement parts & materials',
+          quantity: 1,
+          sellPrice: partsNum,
+          cost: partsNum * 0.7
+        }] : []
+      };
+
+      const { error: insertErr } = await supabase.from('work_orders').insert([payload]);
+      if (insertErr) throw insertErr;
+
+      if (canApprove) {
+        const liveLink = `${window.location.origin}/approve/${newWoId}`;
+        navigator.clipboard?.writeText(liveLink);
+        alert(`✅ Estimate #${newWoId.replace('WO-', 'EST-')} created and sent to customer!\n\nLive Approval Link copied:\n${liveLink}`);
+      } else {
+        alert(`✅ Estimate #${newWoId.replace('WO-', 'EST-')} drafted successfully!\n\n📋 Submitted for Shop Owner Review before sending to customer.`);
+      }
+
+      setShowCreateEstimateModal(false);
+      setEstimateForm({
+        customerId: '',
+        unitId: '',
+        description: '',
+        labourHours: '2.5',
+        labourRate: '145.00',
+        partsAmount: '0',
+        notes: 'Valid for 14 days'
+      });
+      fetchTechJobs();
+    } catch (err) {
+      alert(`Error creating estimate: ${err.message}`);
+    } finally {
+      setSavingEstimate(false);
+    }
+  };
+
+  const handleCreateTechWorkOrder = async (e) => {
+    e.preventDefault();
+    const canCreateWo = techDetails?.can_create_work_orders ?? false;
+    if (!canCreateWo) {
+      alert('⚠️ You do not have owner permission to create new work orders directly. Please ask the shop manager.');
+      return;
+    }
+
+    setSavingWo(true);
+    try {
+      const cust = customers.find(c => c.id === newWoForm.customerId);
+      const selectedUnit = units.find(u => u.id === newWoForm.unitId);
+      const newWoId = `WO-${Date.now().toString().slice(-4)}`;
+      const techName = techDetails?.full_name || profile?.full_name || 'Mechanic';
+
+      const payload = {
+        id: newWoId,
+        customer_id: newWoForm.customerId,
+        customer_name: cust ? (cust.company || cust.company_name) : 'Fleet Customer',
+        unit_id: newWoForm.unitId || null,
+        unit_display: selectedUnit ? `#${selectedUnit.unit_number} - ${selectedUnit.make} ${selectedUnit.model}` : 'Shop Unit',
+        complaint: newWoForm.complaint,
+        cause: newWoForm.cause,
+        correction: newWoForm.correction,
+        priority: newWoForm.priority,
+        tech_id: techDetails?.id || null,
+        tech_name: techName,
+        status: 'repairing'
+      };
+
+      const { error: insertErr } = await supabase.from('work_orders').insert([payload]);
+      if (insertErr) throw insertErr;
+
+      alert(`✅ Work Order #${newWoId} created and active in repair bay!`);
+      setShowCreateWoModal(false);
+      fetchTechJobs();
+    } catch (err) {
+      alert(`Error creating work order: ${err.message}`);
+    } finally {
+      setSavingWo(false);
+    }
+  };
+
+  const handleStartApprovedEstimate = async (wo) => {
+    const canCreateWo = techDetails?.can_create_work_orders ?? false;
+    if (!canCreateWo) {
+      alert('⚠️ You do not have owner permission to launch repair orders. Please notify shop management.');
+      return;
+    }
+
+    try {
+      await supabase.from('work_orders').update({ status: 'repairing' }).eq('id', wo.id);
+      alert(`✅ Repair Order #${wo.id} is now ACTIVE in repair bay!`);
+      fetchTechJobs();
+    } catch (err) {
+      alert(`Error starting repair: ${err.message}`);
     }
   };
 
@@ -433,6 +623,66 @@ export default function TechBayPage() {
       {/* Main Bay Content */}
       <main className={styles.mainContent}>
         <div className="container">
+          {/* Permission Status Pill Banner */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '8px', backgroundColor: 'var(--color-surface)', padding: '10px 16px', borderRadius: '10px', border: '1px solid var(--color-border)', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+              <span style={{ fontWeight: 'bold', color: 'var(--color-text-secondary)' }}>BAY PERMISSIONS:</span>
+              
+              {techDetails?.can_create_estimates !== false ? (
+                <span style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '3px 8px', borderRadius: '12px', fontWeight: '600' }}>
+                  ✓ Can Create Estimates
+                </span>
+              ) : (
+                <span style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '3px 8px', borderRadius: '12px', fontWeight: '600' }}>
+                  🔒 Estimates Disabled
+                </span>
+              )}
+
+              {techDetails?.can_approve_estimates ? (
+                <span style={{ backgroundColor: 'rgba(37, 99, 255, 0.1)', color: 'var(--color-primary)', padding: '3px 8px', borderRadius: '12px', fontWeight: '600' }}>
+                  ✓ Direct Customer Dispatch
+                </span>
+              ) : (
+                <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#d97706', padding: '3px 8px', borderRadius: '12px', fontWeight: '600' }}>
+                  ⚡ Needs Owner Approval
+                </span>
+              )}
+
+              {techDetails?.can_create_work_orders ? (
+                <span style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', padding: '3px 8px', borderRadius: '12px', fontWeight: '600' }}>
+                  ✓ Can Launch Work Orders
+                </span>
+              ) : (
+                <span style={{ backgroundColor: 'rgba(107, 114, 128, 0.1)', color: 'var(--color-text-secondary)', padding: '3px 8px', borderRadius: '12px', fontWeight: '600' }}>
+                  🔒 Work Orders: Owner Only
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                onClick={() => setShowCreateEstimateModal(true)} 
+                className="btn btn-primary" 
+                style={{ padding: '6px 12px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              >
+                <Calculator size={14} /> + New Estimate
+              </button>
+              <button 
+                onClick={() => {
+                  if (techDetails?.can_create_work_orders) {
+                    setShowCreateWoModal(true);
+                  } else {
+                    alert('⚠️ Work order creation requires owner authorization. Please ask the shop manager.');
+                  }
+                }} 
+                className="btn btn-outline" 
+                style={{ padding: '6px 12px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              >
+                <Plus size={14} /> + New Work Order
+              </button>
+            </div>
+          </div>
+
           {isLoading ? (
             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)' }}>
               Loading assigned jobs from Supabase...
@@ -449,9 +699,18 @@ export default function TechBayPage() {
                   <div className={styles.cardHeader}>
                     <div className={styles.roBadge}>CURRENT REPAIR ORDER · #{activeJob.id}</div>
                     
-                    {/* Live Status Selector for all 8 states */}
+                    {/* 1-Click Copy Customer Live Link */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <label style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Status:</label>
+                      <button
+                        onClick={() => handleCopyCustomerLink(activeJob.id)}
+                        className="btn btn-outline"
+                        style={{ padding: '4px 10px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        title="Copy live customer tracking and approval link"
+                      >
+                        <ExternalLink size={13} /> Copy Customer Link
+                      </button>
+
+                      {/* Live Status Selector for all 8 states */}
                       <select
                         value={activeJob.status || 'new'}
                         onChange={(e) => handleStatusChange(e.target.value)}
@@ -482,6 +741,13 @@ export default function TechBayPage() {
                       <p className={styles.fleetCustomer}>Fleet: {activeJob.customer_name || 'Unknown Customer'} · RO Created: {new Date(activeJob.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
+
+                  {/* Customer Authorized Notification Banner */}
+                  {activeJob.authorized && (
+                    <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '8px 12px', borderRadius: '6px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#10b981', fontWeight: '600' }}>
+                      <CheckCircle size={16} /> Customer Authorized: {activeJob.signature || 'Digital Sign-off on File'}
+                    </div>
+                  )}
 
                   {/* Status Progression Bar */}
                   <div style={{
@@ -635,7 +901,7 @@ export default function TechBayPage() {
                 </button>
               </div>
 
-              {/* Dual Bay Layout: Work Queue + Repair Notes */}
+              {/* Bay Layout: Work Queue + Repair Notes */}
               <div className={styles.bayLayoutGrid}>
                 {/* Left Column: Work Notes Log */}
                 <div className={styles.notesCard}>
@@ -664,9 +930,9 @@ export default function TechBayPage() {
                   </div>
                 </div>
 
-                {/* Right Column: Assigned Bay Queue */}
+                {/* Right Column: Assigned Bay Queue & Estimates Tracker */}
                 <div className={styles.queueCard}>
-                  <h2 className={styles.sectionTitle}>Assigned Truck Queue ({assignedQueue.length})</h2>
+                  <h2 className={styles.sectionTitle}>Assigned Truck Queue & Approvals ({assignedQueue.length})</h2>
                   
                   <div className={styles.queueList}>
                     {assignedQueue.length === 0 ? (
@@ -678,13 +944,43 @@ export default function TechBayPage() {
                         <div key={item.id} className={styles.queueItem}>
                           <div className={styles.queueHeader}>
                             <span className={styles.queueUnit}>{item.unit_display || item.id}</span>
-                            <span className={styles.priorityBadge}>{item.status || 'Normal'}</span>
+                            
+                            {item.status === 'pending_owner_approval' ? (
+                              <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#d97706', fontSize: '11px', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' }}>
+                                ⚡ Pending Owner Review
+                              </span>
+                            ) : item.authorized ? (
+                              <span style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontSize: '11px', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' }}>
+                                ✓ Customer Approved!
+                              </span>
+                            ) : (
+                              <span className={styles.priorityBadge}>{item.status || 'Normal'}</span>
+                            )}
                           </div>
+
                           <div className={styles.queueCustomer}>{item.customer_name}</div>
                           <div className={styles.queueIssue}>{item.complaint}</div>
-                          <div className={styles.queueFooter}>
-                            <span className={styles.queueEst}>Est: ${item.estimated_cost || 0}</span>
-                            <button className={styles.startJobBtn} onClick={() => handleStartJob(item)}>Start Job →</button>
+                          
+                          <div className={styles.queueFooter} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                            <span className={styles.queueEst}>Est: ${Number(item.estimated_cost || 0).toFixed(2)} CAD</span>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button 
+                                className="btn btn-outline" 
+                                style={{ padding: '3px 8px', fontSize: '11px' }}
+                                onClick={() => handleCopyCustomerLink(item.id)}
+                                title="Copy customer approval link"
+                              >
+                                📋 Link
+                              </button>
+                              
+                              {item.status === 'pending_owner_approval' ? (
+                                <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>Awaiting Shop Review</span>
+                              ) : (
+                                <button className={styles.startJobBtn} onClick={() => handleStartJob(item)}>
+                                  Start Job →
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))
@@ -1013,6 +1309,212 @@ export default function TechBayPage() {
                 Close Profile
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Technician Bay + Create Estimate Modal */}
+      {showCreateEstimateModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowCreateEstimateModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className={styles.modalHeader}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Calculator size={18} color="var(--color-primary)" />
+                Draft Repair Estimate (Bay Tablet)
+              </h3>
+              <button onClick={() => setShowCreateEstimateModal(false)} className={styles.closeModalBtn}>✕</button>
+            </div>
+
+            <form onSubmit={handleCreateTechEstimate} style={{ padding: '1rem 0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Customer *</label>
+                  <select
+                    required
+                    value={estimateForm.customerId}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, customerId: e.target.value, unitId: '' })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  >
+                    <option value="">Select Fleet Customer...</option>
+                    {customers.map(c => (
+                      <option key={c.id} value={c.id}>{c.company || c.company_name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Unit / Vehicle</label>
+                  <select
+                    value={estimateForm.unitId}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, unitId: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  >
+                    <option value="">Select Unit...</option>
+                    {units
+                      .filter(u => !estimateForm.customerId || u.customer_id === estimateForm.customerId)
+                      .map(u => (
+                        <option key={u.id} value={u.id}>Unit #{u.unit_number} ({u.make} {u.model})</option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Diagnostic Scope / Complaint *</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={estimateForm.description}
+                  onChange={(e) => setEstimateForm({ ...estimateForm, description: e.target.value })}
+                  placeholder="e.g. Diagnosed worn steer axle kingpins and play in drag link assembly..."
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Labour Hours</label>
+                  <input
+                    type="number"
+                    step="0.25"
+                    min="0"
+                    value={estimateForm.labourHours}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, labourHours: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Rate ($ CAD)</label>
+                  <input
+                    type="number"
+                    step="1"
+                    value={estimateForm.labourRate}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, labourRate: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Parts Total ($ CAD)</label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={estimateForm.partsAmount}
+                    onChange={(e) => setEstimateForm({ ...estimateForm, partsAmount: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  />
+                </div>
+              </div>
+
+              {/* Notice pill for routing */}
+              <div style={{ backgroundColor: 'rgba(37, 99, 255, 0.06)', border: '1px solid rgba(37, 99, 255, 0.2)', padding: '10px', borderRadius: '8px', marginBottom: '1.25rem', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                {techDetails?.can_approve_estimates ? (
+                  <span>✓ <strong>Direct Dispatch:</strong> This estimate will be sent directly to the customer with live approval link.</span>
+                ) : (
+                  <span>⚡ <strong>Owner Review:</strong> This estimate will route to the <strong>Shop Owner for Review & Approval</strong> before sending to the customer.</span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowCreateEstimateModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={savingEstimate}>
+                  {savingEstimate ? 'Saving Estimate...' : 'Submit Estimate'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Technician Bay + Create Work Order Modal */}
+      {showCreateWoModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowCreateWoModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className={styles.modalHeader}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Plus size={18} color="var(--color-primary)" />
+                Create New Repair Order (Bay Tablet)
+              </h3>
+              <button onClick={() => setShowCreateWoModal(false)} className={styles.closeModalBtn}>✕</button>
+            </div>
+
+            <form onSubmit={handleCreateTechWorkOrder} style={{ padding: '1rem 0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Customer *</label>
+                  <select
+                    required
+                    value={newWoForm.customerId}
+                    onChange={(e) => setNewWoForm({ ...newWoForm, customerId: e.target.value, unitId: '' })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  >
+                    <option value="">Select Fleet Customer...</option>
+                    {customers.map(c => (
+                      <option key={c.id} value={c.id}>{c.company || c.company_name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Unit / Vehicle</label>
+                  <select
+                    value={newWoForm.unitId}
+                    onChange={(e) => setNewWoForm({ ...newWoForm, unitId: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  >
+                    <option value="">Select Unit...</option>
+                    {units
+                      .filter(u => !newWoForm.customerId || u.customer_id === newWoForm.customerId)
+                      .map(u => (
+                        <option key={u.id} value={u.id}>Unit #{u.unit_number} ({u.make} {u.model})</option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Customer Complaint *</label>
+                <textarea
+                  required
+                  rows={2}
+                  value={newWoForm.complaint}
+                  onChange={(e) => setNewWoForm({ ...newWoForm, complaint: e.target.value })}
+                  placeholder="e.g. Engine derate, check engine lamp active on highway..."
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Diagnostic Cause</label>
+                <input
+                  type="text"
+                  value={newWoForm.cause}
+                  onChange={(e) => setNewWoForm({ ...newWoForm, cause: e.target.value })}
+                  placeholder="e.g. Fault code SPN 3216 FMI 5 (NOx Sensor Circuit)"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Priority</label>
+                <select
+                  value={newWoForm.priority}
+                  onChange={(e) => setNewWoForm({ ...newWoForm, priority: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                >
+                  <option value="normal">Normal Priority</option>
+                  <option value="high">High Priority</option>
+                  <option value="emergency">🚨 Emergency / Roadside Breakdown</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowCreateWoModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={savingWo}>
+                  {savingWo ? 'Creating Work Order...' : 'Launch Work Order'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

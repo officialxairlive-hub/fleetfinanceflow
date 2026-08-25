@@ -108,7 +108,10 @@ export default function TechniciansHubPage() {
     accountNumber: '',
     payFrequency: 'Bi-Weekly',
     nextPayDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    directDepositNotes: 'Void cheque on file'
+    directDepositNotes: 'Void cheque on file',
+    canCreateEstimates: true,
+    canApproveEstimates: false,
+    canCreateWorkOrders: false
   });
 
   const fetchData = async () => {
@@ -177,7 +180,10 @@ export default function TechniciansHubPage() {
       accountNumber: '',
       payFrequency: 'Bi-Weekly',
       nextPayDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      directDepositNotes: 'Void cheque on file'
+      directDepositNotes: 'Void cheque on file',
+      canCreateEstimates: true,
+      canApproveEstimates: false,
+      canCreateWorkOrders: false
     });
     setIsAddModalOpen(true);
   };
@@ -206,7 +212,10 @@ export default function TechniciansHubPage() {
       accountNumber: tech.account_number || '',
       payFrequency: tech.pay_frequency || 'Bi-Weekly',
       nextPayDate: tech.next_pay_date || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      directDepositNotes: tech.direct_deposit_notes || 'Void cheque on file'
+      directDepositNotes: tech.direct_deposit_notes || 'Void cheque on file',
+      canCreateEstimates: tech.can_create_estimates ?? true,
+      canApproveEstimates: tech.can_approve_estimates ?? false,
+      canCreateWorkOrders: tech.can_create_work_orders ?? false
     });
     setIsEditModalOpen(true);
   };
@@ -248,7 +257,10 @@ export default function TechniciansHubPage() {
         account_number: form.accountNumber,
         pay_frequency: form.payFrequency,
         next_pay_date: form.nextPayDate,
-        direct_deposit_notes: form.directDepositNotes
+        direct_deposit_notes: form.directDepositNotes,
+        can_create_estimates: form.canCreateEstimates,
+        can_approve_estimates: form.canApproveEstimates,
+        can_create_work_orders: form.canCreateWorkOrders
       };
 
       if (isEditModalOpen && selectedTech) {
@@ -272,13 +284,14 @@ export default function TechniciansHubPage() {
           }]);
 
         if (error) throw error;
-        alert(`Technician ${form.fullName} added to the shop team!`);
+        alert(`New technician ${form.fullName} added to team!`);
       }
 
       setIsAddModalOpen(false);
       setIsEditModalOpen(false);
       fetchData();
     } catch (err) {
+      console.error("Error saving technician:", err);
       alert(`Error saving technician: ${err.message}`);
     }
   };
@@ -641,6 +654,45 @@ export default function TechniciansHubPage() {
                       <div style={{ marginTop: '4px', fontSize: '11px', display: 'flex', justifyContent: 'space-between', color: 'var(--color-text)' }}>
                         <span>Pay Schedule: <strong>{tech.pay_frequency || 'Bi-Weekly'}</strong></span>
                         <span>Next: <strong>{tech.next_pay_date || 'Friday'}</strong></span>
+                      </div>
+                    </div>
+
+                    {/* Permissions & Capabilities Pills */}
+                    <div style={{ backgroundColor: 'var(--color-bg)', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--color-border)', fontSize: '11px' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '4px', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <ShieldCheck size={13} color="var(--color-primary)" /> Bay Authorization Permissions
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        <span style={{ 
+                          padding: '2px 6px', 
+                          borderRadius: '4px', 
+                          fontSize: '10px', 
+                          fontWeight: '600',
+                          backgroundColor: (tech.can_create_estimates ?? true) ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                          color: (tech.can_create_estimates ?? true) ? '#10b981' : '#ef4444'
+                        }}>
+                          {(tech.can_create_estimates ?? true) ? '✓ Estimates: Allowed' : '✕ Estimates: Disabled'}
+                        </span>
+                        <span style={{ 
+                          padding: '2px 6px', 
+                          borderRadius: '4px', 
+                          fontSize: '10px', 
+                          fontWeight: '600',
+                          backgroundColor: (tech.can_approve_estimates ?? false) ? 'rgba(59, 130, 246, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                          color: (tech.can_approve_estimates ?? false) ? '#3b82f6' : '#f59e0b'
+                        }}>
+                          {(tech.can_approve_estimates ?? false) ? '✓ Est Approval: Direct' : '⚡ Est Approval: Needs Owner'}
+                        </span>
+                        <span style={{ 
+                          padding: '2px 6px', 
+                          borderRadius: '4px', 
+                          fontSize: '10px', 
+                          fontWeight: '600',
+                          backgroundColor: (tech.can_create_work_orders ?? false) ? 'rgba(139, 92, 246, 0.12)' : 'rgba(107, 114, 128, 0.12)',
+                          color: (tech.can_create_work_orders ?? false) ? '#8b5cf6' : '#6b7280'
+                        }}>
+                          {(tech.can_create_work_orders ?? false) ? '✓ Work Orders: Can Launch' : '🔒 Work Orders: Owner Only'}
+                        </span>
                       </div>
                     </div>
 
@@ -1084,6 +1136,57 @@ export default function TechniciansHubPage() {
                       onChange={(e) => setForm({ ...form, directDepositNotes: e.target.value })}
                     />
                   </div>
+                </div>
+
+                {/* 5. Authorization & Bay Permission Controls */}
+                <div className={styles.sectionHeader} style={{ marginTop: '1.5rem' }}>
+                  <ShieldCheck size={16} /> 5. Bay Authorization & Permission Controls (Owner Configured)
+                </div>
+                <div style={{ backgroundColor: 'var(--color-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={form.canCreateEstimates}
+                      onChange={(e) => setForm({ ...form, canCreateEstimates: e.target.checked })}
+                      style={{ marginTop: '3px', width: '16px', height: '16px', accentColor: 'var(--color-primary)' }}
+                    />
+                    <div>
+                      <strong style={{ fontSize: '13px', display: 'block', color: 'var(--color-text)' }}>Permit Technician to Generate Estimates</strong>
+                      <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                        Allows technician to draft diagnostic estimates and input labor hours / parts from the mobile bay dashboard.
+                      </span>
+                    </div>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={form.canApproveEstimates}
+                      onChange={(e) => setForm({ ...form, canApproveEstimates: e.target.checked })}
+                      style={{ marginTop: '3px', width: '16px', height: '16px', accentColor: 'var(--color-primary)' }}
+                    />
+                    <div>
+                      <strong style={{ fontSize: '13px', display: 'block', color: 'var(--color-text)' }}>Allow Direct Customer Dispatch / Self-Approval</strong>
+                      <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                        If <strong>unchecked (recommended)</strong>, estimates created by this tech require <strong>Owner Review & Approval</strong> before being sent to the customer. If checked, tech can send directly.
+                      </span>
+                    </div>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={form.canCreateWorkOrders}
+                      onChange={(e) => setForm({ ...form, canCreateWorkOrders: e.target.checked })}
+                      style={{ marginTop: '3px', width: '16px', height: '16px', accentColor: 'var(--color-primary)' }}
+                    />
+                    <div>
+                      <strong style={{ fontSize: '13px', display: 'block', color: 'var(--color-text)' }}>Permit Creating & Converting Work Orders</strong>
+                      <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                        Allows technician to convert customer-approved estimates into active repair jobs or launch new repair work orders from the bay.
+                      </span>
+                    </div>
+                  </label>
                 </div>
               </div>
 

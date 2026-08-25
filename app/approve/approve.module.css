@@ -243,6 +243,164 @@
   margin-bottom: var(--space-2);
 }
 
+/* Stepper styles */
+.stepperContainer {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+
+.stepperTitle {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stepsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  overflow-x: auto;
+  padding: 8px 4px;
+}
+
+.stepItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  z-index: 2;
+  min-width: 75px;
+}
+
+.stepDot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-border);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  border: 2px solid var(--color-surface);
+  transition: all 0.2s ease;
+}
+
+.stepDot.completed {
+  background: #10b981;
+  color: white;
+}
+
+.stepDot.active {
+  background: var(--color-primary);
+  color: white;
+  box-shadow: 0 0 0 4px rgba(37, 99, 255, 0.2);
+}
+
+.stepLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.stepLabel.active {
+  color: var(--color-primary);
+}
+
+.stepLabel.completed {
+  color: #10b981;
+}
+
+/* Notice Box */
+.noticeBox {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.noticeHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #d97706;
+  margin-bottom: 6px;
+}
+
+.noticeText {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text);
+  margin: 0;
+}
+
+/* Payment Box */
+.paymentSection {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.payMethodsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.payMethodBtn {
+  padding: 14px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-background);
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.payMethodBtn:hover {
+  border-color: var(--color-primary);
+  background: rgba(37, 99, 255, 0.05);
+}
+
+.payMethodBtn.selected {
+  border-color: var(--color-primary);
+  background: rgba(37, 99, 255, 0.1);
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.termsList {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  padding-left: 18px;
+  margin: 8px 0 0;
+}
+
 @media (max-width: 768px) {
   .main {
     padding: var(--space-4);

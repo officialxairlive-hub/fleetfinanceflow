@@ -56,7 +56,8 @@ export default function EstimatesList() {
         const totalCalc = wo.estimated_cost || (labourTotal + partsTotal ? (labourTotal + partsTotal) * 1.05 : 1250.00);
 
         let estStatus = 'draft';
-        if (wo.status === 'diagnosing') estStatus = 'sent';
+        if (wo.status === 'pending_owner_approval' || wo.needs_owner_approval) estStatus = 'pending_owner_approval';
+        else if (wo.status === 'diagnosing') estStatus = 'sent';
         else if (wo.authorized || wo.status === 'ready_to_invoice' || wo.status === 'repairing' || wo.status === 'completed' || wo.status === 'invoiced' || wo.status === 'paid') estStatus = 'approved';
 
         return {
@@ -71,6 +72,8 @@ export default function EstimatesList() {
           total: totalCalc,
           status: estStatus,
           rawStatus: wo.status,
+          techName: wo.tech_name || wo.estimate_created_by,
+          needsOwnerApproval: wo.needs_owner_approval || wo.status === 'pending_owner_approval',
           createdAt: wo.created_at,
           expiresAt: new Date(new Date(wo.created_at).getTime() + 14*24*60*60*1000).toISOString()
         };
@@ -118,13 +121,15 @@ export default function EstimatesList() {
         unit_id: estimateForm.unitId || null,
         unit_display: selectedUnit ? `#${selectedUnit.unit_number} - ${selectedUnit.make} ${selectedUnit.model}` : 'Shop Unit',
         complaint: estimateForm.description,
-        status: 'diagnosing',
+        status: 'draft',
+        estimate_status: 'draft',
         estimated_cost: total,
         customer_notes: estimateForm.notes,
         labour: [{
           description: estimateForm.description,
           hours: hoursNum,
-          rate: rateNum
+          rate: rateNum,
+          technician: 'Shop Assigned'
         }],
         parts: partsNum > 0 ? [{
           partNumber: 'EST-PARTS',
@@ -157,16 +162,42 @@ export default function EstimatesList() {
     }
   };
 
-  const handleSendEstimate = async (est) => {
+  const handleOwnerApproveAndSend = async (est) => {
     try {
-      await supabase.from('work_orders').update({ status: 'diagnosing' }).eq('id', est.woId);
+      await supabase
+        .from('work_orders')
+        .update({ 
+          status: 'diagnosing', 
+          needs_owner_approval: false,
+          estimate_status: 'sent'
+        })
+        .eq('id', est.woId);
+
       const approveLink = `${window.location.origin}/approve/${est.woId}`;
       navigator.clipboard?.writeText(approveLink);
-      alert(`✅ Estimate approval link copied to clipboard:\n${approveLink}\n\nStatus marked as SENT.`);
+      alert(`✅ Owner Approval Granted! Estimate #${est.id} is now approved and dispatched.\n\nCustomer Live Approval Link copied to clipboard:\n${approveLink}`);
+      fetchEstimatesAndData();
+    } catch (err) {
+      alert(`Error approving estimate: ${err.message}`);
+    }
+  };
+
+  const handleSendEstimate = async (est) => {
+    try {
+      await supabase.from('work_orders').update({ status: 'diagnosing', estimate_status: 'sent' }).eq('id', est.woId);
+      const approveLink = `${window.location.origin}/approve/${est.woId}`;
+      navigator.clipboard?.writeText(approveLink);
+      alert(`✅ Estimate approval link copied to clipboard:\n${approveLink}\n\nStatus marked as SENT to customer.`);
       fetchEstimatesAndData();
     } catch (err) {
       alert(`Error sending estimate: ${err.message}`);
     }
+  };
+
+  const handleCopyCustomerLink = (est) => {
+    const approveLink = `${window.location.origin}/approve/${est.woId}`;
+    navigator.clipboard?.writeText(approveLink);
+    alert(`📋 Customer live tracking & approval link copied to clipboard:\n${approveLink}`);
   };
 
   const handleConvertToWorkOrder = async (est) => {
@@ -179,7 +210,10 @@ export default function EstimatesList() {
     }
   };
 
+  const pendingShopReviewCount = estimates.filter(e => e.status === 'pending_owner_approval').length;
+
   const filteredEstimates = estimates.filter(est => {
+    if (filter === 'Pending Owner Review') return est.status === 'pending_owner_approval';
     if (filter !== 'All' && est.status.toLowerCase() !== filter.toLowerCase()) return false;
     if (search) {
       const s = search.toLowerCase();
@@ -196,7 +230,7 @@ export default function EstimatesList() {
         <div>
           <h1 className={styles.title}>Estimates & Quotes</h1>
           <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px', margin: '4px 0 0' }}>
-            Create, send digital approvals, and convert quotes to active repair orders
+            Multi-tier estimate drafting, owner authorization review, digital customer approval, and RO conversion
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
@@ -207,13 +241,18 @@ export default function EstimatesList() {
 
       <div className={styles.controls}>
         <div className={styles.tabs}>
-          {['All', 'Draft', 'Sent', 'Approved'].map(tab => (
+          {['All', 'Pending Owner Review', 'Draft', 'Sent', 'Approved'].map(tab => (
             <button 
               key={tab}
               className={`${styles.tab} ${filter === tab ? styles.active : ''}`}
               onClick={() => setFilter(tab)}
             >
               {tab}
+              {tab === 'Pending Owner Review' && pendingShopReviewCount > 0 && (
+                <span style={{ marginLeft: '6px', backgroundColor: '#f59e0b', color: 'white', padding: '1px 6px', borderRadius: '10px', fontSize: '11px' }}>
+                  {pendingShopReviewCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -265,22 +304,42 @@ export default function EstimatesList() {
                     <td style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{est.description}</td>
                     <td><strong>${est.total.toFixed(2)}</strong></td>
                     <td>
-                      <span className={`${styles.pill} ${styles[est.status.toLowerCase()] || ''}`} style={{ textTransform: 'capitalize' }}>
-                        {est.status}
-                      </span>
+                      {est.status === 'pending_owner_approval' ? (
+                        <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#d97706', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          ⚡ Pending Owner Review
+                        </span>
+                      ) : (
+                        <span className={`${styles.pill} ${styles[est.status.toLowerCase()] || ''}`} style={{ textTransform: 'capitalize' }}>
+                          {est.status}
+                        </span>
+                      )}
                     </td>
                     <td>{new Date(est.createdAt).toLocaleDateString()}</td>
                     <td>{new Date(est.expiresAt).toLocaleDateString()}</td>
                     <td>
-                      <div className={styles.actions}>
+                      <div className={styles.actions} style={{ display: 'flex', gap: '6px' }}>
+                        {est.status === 'pending_owner_approval' ? (
+                          <button 
+                            className="btn btn-primary" 
+                            style={{ padding: '3px 8px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#f59e0b', borderColor: '#f59e0b' }} 
+                            title="Approve Tech Estimate & Dispatch to Customer"
+                            onClick={() => handleOwnerApproveAndSend(est)}
+                          >
+                            <CheckCircle2 size={13} /> Approve & Send
+                          </button>
+                        ) : (
+                          <button className={styles.actionBtn} title="Copy Digital Approval Link & Mark Sent" onClick={() => handleSendEstimate(est)}>
+                            <Send size={17}/>
+                          </button>
+                        )}
+                        <button className={styles.actionBtn} title="Copy Customer Live Link" onClick={() => handleCopyCustomerLink(est)}>
+                          <ExternalLink size={17} color="var(--color-primary)"/>
+                        </button>
                         <button className={styles.actionBtn} title="View Estimate Breakdown" onClick={() => setViewEstimate(est)}>
                           <Eye size={17}/>
                         </button>
-                        <button className={styles.actionBtn} title="Copy Digital Approval Link & Mark Sent" onClick={() => handleSendEstimate(est)}>
-                          <Send size={17}/>
-                        </button>
                         <button className={styles.actionBtn} title="Convert to Active Work Order" onClick={() => handleConvertToWorkOrder(est)}>
-                          <FilePlus size={17} color="var(--color-primary)"/>
+                          <FilePlus size={17} color="#10b981"/>
                         </button>
                       </div>
                     </td>
