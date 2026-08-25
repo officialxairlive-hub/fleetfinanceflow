@@ -85,7 +85,7 @@ export default function InvoiceDetail() {
       
       const { error } = await supabase
         .from('invoices')
-        .update({ status: 'paid', payment_date: paymentForm.date })
+        .update({ status: 'paid', paid_date: paymentForm.date })
         .eq('id', invoiceId);
         
       if (error) throw error;

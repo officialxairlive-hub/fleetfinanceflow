@@ -149,19 +149,18 @@ export default function WorkOrderDetailPage() {
       const today = new Date().toISOString().split('T')[0];
       const dueDate = new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
 
-      // 1. Upsert invoice in Supabase
+      // 1. Upsert invoice in Supabase matching exact schema columns
       const { data, error } = await supabase
         .from('invoices')
         .upsert([{
           id: invId,
           customer_id: wo.customer_id,
           work_order_id: wo.id,
-          subtotal: totals.subtotal,
-          tax: totals.tax,
-          total: totals.total,
-          labour_total: totals.labourTotal,
-          parts_total: totals.partsTotal,
-          shop_supplies: totals.shopSupplies,
+          total: totals.total || 0,
+          tax_amount: totals.tax || 0,
+          labour_total: totals.labourTotal || 0,
+          parts_total: totals.partsTotal || 0,
+          shop_supplies: totals.shopSupplies || 0,
           status: 'draft',
           issue_date: today,
           due_date: dueDate

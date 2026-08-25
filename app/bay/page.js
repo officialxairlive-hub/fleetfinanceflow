@@ -189,13 +189,16 @@ export default function TechBayPage() {
       const today = new Date().toISOString().split('T')[0];
       const dueDate = new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
 
+      const est = activeJob.estimated_cost || 650;
       await supabase.from('invoices').upsert([{
         id: invId,
         customer_id: activeJob.customer_id,
         work_order_id: activeJob.id,
-        total: activeJob.estimated_cost || 650,
-        subtotal: (activeJob.estimated_cost || 650) * 0.9,
-        tax: (activeJob.estimated_cost || 650) * 0.1,
+        total: est,
+        tax_amount: est * 0.1,
+        labour_total: est * 0.5,
+        parts_total: est * 0.4,
+        shop_supplies: est * 0.05,
         status: 'draft',
         issue_date: today,
         due_date: dueDate
@@ -212,10 +215,10 @@ export default function TechBayPage() {
     e.preventDefault();
     if (!activeJob) return;
     try {
-      const invId = `INV-${activeJob.id.replace('WO-', '')}`;
+      const today = new Date().toISOString().split('T')[0];
       await supabase.from('invoices').update({
         status: 'paid',
-        payment_date: new Date().toISOString().split('T')[0]
+        paid_date: today
       }).eq('work_order_id', activeJob.id);
 
       await handleStatusChange('paid');
