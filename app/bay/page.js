@@ -66,6 +66,15 @@ export default function TechBayPage() {
     notes: 'Valid for 14 days'
   });
 
+  // Quick Customer & Unit in Bay
+  const [showQuickCust, setShowQuickCust] = useState(false);
+  const [savingQuickCust, setSavingQuickCust] = useState(false);
+  const [quickCustForm, setQuickCustForm] = useState({ company: '', contactName: '', phone: '', email: '' });
+
+  const [showQuickUnit, setShowQuickUnit] = useState(false);
+  const [savingQuickUnit, setSavingQuickUnit] = useState(false);
+  const [quickUnitForm, setQuickUnitForm] = useState({ unitNumber: '', make: 'Freightliner', model: 'Cascadia', year: '2023', vin: '' });
+
   const [newWoForm, setNewWoForm] = useState({
     customerId: '',
     unitId: '',
@@ -188,6 +197,84 @@ export default function TechBayPage() {
     const link = `${window.location.origin}/approve/${woId}`;
     navigator.clipboard?.writeText(link);
     alert(`📋 Live Customer Link Copied to Clipboard:\n${link}\n\nYou can SMS/text or email this to the customer.`);
+  };
+
+  const handleSaveQuickCustomer = async (e) => {
+    e.preventDefault();
+    if (!quickCustForm.company.trim()) {
+      alert('Please enter a company name.');
+      return;
+    }
+    setSavingQuickCust(true);
+    try {
+      const newCustId = `cust-${Date.now().toString().slice(-4)}`;
+      const newCust = {
+        id: newCustId,
+        company: quickCustForm.company.trim(),
+        contact_name: quickCustForm.contactName.trim() || 'Fleet Contact',
+        phone: quickCustForm.phone.trim() || '(403) 555-0199',
+        email: quickCustForm.email.trim() || 'dispatch@fleet.com',
+        status: 'active',
+        payment_terms: 'Net 30'
+      };
+
+      const { data, error } = await supabase.from('customers').insert([newCust]).select().single();
+      if (error) throw error;
+
+      const added = data || newCust;
+      setCustomers(prev => [added, ...prev]);
+      setEstimateForm(prev => ({ ...prev, customerId: added.id, unitId: '' }));
+      setNewWoForm(prev => ({ ...prev, customerId: added.id, unitId: '' }));
+      setShowQuickCust(false);
+      setQuickCustForm({ company: '', contactName: '', phone: '', email: '' });
+      alert(`✅ Customer "${added.company}" added to shop roster!`);
+    } catch (err) {
+      alert(`Error adding customer: ${err.message}`);
+    } finally {
+      setSavingQuickCust(false);
+    }
+  };
+
+  const handleSaveQuickUnit = async (e) => {
+    e.preventDefault();
+    if (!quickUnitForm.unitNumber.trim()) {
+      alert('Please enter a unit number.');
+      return;
+    }
+    const targetCustId = estimateForm.customerId || newWoForm.customerId;
+    if (!targetCustId) {
+      alert('Please select a customer first to assign this unit.');
+      return;
+    }
+    setSavingQuickUnit(true);
+    try {
+      const newUnitId = `trk-${Date.now().toString().slice(-4)}`;
+      const newUnit = {
+        id: newUnitId,
+        customer_id: targetCustId,
+        unit_number: quickUnitForm.unitNumber.trim(),
+        make: quickUnitForm.make.trim() || 'Freightliner',
+        model: quickUnitForm.model.trim() || 'Cascadia',
+        year: parseInt(quickUnitForm.year) || 2023,
+        vin: quickUnitForm.vin.trim() || `1FUJGLDR${Date.now().toString().slice(-8)}`,
+        status: 'active'
+      };
+
+      const { data, error } = await supabase.from('units').insert([newUnit]).select().single();
+      if (error) throw error;
+
+      const added = data || newUnit;
+      setUnits(prev => [added, ...prev]);
+      setEstimateForm(prev => ({ ...prev, unitId: added.id }));
+      setNewWoForm(prev => ({ ...prev, unitId: added.id }));
+      setShowQuickUnit(false);
+      setQuickUnitForm({ unitNumber: '', make: 'Freightliner', model: 'Cascadia', year: '2023', vin: '' });
+      alert(`✅ Unit #${added.unit_number} added and selected!`);
+    } catch (err) {
+      alert(`Error adding unit: ${err.message}`);
+    } finally {
+      setSavingQuickUnit(false);
+    }
   };
 
   const handleCreateTechEstimate = async (e) => {
@@ -1325,7 +1412,16 @@ export default function TechBayPage() {
             <form onSubmit={handleCreateTechEstimate} style={{ padding: '1rem 0' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Customer *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, margin: 0 }}>Customer *</label>
+                    <button
+                      type="button"
+                      onClick={() => { setShowQuickCust(!showQuickCust); setShowQuickUnit(false); }}
+                      style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                    >
+                      {showQuickCust ? '✕ Cancel' : '+ Add Customer'}
+                    </button>
+                  </div>
                   <select
                     required
                     value={estimateForm.customerId}
@@ -1340,7 +1436,18 @@ export default function TechBayPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Unit / Vehicle</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, margin: 0 }}>Unit / Vehicle</label>
+                    {estimateForm.customerId && (
+                      <button
+                        type="button"
+                        onClick={() => { setShowQuickUnit(!showQuickUnit); setShowQuickCust(false); }}
+                        style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                      >
+                        {showQuickUnit ? '✕ Cancel' : '+ Add Unit'}
+                      </button>
+                    )}
+                  </div>
                   <select
                     value={estimateForm.unitId}
                     onChange={(e) => setEstimateForm({ ...estimateForm, unitId: e.target.value })}
@@ -1355,6 +1462,75 @@ export default function TechBayPage() {
                   </select>
                 </div>
               </div>
+
+              {/* Inline Quick Customer Creation Box (Bay) */}
+              {showQuickCust && (
+                <div style={{ backgroundColor: 'rgba(37, 99, 255, 0.05)', border: '1px solid rgba(37, 99, 255, 0.25)', borderRadius: '8px', padding: '12px', marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '8px' }}>
+                    ⚡ Quick Add Fleet Customer (Tablet)
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="Company Name *"
+                      value={quickCustForm.company}
+                      onChange={(e) => setQuickCustForm({ ...quickCustForm, company: e.target.value })}
+                      style={{ padding: '8px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Contact Person"
+                      value={quickCustForm.contactName}
+                      onChange={(e) => setQuickCustForm({ ...quickCustForm, contactName: e.target.value })}
+                      style={{ padding: '8px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                    <button type="button" onClick={() => setShowQuickCust(false)} className="btn btn-outline" style={{ padding: '4px 10px', fontSize: '11px' }}>Cancel</button>
+                    <button type="button" onClick={handleSaveQuickCustomer} className="btn btn-primary" style={{ padding: '4px 12px', fontSize: '11px' }} disabled={savingQuickCust}>
+                      {savingQuickCust ? 'Saving...' : 'Save & Select Customer'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Inline Quick Unit Creation Box (Bay) */}
+              {showQuickUnit && (
+                <div style={{ backgroundColor: 'rgba(37, 99, 255, 0.05)', border: '1px solid rgba(37, 99, 255, 0.25)', borderRadius: '8px', padding: '12px', marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '8px' }}>
+                    ⚡ Quick Add Unit to Fleet (Tablet)
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="Unit # *"
+                      value={quickUnitForm.unitNumber}
+                      onChange={(e) => setQuickUnitForm({ ...quickUnitForm, unitNumber: e.target.value })}
+                      style={{ padding: '8px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Make"
+                      value={quickUnitForm.make}
+                      onChange={(e) => setQuickUnitForm({ ...quickUnitForm, make: e.target.value })}
+                      style={{ padding: '8px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Model"
+                      value={quickUnitForm.model}
+                      onChange={(e) => setQuickUnitForm({ ...quickUnitForm, model: e.target.value })}
+                      style={{ padding: '8px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                    <button type="button" onClick={() => setShowQuickUnit(false)} className="btn btn-outline" style={{ padding: '4px 10px', fontSize: '11px' }}>Cancel</button>
+                    <button type="button" onClick={handleSaveQuickUnit} className="btn btn-primary" style={{ padding: '4px 12px', fontSize: '11px' }} disabled={savingQuickUnit}>
+                      {savingQuickUnit ? 'Saving...' : 'Save & Select Unit'}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Diagnostic Scope / Complaint *</label>
@@ -1438,7 +1614,16 @@ export default function TechBayPage() {
             <form onSubmit={handleCreateTechWorkOrder} style={{ padding: '1rem 0' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Customer *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, margin: 0 }}>Customer *</label>
+                    <button
+                      type="button"
+                      onClick={() => { setShowQuickCust(!showQuickCust); setShowQuickUnit(false); }}
+                      style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                    >
+                      {showQuickCust ? '✕ Cancel' : '+ Add Customer'}
+                    </button>
+                  </div>
                   <select
                     required
                     value={newWoForm.customerId}
@@ -1453,7 +1638,18 @@ export default function TechBayPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Unit / Vehicle</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, margin: 0 }}>Unit / Vehicle</label>
+                    {newWoForm.customerId && (
+                      <button
+                        type="button"
+                        onClick={() => { setShowQuickUnit(!showQuickUnit); setShowQuickCust(false); }}
+                        style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                      >
+                        {showQuickUnit ? '✕ Cancel' : '+ Add Unit'}
+                      </button>
+                    )}
+                  </div>
                   <select
                     value={newWoForm.unitId}
                     onChange={(e) => setNewWoForm({ ...newWoForm, unitId: e.target.value })}
@@ -1468,6 +1664,75 @@ export default function TechBayPage() {
                   </select>
                 </div>
               </div>
+
+              {/* Inline Quick Customer Creation Box (Bay WO) */}
+              {showQuickCust && (
+                <div style={{ backgroundColor: 'rgba(37, 99, 255, 0.05)', border: '1px solid rgba(37, 99, 255, 0.25)', borderRadius: '8px', padding: '12px', marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '8px' }}>
+                    ⚡ Quick Add Fleet Customer (Tablet)
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="Company Name *"
+                      value={quickCustForm.company}
+                      onChange={(e) => setQuickCustForm({ ...quickCustForm, company: e.target.value })}
+                      style={{ padding: '8px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Contact Person"
+                      value={quickCustForm.contactName}
+                      onChange={(e) => setQuickCustForm({ ...quickCustForm, contactName: e.target.value })}
+                      style={{ padding: '8px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                    <button type="button" onClick={() => setShowQuickCust(false)} className="btn btn-outline" style={{ padding: '4px 10px', fontSize: '11px' }}>Cancel</button>
+                    <button type="button" onClick={handleSaveQuickCustomer} className="btn btn-primary" style={{ padding: '4px 12px', fontSize: '11px' }} disabled={savingQuickCust}>
+                      {savingQuickCust ? 'Saving...' : 'Save & Select Customer'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Inline Quick Unit Creation Box (Bay WO) */}
+              {showQuickUnit && (
+                <div style={{ backgroundColor: 'rgba(37, 99, 255, 0.05)', border: '1px solid rgba(37, 99, 255, 0.25)', borderRadius: '8px', padding: '12px', marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '8px' }}>
+                    ⚡ Quick Add Unit to Fleet (Tablet)
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="Unit # *"
+                      value={quickUnitForm.unitNumber}
+                      onChange={(e) => setQuickUnitForm({ ...quickUnitForm, unitNumber: e.target.value })}
+                      style={{ padding: '8px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Make"
+                      value={quickUnitForm.make}
+                      onChange={(e) => setQuickUnitForm({ ...quickUnitForm, make: e.target.value })}
+                      style={{ padding: '8px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Model"
+                      value={quickUnitForm.model}
+                      onChange={(e) => setQuickUnitForm({ ...quickUnitForm, model: e.target.value })}
+                      style={{ padding: '8px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                    <button type="button" onClick={() => setShowQuickUnit(false)} className="btn btn-outline" style={{ padding: '4px 10px', fontSize: '11px' }}>Cancel</button>
+                    <button type="button" onClick={handleSaveQuickUnit} className="btn btn-primary" style={{ padding: '4px 12px', fontSize: '11px' }} disabled={savingQuickUnit}>
+                      {savingQuickUnit ? 'Saving...' : 'Save & Select Unit'}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Customer Complaint *</label>

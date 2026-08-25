@@ -1,264 +1,78 @@
 .container {
   min-height: 100vh;
-  background-color: var(--color-background);
+  background-color: #F8FAFC;
   display: flex;
   flex-direction: column;
+  color: var(--color-text);
 }
 
 .header {
-  background-color: var(--color-surface);
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--color-border);
-  padding: var(--space-4) var(--space-8);
+  padding: 14px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 50;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .brand {
   font-family: var(--font-heading);
-  font-size: var(--text-xl);
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
   color: var(--color-text);
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 8px;
+  letter-spacing: -0.02em;
 }
 
 .brand span {
   color: var(--color-primary);
 }
 
+.portalBadge {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(37, 99, 255, 0.08);
+  color: var(--color-primary);
+  border: 1px solid rgba(37, 99, 255, 0.2);
+  padding: 4px 10px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .main {
   flex: 1;
-  max-width: 800px;
+  max-width: 760px;
   margin: 0 auto;
   width: 100%;
-  padding: var(--space-8);
-}
-
-.alert {
-  background-color: rgba(37, 99, 255, 0.1);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4) var(--space-6);
-  margin-bottom: var(--space-8);
-  display: flex;
-  gap: var(--space-4);
-  align-items: flex-start;
-}
-
-.alertIcon {
-  color: var(--color-primary);
-  margin-top: 2px;
-}
-
-.alertContent h2 {
-  color: var(--color-text);
-  font-size: var(--text-lg);
-  margin: 0 0 var(--space-2) 0;
-}
-
-.alertContent p {
-  color: var(--color-text-secondary);
-  margin: 0;
-  line-height: 1.5;
-}
-
-.card {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  margin-bottom: var(--space-6);
-}
-
-.cardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: var(--space-4);
-  margin-bottom: var(--space-4);
-}
-
-.cardTitle {
-  font-size: var(--text-lg);
-  font-weight: 600;
-  margin: 0;
-}
-
-.orderMeta {
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-}
-
-.section {
-  margin-bottom: var(--space-6);
-}
-
-.sectionTitle {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0 0 var(--space-2) 0;
-}
-
-.sectionText {
-  margin: 0;
-  line-height: 1.6;
-}
-
-.costRow {
-  display: flex;
-  justify-content: space-between;
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--color-border-subtle);
-}
-
-.costRow:last-child {
-  border-bottom: none;
-}
-
-.costTotal {
-  display: flex;
-  justify-content: space-between;
-  padding-top: var(--space-4);
-  margin-top: var(--space-2);
-  border-top: 2px solid var(--color-border);
-  font-weight: 700;
-  font-size: var(--text-lg);
-}
-
-.signatureArea {
-  margin-top: var(--space-6);
-}
-
-.signatureLabel {
-  display: block;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  margin-bottom: var(--space-2);
-}
-
-.canvasContainer {
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
-  background-color: var(--color-background);
-  height: 150px;
-  position: relative;
-  margin-bottom: var(--space-4);
-}
-
-.canvasPlaceholder {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: var(--color-text-muted);
-  pointer-events: none;
-}
-
-.inputGroup {
-  margin-bottom: var(--space-4);
-}
-
-.input {
-  width: 100%;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background-color: var(--color-background);
-  color: var(--color-text);
-  font-family: inherit;
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 255, 0.1);
-}
-
-.actions {
-  display: flex;
-  gap: var(--space-4);
-  margin-top: var(--space-8);
-}
-
-.btnApprove {
-  flex: 2;
-  background-color: #10b981;
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  font-size: var(--text-base);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.btnApprove:hover {
-  background-color: #059669;
-}
-
-.btnDecline {
-  flex: 1;
-  background-color: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  font-size: var(--text-base);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btnDecline:hover {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border-color: #ef4444;
-}
-
-.successState {
-  text-align: center;
-  padding: var(--space-12) 0;
-}
-
-.successIcon {
-  color: #10b981;
-  margin-bottom: var(--space-4);
-}
-
-.successTitle {
-  font-size: var(--text-2xl);
-  margin-bottom: var(--space-2);
+  padding: 20px 16px 40px;
 }
 
 /* Stepper styles */
 .stepperContainer {
-  background: var(--color-surface);
+  background: #FFFFFF;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 18px 20px;
-  margin-bottom: 24px;
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
 .stepperTitle {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: var(--color-text-secondary);
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -270,7 +84,12 @@
   justify-content: space-between;
   position: relative;
   overflow-x: auto;
-  padding: 8px 4px;
+  padding: 6px 2px;
+  gap: 8px;
+  scrollbar-width: none;
+}
+.stepsRow::-webkit-scrollbar {
+  display: none;
 }
 
 .stepItem {
@@ -280,57 +99,145 @@
   gap: 6px;
   position: relative;
   z-index: 2;
-  min-width: 75px;
+  min-width: 68px;
+  flex: 1;
 }
 
 .stepDot {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background: var(--color-border);
-  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  border: 2px solid var(--color-surface);
+  border: 2px solid var(--color-border);
   transition: all 0.2s ease;
 }
 
 .stepDot.completed {
-  background: #10b981;
-  color: white;
+  background: #10B981;
+  border-color: #10B981;
+  color: #FFFFFF;
 }
 
 .stepDot.active {
   background: var(--color-primary);
-  color: white;
-  box-shadow: 0 0 0 4px rgba(37, 99, 255, 0.2);
+  border-color: var(--color-primary);
+  color: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(37, 99, 255, 0.2);
 }
 
 .stepLabel {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   text-align: center;
+  white-space: nowrap;
 }
 
 .stepLabel.active {
   color: var(--color-primary);
+  font-weight: 700;
 }
 
 .stepLabel.completed {
-  color: #10b981;
+  color: #10B981;
+  font-weight: 700;
+}
+
+/* Card Styling */
+.card {
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 2px;
+}
+
+.orderMeta {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.section {
+  margin-bottom: 14px;
+}
+.section:last-child {
+  margin-bottom: 0;
+}
+
+.sectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 4px 0;
+}
+
+.sectionText {
+  font-size: 13px;
+  color: var(--color-text);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Cost Table Rows */
+.costRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.costRow strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.costTotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  margin-top: 6px;
+  border-top: 2px solid var(--color-border);
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--color-text);
 }
 
 /* Notice Box */
 .noticeBox {
-  background: rgba(245, 158, 11, 0.08);
+  background: rgba(245, 158, 11, 0.07);
   border: 1px solid rgba(245, 158, 11, 0.3);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  margin-bottom: 20px;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
 }
 
 .noticeHeader {
@@ -338,58 +245,177 @@
   align-items: center;
   gap: 8px;
   font-weight: 700;
-  font-size: 14px;
-  color: #d97706;
+  font-size: 13px;
+  color: #D97706;
   margin-bottom: 6px;
 }
 
 .noticeText {
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--color-text);
+  font-size: 12px;
+  line-height: 1.55;
+  color: #78350F;
   margin: 0;
+}
+
+/* Signature & Canvas */
+.signatureArea {
+  margin-top: 14px;
+}
+
+.signatureLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 6px;
+}
+
+.canvasContainer {
+  border: 1.5px dashed #CBD5E1;
+  border-radius: 10px;
+  background-color: #F8FAFC;
+  height: 140px;
+  position: relative;
+  margin-bottom: 12px;
+  touch-action: none;
+  overflow: hidden;
+}
+
+.canvasContainer:focus-within,
+.canvasContainer:hover {
+  border-color: var(--color-primary);
+  background-color: #FFFFFF;
+}
+
+.canvasPlaceholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  pointer-events: none;
+  text-align: center;
+}
+
+.inputGroup {
+  margin-bottom: 12px;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  color: var(--color-text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 255, 0.12);
+}
+
+/* Action Buttons */
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.btnApprove {
+  flex: 2;
+  background-color: #10B981;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.15s ease, transform 0.05s ease;
+}
+
+.btnApprove:hover {
+  background-color: #059669;
+}
+.btnApprove:active {
+  transform: translateY(1px);
+}
+
+.btnDecline {
+  flex: 1;
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.btnDecline:hover {
+  background-color: rgba(239, 68, 68, 0.08);
+  color: #EF4444;
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
 /* Payment Box */
 .paymentSection {
-  background: var(--color-surface);
+  background: #FFFFFF;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  margin-bottom: 24px;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
 .payMethodsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-  margin-top: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
 }
 
 .payMethodBtn {
-  padding: 14px 10px;
+  padding: 12px 10px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: var(--color-background);
+  background: #F8FAFC;
   color: var(--color-text);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 13px;
-  transition: all 0.2s ease;
+  font-size: 12px;
+  transition: all 0.15s ease;
 }
 
 .payMethodBtn:hover {
   border-color: var(--color-primary);
-  background: rgba(37, 99, 255, 0.05);
+  background: rgba(37, 99, 255, 0.04);
 }
 
 .payMethodBtn.selected {
   border-color: var(--color-primary);
-  background: rgba(37, 99, 255, 0.1);
+  background: rgba(37, 99, 255, 0.08);
+  color: var(--color-primary);
   box-shadow: 0 0 0 2px var(--color-primary);
 }
 
@@ -398,15 +424,36 @@
   color: var(--color-text-secondary);
   line-height: 1.6;
   padding-left: 18px;
-  margin: 8px 0 0;
+  margin: 6px 0 0;
 }
 
-@media (max-width: 768px) {
-  .main {
-    padding: var(--space-4);
+@media (max-width: 640px) {
+  .header {
+    padding: 10px 14px;
   }
-  
+  .brand {
+    font-size: 16px;
+  }
+  .main {
+    padding: 14px 10px 32px;
+  }
+  .card {
+    padding: 14px 14px;
+    border-radius: 10px;
+  }
+  .stepperContainer {
+    padding: 12px 12px;
+    border-radius: 10px;
+  }
   .actions {
     flex-direction: column;
+  }
+  .payMethodsGrid {
+    grid-template-columns: 1fr;
+  }
+  .payMethodBtn {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 10px 14px;
   }
 }

@@ -31,8 +31,104 @@ export default function EstimatesList() {
     notes: 'Valid for 14 days from date of issue.'
   });
 
+  // Quick Customer Inline State
+  const [showQuickCust, setShowQuickCust] = useState(false);
+  const [savingQuickCust, setSavingQuickCust] = useState(false);
+  const [quickCustForm, setQuickCustForm] = useState({
+    company: '',
+    contactName: '',
+    phone: '',
+    email: ''
+  });
+
+  // Quick Unit Inline State
+  const [showQuickUnit, setShowQuickUnit] = useState(false);
+  const [savingQuickUnit, setSavingQuickUnit] = useState(false);
+  const [quickUnitForm, setQuickUnitForm] = useState({
+    unitNumber: '',
+    make: 'Freightliner',
+    model: 'Cascadia',
+    year: '2023',
+    vin: ''
+  });
+
   // View / Detail Modal State
   const [viewEstimate, setViewEstimate] = useState(null);
+
+  const handleSaveQuickCustomer = async (e) => {
+    e.preventDefault();
+    if (!quickCustForm.company.trim()) {
+      alert('Please enter a company name.');
+      return;
+    }
+    setSavingQuickCust(true);
+    try {
+      const newCustId = `cust-${Date.now().toString().slice(-4)}`;
+      const newCust = {
+        id: newCustId,
+        company: quickCustForm.company.trim(),
+        contact_name: quickCustForm.contactName.trim() || 'Fleet Contact',
+        phone: quickCustForm.phone.trim() || '(403) 555-0199',
+        email: quickCustForm.email.trim() || 'dispatch@fleet.com',
+        status: 'active',
+        payment_terms: 'Net 30'
+      };
+
+      const { data, error } = await supabase.from('customers').insert([newCust]).select().single();
+      if (error) throw error;
+
+      const added = data || newCust;
+      setCustomers(prev => [added, ...prev]);
+      setEstimateForm(prev => ({ ...prev, customerId: added.id, unitId: '' }));
+      setShowQuickCust(false);
+      setQuickCustForm({ company: '', contactName: '', phone: '', email: '' });
+      alert(`✅ Customer "${added.company}" added and selected!`);
+    } catch (err) {
+      alert(`Error adding customer: ${err.message}`);
+    } finally {
+      setSavingQuickCust(false);
+    }
+  };
+
+  const handleSaveQuickUnit = async (e) => {
+    e.preventDefault();
+    if (!quickUnitForm.unitNumber.trim()) {
+      alert('Please enter a unit number.');
+      return;
+    }
+    if (!estimateForm.customerId) {
+      alert('Please select a customer first to assign this unit.');
+      return;
+    }
+    setSavingQuickUnit(true);
+    try {
+      const newUnitId = `trk-${Date.now().toString().slice(-4)}`;
+      const newUnit = {
+        id: newUnitId,
+        customer_id: estimateForm.customerId,
+        unit_number: quickUnitForm.unitNumber.trim(),
+        make: quickUnitForm.make.trim() || 'Freightliner',
+        model: quickUnitForm.model.trim() || 'Cascadia',
+        year: parseInt(quickUnitForm.year) || 2023,
+        vin: quickUnitForm.vin.trim() || `1FUJGLDR${Date.now().toString().slice(-8)}`,
+        status: 'active'
+      };
+
+      const { data, error } = await supabase.from('units').insert([newUnit]).select().single();
+      if (error) throw error;
+
+      const added = data || newUnit;
+      setUnits(prev => [added, ...prev]);
+      setEstimateForm(prev => ({ ...prev, unitId: added.id }));
+      setShowQuickUnit(false);
+      setQuickUnitForm({ unitNumber: '', make: 'Freightliner', model: 'Cascadia', year: '2023', vin: '' });
+      alert(`✅ Unit #${added.unit_number} added and selected!`);
+    } catch (err) {
+      alert(`Error adding unit: ${err.message}`);
+    } finally {
+      setSavingQuickUnit(false);
+    }
+  };
 
   const fetchEstimatesAndData = async () => {
     setIsLoading(true);
@@ -370,7 +466,16 @@ export default function EstimatesList() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginBottom: '20px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Customer *</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', margin: 0 }}>Customer *</label>
+                      <button
+                        type="button"
+                        onClick={() => { setShowQuickCust(!showQuickCust); setShowQuickUnit(false); }}
+                        style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                      >
+                        {showQuickCust ? '✕ Cancel' : '+ Add Customer'}
+                      </button>
+                    </div>
                     <select
                       required
                       value={estimateForm.customerId}
@@ -384,7 +489,18 @@ export default function EstimatesList() {
                     </select>
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Unit / Truck</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', margin: 0 }}>Unit / Truck</label>
+                      {estimateForm.customerId && (
+                        <button
+                          type="button"
+                          onClick={() => { setShowQuickUnit(!showQuickUnit); setShowQuickCust(false); }}
+                          style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                        >
+                          {showQuickUnit ? '✕ Cancel' : '+ Add Unit'}
+                        </button>
+                      )}
+                    </div>
                     <select
                       value={estimateForm.unitId}
                       onChange={(e) => setEstimateForm({ ...estimateForm, unitId: e.target.value })}
@@ -398,6 +514,107 @@ export default function EstimatesList() {
                     </select>
                   </div>
                 </div>
+
+                {/* Inline Quick Customer Creation Box */}
+                {showQuickCust && (
+                  <div style={{ backgroundColor: 'rgba(37, 99, 255, 0.05)', border: '1px solid rgba(37, 99, 255, 0.25)', borderRadius: '8px', padding: '12px', marginBottom: '4px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '8px' }}>
+                      ⚡ Quick Add New Fleet Customer
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                      <input
+                        type="text"
+                        placeholder="Company Name *"
+                        value={quickCustForm.company}
+                        onChange={(e) => setQuickCustForm({ ...quickCustForm, company: e.target.value })}
+                        style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Contact Person Name"
+                        value={quickCustForm.contactName}
+                        onChange={(e) => setQuickCustForm({ ...quickCustForm, contactName: e.target.value })}
+                        style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                      <input
+                        type="tel"
+                        placeholder="Phone Number"
+                        value={quickCustForm.phone}
+                        onChange={(e) => setQuickCustForm({ ...quickCustForm, phone: e.target.value })}
+                        style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                      />
+                      <input
+                        type="email"
+                        placeholder="Email Address"
+                        value={quickCustForm.email}
+                        onChange={(e) => setQuickCustForm({ ...quickCustForm, email: e.target.value })}
+                        style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                      <button type="button" onClick={() => setShowQuickCust(false)} className="btn btn-outline" style={{ padding: '4px 10px', fontSize: '11px' }}>Cancel</button>
+                      <button type="button" onClick={handleSaveQuickCustomer} className="btn btn-primary" style={{ padding: '4px 12px', fontSize: '11px' }} disabled={savingQuickCust}>
+                        {savingQuickCust ? 'Saving...' : 'Save & Select Customer'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Inline Quick Unit Creation Box */}
+                {showQuickUnit && (
+                  <div style={{ backgroundColor: 'rgba(37, 99, 255, 0.05)', border: '1px solid rgba(37, 99, 255, 0.25)', borderRadius: '8px', padding: '12px', marginBottom: '4px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '8px' }}>
+                      ⚡ Quick Add Unit / Vehicle to Selected Customer
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                      <input
+                        type="text"
+                        placeholder="Unit # (e.g. 104) *"
+                        value={quickUnitForm.unitNumber}
+                        onChange={(e) => setQuickUnitForm({ ...quickUnitForm, unitNumber: e.target.value })}
+                        style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Make (e.g. Peterbilt)"
+                        value={quickUnitForm.make}
+                        onChange={(e) => setQuickUnitForm({ ...quickUnitForm, make: e.target.value })}
+                        style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Model (e.g. 579)"
+                        value={quickUnitForm.model}
+                        onChange={(e) => setQuickUnitForm({ ...quickUnitForm, model: e.target.value })}
+                        style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '8px', marginBottom: '8px' }}>
+                      <input
+                        type="number"
+                        placeholder="Year (e.g. 2024)"
+                        value={quickUnitForm.year}
+                        onChange={(e) => setQuickUnitForm({ ...quickUnitForm, year: e.target.value })}
+                        style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="VIN / Serial Number (Optional)"
+                        value={quickUnitForm.vin}
+                        onChange={(e) => setQuickUnitForm({ ...quickUnitForm, vin: e.target.value })}
+                        style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                      <button type="button" onClick={() => setShowQuickUnit(false)} className="btn btn-outline" style={{ padding: '4px 10px', fontSize: '11px' }}>Cancel</button>
+                      <button type="button" onClick={handleSaveQuickUnit} className="btn btn-primary" style={{ padding: '4px 12px', fontSize: '11px' }} disabled={savingQuickUnit}>
+                        {savingQuickUnit ? 'Saving...' : 'Save & Select Unit'}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Scope of Work / Description *</label>
