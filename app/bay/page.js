@@ -56,8 +56,17 @@ export default function TechBayPage() {
   const [activeJob, setActiveJob] = useState(null);
   const [assignedQueue, setAssignedQueue] = useState([]);
   const [availableParts, setAvailableParts] = useState([]);
+  const [partsModalMode, setPartsModalMode] = useState('stock'); // 'stock' | 'special_order'
   const [selectedPartId, setSelectedPartId] = useState('');
   const [partQty, setPartQty] = useState(1);
+  const [specialPartForm, setSpecialPartForm] = useState({
+    partName: '',
+    partNumber: '',
+    quantity: '1',
+    urgency: 'Standard',
+    notes: ''
+  });
+
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('Credit Card');
 
@@ -247,6 +256,46 @@ export default function TechBayPage() {
       alert(`Part ${partObj.part_number} added to Repair Order!`);
     } catch (err) {
       alert(`Error adding part: ${err.message}`);
+    }
+  };
+
+  const handleRequestSpecialPart = async (e) => {
+    e.preventDefault();
+    if (!specialPartForm.partName.trim() || !activeJob) return;
+
+    try {
+      const newReqId = `REQ-${Date.now().toString().slice(-6)}`;
+      const { error } = await supabase
+        .from('part_requests')
+        .insert([{
+          id: newReqId,
+          work_order_id: activeJob.id,
+          unit_display: activeJob.unit_display || activeJob.id,
+          part_name: specialPartForm.partName,
+          part_number: specialPartForm.partNumber || null,
+          quantity: parseInt(specialPartForm.quantity) || 1,
+          urgency: specialPartForm.urgency,
+          requested_by: profile?.full_name || 'Mechanic',
+          notes: specialPartForm.notes || null,
+          status: 'pending'
+        }]);
+
+      if (error) throw error;
+
+      // Update work order status to waiting_parts
+      await handleStatusChange('waiting_parts');
+
+      setShowPartsModal(false);
+      setSpecialPartForm({
+        partName: '',
+        partNumber: '',
+        quantity: '1',
+        urgency: 'Standard',
+        notes: ''
+      });
+      alert(`Part Request #${newReqId} sent to Shop Manager! RO status updated to "Waiting Parts".`);
+    } catch (err) {
+      alert(`Error submitting part request: ${err.message}`);
     }
   };
 
@@ -561,47 +610,153 @@ export default function TechBayPage() {
       {/* Parts Request & Add Modal */}
       {showPartsModal && (
         <div className={styles.modalOverlay} onClick={() => setShowPartsModal(false)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
             <div className={styles.modalHeader}>
-              <h3>Add Parts to RO #{activeJob?.id}</h3>
+              <h3>Parts Management · RO #{activeJob?.id}</h3>
               <button onClick={() => setShowPartsModal(false)} className={styles.closeModalBtn}>✕</button>
             </div>
             
-            <form onSubmit={handleAddPartToJob} style={{ padding: '1rem 0' }}>
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Select Part from Stock</label>
-                <select 
-                  value={selectedPartId} 
-                  onChange={(e) => setSelectedPartId(e.target.value)}
-                  required
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
-                >
-                  <option value="">Choose a part SKU...</option>
-                  {availableParts.map(p => (
-                    <option key={p.id} value={p.id} style={{ color: '#000' }}>
-                      {p.part_number} - {p.description} (${p.sell_price || 0}) [Stock: {p.qty_on_hand || 0}]
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* Modal Mode Tabs */}
+            <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--color-border)', margin: '10px 0 16px 0' }}>
+              <button
+                type="button"
+                onClick={() => setPartsModalMode('stock')}
+                style={{
+                  padding: '8px 12px',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: partsModalMode === 'stock' ? '2px solid var(--color-primary)' : '2px solid transparent',
+                  color: partsModalMode === 'stock' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                  fontWeight: partsModalMode === 'stock' ? 'bold' : 'normal',
+                  cursor: 'pointer',
+                  fontSize: '13px'
+                }}
+              >
+                📦 Pick From In-Stock Parts
+              </button>
+              <button
+                type="button"
+                onClick={() => setPartsModalMode('special_order')}
+                style={{
+                  padding: '8px 12px',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: partsModalMode === 'special_order' ? '2px solid var(--color-primary)' : '2px solid transparent',
+                  color: partsModalMode === 'special_order' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                  fontWeight: partsModalMode === 'special_order' ? 'bold' : 'normal',
+                  cursor: 'pointer',
+                  fontSize: '13px'
+                }}
+              >
+                🚨 Request Special Order / Non-Stock
+              </button>
+            </div>
 
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Quantity</label>
-                <input 
-                  type="number" 
-                  min="1" 
-                  value={partQty} 
-                  onChange={(e) => setPartQty(e.target.value)}
-                  required
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
-                />
-              </div>
+            {partsModalMode === 'stock' ? (
+              <form onSubmit={handleAddPartToJob} style={{ padding: '0.5rem 0' }}>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Select Part from Stock</label>
+                  <select 
+                    value={selectedPartId} 
+                    onChange={(e) => setSelectedPartId(e.target.value)}
+                    required
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  >
+                    <option value="">Choose a part SKU...</option>
+                    {availableParts.map(p => (
+                      <option key={p.id} value={p.id} style={{ color: '#000' }}>
+                        {p.part_number} - {p.description} (${p.sell || p.price || 0}) [Stock: {p.qty_on_hand || 0}]
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" className="btn btn-outline" onClick={() => setShowPartsModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Add Part to Work Order</button>
-              </div>
-            </form>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Quantity</label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    value={partQty} 
+                    onChange={(e) => setPartQty(e.target.value)}
+                    required
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                  <button type="button" className="btn btn-outline" onClick={() => setShowPartsModal(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary">Add Part to Work Order</button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleRequestSpecialPart} style={{ padding: '0.5rem 0' }}>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Part Name / Description *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Cummins ISX Fuel Pressure Relief Valve"
+                    value={specialPartForm.partName}
+                    onChange={(e) => setSpecialPartForm({ ...specialPartForm, partName: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>OEM / Part # (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 4307399"
+                      value={specialPartForm.partNumber}
+                      onChange={(e) => setSpecialPartForm({ ...specialPartForm, partNumber: e.target.value })}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Quantity Needed</label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={specialPartForm.quantity}
+                      onChange={(e) => setSpecialPartForm({ ...specialPartForm, quantity: e.target.value })}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Urgency Level</label>
+                  <select
+                    value={specialPartForm.urgency}
+                    onChange={(e) => setSpecialPartForm({ ...specialPartForm, urgency: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  >
+                    <option value="Standard">Standard (Normal PM / Next Day)</option>
+                    <option value="Urgent / Truck Down">🚨 Urgent / Truck Down in Bay</option>
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Special Instructions / Supplier Note</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Needs to be OEM Cummins, not aftermarket"
+                    value={specialPartForm.notes}
+                    onChange={(e) => setSpecialPartForm({ ...specialPartForm, notes: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                  <button type="button" className="btn btn-outline" onClick={() => setShowPartsModal(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary" style={{ backgroundColor: '#ef4444', borderColor: '#ef4444' }}>
+                    Send Order Request to Manager
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
