@@ -35,7 +35,8 @@ import styles from './dashboard.module.css';
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Work Orders', href: '/dashboard/jobs', icon: Wrench },
-  { label: 'Customers & Fleets', href: '/dashboard/customers', icon: Users },
+  { label: 'Technicians & Team', href: '/dashboard/technicians', icon: Users },
+  { label: 'Customers & Fleets', href: '/dashboard/customers', icon: Truck },
   { label: 'Dispatch Board', href: '/dashboard/dispatch', icon: Map },
   { label: 'Parts & Inventory', href: '/dashboard/parts', icon: PackageCheck },
   { label: 'Invoices', href: '/dashboard/invoices', icon: Receipt },

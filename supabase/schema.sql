@@ -51,22 +51,39 @@ CREATE TABLE units (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 3. TECHNICIANS TABLE
+-- 3. TECHNICIANS TABLE (Expanded with Canadian Payroll, Banking & Real-Time Sync)
 CREATE TABLE technicians (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   full_name TEXT,
   avatar TEXT,
   role TEXT,
+  tech_type TEXT DEFAULT 'Journeyman Heavy Duty',
   phone TEXT,
   email TEXT,
-  certifications JSONB, -- Array of strings
-  labour_rate NUMERIC,
+  address TEXT,
+  id_proof_type TEXT,
+  id_proof_number TEXT,
+  certifications JSONB DEFAULT '[]'::jsonb,
+  working_terms TEXT DEFAULT 'Full-Time Hourly',
+  hourly_pay_cad NUMERIC DEFAULT 45.00,
+  overtime_pay_cad NUMERIC DEFAULT 67.50,
+  labour_rate NUMERIC DEFAULT 145.00,
+  bank_name TEXT,
+  institution_number TEXT, -- 3-digit Canadian institution # (e.g. 003 RBC, 004 TD)
+  transit_number TEXT,     -- 5-digit branch/transit #
+  account_number TEXT,     -- 7 to 12-digit account #
+  pay_frequency TEXT DEFAULT 'Bi-Weekly',
+  next_pay_date DATE,
+  direct_deposit_notes TEXT,
   hours_today NUMERIC DEFAULT 0,
-  status TEXT DEFAULT 'off',
+  status TEXT DEFAULT 'off', -- 'off', 'active', 'repairing', 'waiting_parts', 'break'
   active_job TEXT,
+  active_job_status TEXT,
   clocked_in TEXT,
-  stats JSONB, -- e.g. { hoursThisWeek, jobsCompleted, efficiency, revenue, comebacks }
+  last_heartbeat TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  stats JSONB DEFAULT '{"hoursThisWeek":0,"jobsCompleted":0,"efficiency":100,"revenue":0,"comebacks":0}'::jsonb,
+  shop_id UUID,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

@@ -44,6 +44,23 @@ export default function DispatchBoardPage() {
 
   useEffect(() => {
     fetchDispatchData();
+
+    const interval = setInterval(fetchDispatchData, 10000);
+
+    const channel = supabase
+      .channel('dispatch-board-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_orders' }, () => {
+        fetchDispatchData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'technicians' }, () => {
+        fetchDispatchData();
+      })
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const getCustomerName = (customerId, fallbackName) => {

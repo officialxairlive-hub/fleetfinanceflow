@@ -46,6 +46,7 @@ export default function TechBayPage() {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [showPartsModal, setShowPartsModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showTechProfileModal, setShowTechProfileModal] = useState(false);
 
   const [notes, setNotes] = useState('');
   const [savedNotes, setSavedNotes] = useState([
@@ -73,6 +74,25 @@ export default function TechBayPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [techDetails, setTechDetails] = useState(null);
+
+  const syncTechStatus = async (status, job) => {
+    try {
+      if (profile?.full_name || profile?.email) {
+        await supabase
+          .from('technicians')
+          .update({
+            status: status || 'active',
+            active_job: job?.id || null,
+            active_job_status: job?.status || status,
+            last_heartbeat: new Date().toISOString()
+          })
+          .or(`full_name.ilike.%${profile?.full_name}%,name.ilike.%${profile?.full_name}%`);
+      }
+    } catch (err) {
+      console.warn("Tech status sync:", err);
+    }
+  };
 
   const fetchTechJobs = async () => {
     setIsLoading(true);
@@ -84,15 +104,27 @@ export default function TechBayPage() {
         return;
       }
 
-      const [profileRes, woRes, partsRes] = await Promise.all([
+      const [profileRes, woRes, partsRes, techRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', session.user.id).single(),
         supabase.from('work_orders').select('*').order('created_at', { ascending: false }),
-        supabase.from('parts').select('*')
+        supabase.from('parts').select('*'),
+        supabase.from('technicians').select('*')
       ]);
 
       if (profileRes.error) throw profileRes.error;
-      setProfile(profileRes.data);
+      const userProfile = profileRes.data;
+      setProfile(userProfile);
       setAvailableParts(partsRes.data || []);
+
+      // Find matching technician record for payroll and bank info
+      const allTechs = techRes.data || [];
+      const matchedTech = allTechs.find(t => 
+        (t.email && t.email.toLowerCase() === session.user.email?.toLowerCase()) ||
+        (t.full_name && t.full_name.toLowerCase() === userProfile.full_name?.toLowerCase()) ||
+        (t.name && userProfile.full_name?.toLowerCase().includes(t.name.toLowerCase()))
+      ) || allTechs[0] || null;
+
+      setTechDetails(matchedTech);
 
       const data = woRes.data || [];
       
@@ -102,6 +134,9 @@ export default function TechBayPage() {
         setActiveJob(repairing);
         setSeconds(repairing.timer || 0);
         setPaymentAmount(repairing.estimated_cost || 500);
+        syncTechStatus(repairing.status === 'repairing' ? 'repairing' : 'active', repairing);
+      } else {
+        syncTechStatus('active', null);
       }
 
       const queue = data.filter(wo => wo.id !== (repairing?.id));
@@ -157,6 +192,8 @@ export default function TechBayPage() {
         status: newStatus,
         timer: seconds
       }).eq('id', activeJob.id);
+
+      syncTechStatus(newStatus === 'repairing' ? 'repairing' : newStatus === 'waiting_parts' ? 'waiting_parts' : 'active', { ...activeJob, status: newStatus });
     } catch (err) {
       alert(`Error updating status: ${err.message}`);
     }
@@ -164,19 +201,19 @@ export default function TechBayPage() {
 
   const handleStartJob = async (job) => {
     try {
-      if (activeJob) {
-        await supabase.from('work_orders').update({ timer: seconds }).eq('id', activeJob.id);
-      }
-
-      const newStatus = 'repairing';
-      await supabase.from('work_orders').update({
-        status: newStatus
-      }).eq('id', job.id);
-
-      setActiveJob({ ...job, status: newStatus });
+      setActiveJob(job);
       setSeconds(job.timer || 0);
       setIsTimerRunning(true);
-      setAssignedQueue(prev => prev.filter(item => item.id !== job.id));
+      
+      const newStatus = job.status === 'new' ? 'repairing' : job.status;
+      await supabase.from('work_orders').update({
+        status: newStatus,
+        timer: job.timer || 0
+      }).eq('id', job.id);
+
+      setActiveJob(prev => ({ ...prev, status: newStatus }));
+      setAssignedQueue(prev => prev.filter(w => w.id !== job.id));
+      syncTechStatus('repairing', { ...job, status: newStatus });
     } catch (err) {
       alert(`Error starting job: ${err.message}`);
     }
@@ -356,17 +393,39 @@ export default function TechBayPage() {
             <Logo size="small" showText={true} />
           </Link>
 
-          <div className={styles.techProfileBox}>
-            <div className={styles.avatar}>{(profile?.full_name || 'M')[0]}</div>
-            <div>
-              <div className={styles.techName}>{profile?.full_name || 'Mechanic'}</div>
-              <div className={styles.shiftStatus}>
-                <span className={styles.shiftDot} /> Clocked In · {profile?.role || 'Mechanic'}
-              </div>
-            </div>
-            <button onClick={async () => { await supabase.auth.signOut(); router.push('/login'); }} className={styles.logoutBtn} title="End Shift & Log Out" style={{background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer'}}>
-              <LogOut size={18} />
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button
+              onClick={() => setShowTechProfileModal(true)}
+              style={{
+                background: 'rgba(37, 99, 235, 0.1)',
+                border: '1px solid rgba(37, 99, 235, 0.3)',
+                borderRadius: '20px',
+                padding: '6px 14px',
+                color: '#3b82f6',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginRight: '16px'
+              }}
+            >
+              🇨🇦 My Pay & Direct Deposit ($ CAD)
             </button>
+
+            <div className={styles.techProfileBox}>
+              <div className={styles.avatar}>{(profile?.full_name || 'M')[0]}</div>
+              <div>
+                <div className={styles.techName}>{profile?.full_name || 'Mechanic'}</div>
+                <div className={styles.shiftStatus}>
+                  <span className={styles.shiftDot} /> Clocked In · {techDetails?.tech_type || techDetails?.role || profile?.role || 'Mechanic'}
+                </div>
+              </div>
+              <button onClick={async () => { await supabase.auth.signOut(); router.push('/login'); }} className={styles.logoutBtn} title="End Shift & Log Out" style={{background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer'}}>
+                <LogOut size={18} />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -858,6 +917,100 @@ export default function TechBayPage() {
             <div className={styles.modalFooter}>
               <button onClick={() => { alert('Photo attached to Repair Order!'); setShowPhotoModal(false); }} className="btn btn-primary" style={{ width: '100%' }}>
                 Save Photo to RO
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Technician Profile & Direct Deposit Pay Info Modal */}
+      {showTechProfileModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowTechProfileModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className={styles.modalHeader}>
+              <h3>🇨🇦 Technician Profile & Compensation</h3>
+              <button onClick={() => setShowTechProfileModal(false)} className={styles.closeModalBtn}>✕</button>
+            </div>
+            
+            <div style={{ padding: '1rem 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.25rem', padding: '12px', backgroundColor: 'var(--color-surface)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px' }}>
+                  {(profile?.full_name || 'M')[0]}
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '16px' }}>{profile?.full_name || 'Mechanic'}</h4>
+                  <div style={{ fontSize: '12px', color: 'var(--color-primary)', fontWeight: '600' }}>
+                    {techDetails?.tech_type || techDetails?.role || 'Journeyman Heavy Duty'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Pay Rates ($ CAD) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '1rem' }}>
+                <div style={{ padding: '10px', backgroundColor: 'rgba(16, 185, 129, 0.08)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontWeight: '600' }}>Hourly Rate</div>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981', marginTop: '2px' }}>
+                    ${parseFloat(techDetails?.hourly_pay_cad || 45).toFixed(2)} CAD / hr
+                  </div>
+                </div>
+
+                <div style={{ padding: '10px', backgroundColor: 'rgba(59, 130, 246, 0.08)', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontWeight: '600' }}>Overtime Rate</div>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#3b82f6', marginTop: '2px' }}>
+                    ${parseFloat(techDetails?.overtime_pay_cad || (parseFloat(techDetails?.hourly_pay_cad || 45) * 1.5)).toFixed(2)} CAD / hr
+                  </div>
+                </div>
+              </div>
+
+              {/* Working Terms */}
+              <div style={{ marginBottom: '1rem', padding: '10px 12px', backgroundColor: 'var(--color-surface)', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>Working Terms:</span>
+                  <strong>{techDetails?.working_terms || 'Full-Time Hourly'}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>Pay Schedule:</span>
+                  <strong>{techDetails?.pay_frequency || 'Bi-Weekly'}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>Next Pay Date:</span>
+                  <strong style={{ color: 'var(--color-primary)' }}>{techDetails?.next_pay_date || 'Friday'}</strong>
+                </div>
+              </div>
+
+              {/* Canadian Direct Deposit Banking */}
+              <div style={{ padding: '12px', backgroundColor: 'rgba(37, 99, 235, 0.04)', borderRadius: '8px', border: '1px dashed var(--color-border)', marginBottom: '1rem' }}>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--color-primary)', marginBottom: '8px' }}>
+                  🏛️ Canadian Direct Deposit on File
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px' }}>
+                  <div>
+                    <span style={{ fontSize: '10px', color: 'var(--color-text-secondary)', display: 'block' }}>BANK</span>
+                    <strong>{techDetails?.bank_name || 'RBC Royal Bank'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '10px', color: 'var(--color-text-secondary)', display: 'block' }}>INSTITUTION #</span>
+                    <strong>{techDetails?.institution_number || '003'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '10px', color: 'var(--color-text-secondary)', display: 'block' }}>TRANSIT #</span>
+                    <strong>{techDetails?.transit_number || '12345'}</strong>
+                  </div>
+                </div>
+                <div style={{ marginTop: '8px', fontSize: '12px' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--color-text-secondary)', display: 'block' }}>ACCOUNT NUMBER</span>
+                  <strong>{techDetails?.account_number ? `••••${techDetails.account_number.slice(-4)}` : '••••4821'}</strong>
+                </div>
+              </div>
+
+              <p style={{ fontSize: '11px', color: 'var(--color-text-secondary)', margin: 0, textAlign: 'center' }}>
+                To update your direct deposit banking or working terms, please contact shop management.
+              </p>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button onClick={() => setShowTechProfileModal(false)} className="btn btn-primary" style={{ width: '100%' }}>
+                Close Profile
               </button>
             </div>
           </div>
