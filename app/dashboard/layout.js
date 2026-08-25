@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Logo from '../components/Logo';
 import { supabase } from '../lib/supabaseClient';
-import { workOrders, customers, technicians, partsInventory } from '../lib/demoData';
 import {
   LayoutDashboard,
   Wrench,
@@ -35,10 +34,10 @@ import styles from './dashboard.module.css';
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Work Orders', href: '/dashboard/jobs', icon: Wrench, badge: '7' },
+  { label: 'Work Orders', href: '/dashboard/jobs', icon: Wrench },
   { label: 'Customers & Fleets', href: '/dashboard/customers', icon: Users },
   { label: 'Dispatch Board', href: '/dashboard/dispatch', icon: Map },
-  { label: 'Parts & Inventory', href: '/dashboard/parts', icon: PackageCheck, badge: '1 Low' },
+  { label: 'Parts & Inventory', href: '/dashboard/parts', icon: PackageCheck },
   { label: 'Invoices', href: '/dashboard/invoices', icon: Receipt },
   { label: 'Estimates', href: '/dashboard/estimates', icon: FileText },
   { label: 'Fleet Maintenance', href: '/dashboard/maintenance', icon: Shield },
@@ -57,6 +56,12 @@ export default function DashboardLayout({ children }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   
+  // Dynamic Search State from Supabase
+  const [dbJobs, setDbJobs] = useState([]);
+  const [dbCustomers, setDbCustomers] = useState([]);
+  const [dbTechs, setDbTechs] = useState([]);
+  const [dbParts, setDbParts] = useState([]);
+
   // Auth & Profile State
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [profile, setProfile] = useState(null);
@@ -84,13 +89,19 @@ export default function DashboardLayout({ children }) {
 
         // Fetch shop details
         if (profileData?.shop_id) {
-          const { data: shopData } = await supabase
-            .from('shops')
-            .select('*')
-            .eq('id', profileData.shop_id)
-            .single();
-            
-          setShop(shopData);
+          const [shopRes, jobsRes, custRes, techRes, partsRes] = await Promise.all([
+            supabase.from('shops').select('*').eq('id', profileData.shop_id).single(),
+            supabase.from('work_orders').select('id, customer_name, unit_display'),
+            supabase.from('customers').select('id, company, contact'),
+            supabase.from('technicians').select('id, name, full_name, role'),
+            supabase.from('parts').select('id, part_number, description')
+          ]);
+
+          setShop(shopRes.data || null);
+          setDbJobs(jobsRes.data || []);
+          setDbCustomers(custRes.data || []);
+          setDbTechs(techRes.data || []);
+          setDbParts(partsRes.data || []);
         }
 
         setLoadingAuth(false);
@@ -112,10 +123,10 @@ export default function DashboardLayout({ children }) {
   const searchLower = searchQuery.toLowerCase();
   
   const searchResults = {
-    jobs: searchQuery ? workOrders.filter(wo => wo.id.toLowerCase().includes(searchLower) || (wo.customer || '').toLowerCase().includes(searchLower)) : [],
-    customers: searchQuery ? customers.filter(c => c.company.toLowerCase().includes(searchLower) || c.id.toLowerCase().includes(searchLower)) : [],
-    techs: searchQuery ? technicians.filter(t => t.name.toLowerCase().includes(searchLower)) : [],
-    parts: searchQuery ? partsInventory.filter(p => p.partNumber.toLowerCase().includes(searchLower) || p.description.toLowerCase().includes(searchLower)) : []
+    jobs: searchQuery ? dbJobs.filter(wo => (wo.id || '').toLowerCase().includes(searchLower) || (wo.customer_name || '').toLowerCase().includes(searchLower)) : [],
+    customers: searchQuery ? dbCustomers.filter(c => (c.company || '').toLowerCase().includes(searchLower) || (c.id || '').toLowerCase().includes(searchLower)) : [],
+    techs: searchQuery ? dbTechs.filter(t => (t.full_name || t.name || '').toLowerCase().includes(searchLower)) : [],
+    parts: searchQuery ? dbParts.filter(p => (p.part_number || '').toLowerCase().includes(searchLower) || (p.description || '').toLowerCase().includes(searchLower)) : []
   };
 
   const hasResults = Object.values(searchResults).some(arr => arr.length > 0);

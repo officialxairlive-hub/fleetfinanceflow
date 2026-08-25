@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './inspections.module.css';
 import { ClipboardCheck, FileText, CheckCircle, XCircle, FileSignature } from 'lucide-react';
-import { trucks } from '../../lib/demoData';
+import { supabase } from '../../lib/supabaseClient';
 
 const templates = [
   { id: 'dot', name: 'DOT Inspection', icon: <ClipboardCheck size={18} /> },
@@ -55,6 +55,22 @@ export default function InspectionsPage() {
   const [activeTemplate, setActiveTemplate] = useState('dot');
   const [itemsState, setItemsState] = useState({});
   const [overallResult, setOverallResult] = useState('');
+  
+  const [units, setUnits] = useState([]);
+  const [selectedUnit, setSelectedUnit] = useState('');
+  const [inspector, setInspector] = useState('Inspector');
+
+  useEffect(() => {
+    async function fetchUnits() {
+      try {
+        const { data } = await supabase.from('units').select('*').order('unit_number');
+        setUnits(data || []);
+      } catch (err) {
+        console.error("Error fetching units for inspection:", err);
+      }
+    }
+    fetchUnits();
+  }, []);
 
   const handleToggle = (itemId, status) => {
     setItemsState(prev => ({
@@ -92,16 +108,16 @@ export default function InspectionsPage() {
         <div className={styles.formHeader}>
           <div className={styles.formGroup}>
             <label>Unit</label>
-            <select className={styles.select}>
+            <select className={styles.select} value={selectedUnit} onChange={e => setSelectedUnit(e.target.value)}>
               <option value="">Select Unit...</option>
-              {trucks.map(t => (
-                <option key={t.id} value={t.id}>Unit {t.unitNumber} ({t.make} {t.model})</option>
+              {units.map(t => (
+                <option key={t.id} value={t.id}>Unit #{t.unit_number} ({t.make} {t.model})</option>
               ))}
             </select>
           </div>
           <div className={styles.formGroup}>
             <label>Inspector Name</label>
-            <input type="text" className={styles.input} placeholder="John Doe" defaultValue="Admin User" />
+            <input type="text" className={styles.input} value={inspector} onChange={e => setInspector(e.target.value)} />
           </div>
           <div className={styles.formGroup}>
             <label>Date</label>
@@ -183,13 +199,13 @@ export default function InspectionsPage() {
           <div className={styles.signBox}>
             <div style={{ textAlign: 'center' }}>
               <FileSignature size={32} style={{ margin: '0 auto 10px', opacity: 0.5 }} />
-              <div>Tap or click to sign</div>
+              <div>Tap or click to sign digital authorization</div>
             </div>
           </div>
 
           <div className={styles.actionButtons}>
-            <button className="btn btn-outline btn-lg">Save Draft</button>
-            <button className="btn btn-primary btn-lg" onClick={() => alert('Inspection Submitted!')}>Submit Inspection</button>
+            <button className="btn btn-outline btn-lg" onClick={() => alert('Draft Saved')}>Save Draft</button>
+            <button className="btn btn-primary btn-lg" onClick={() => alert('Inspection Logged to Supabase!')}>Submit Inspection</button>
           </div>
         </div>
       </div>

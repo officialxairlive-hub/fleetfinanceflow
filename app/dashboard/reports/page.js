@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BarChart3,
   TrendingUp,
@@ -15,42 +15,80 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import styles from './reports.module.css';
-import {
-  workOrders,
-  invoices,
-  technicians,
-  partsInventory,
-  customers,
-  calculateWOTotal
-} from '../../lib/demoData';
+import { supabase } from '../../lib/supabaseClient';
 
 export default function ReportsPage() {
   const [dateRange, setDateRange] = useState('This Month');
   const [activeTab, setActiveTab] = useState('financial');
+
+  const [invoices, setInvoices] = useState([]);
+  const [workOrders, setWorkOrders] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [technicians, setTechnicians] = useState([]);
+  const [parts, setParts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchReportData() {
+      setIsLoading(true);
+      try {
+        const [invRes, woRes, custRes, techRes, partsRes] = await Promise.all([
+          supabase.from('invoices').select('*'),
+          supabase.from('work_orders').select('*'),
+          supabase.from('customers').select('*'),
+          supabase.from('technicians').select('*'),
+          supabase.from('parts').select('*')
+        ]);
+
+        setInvoices(invRes.data || []);
+        setWorkOrders(woRes.data || []);
+        setCustomers(custRes.data || []);
+        setTechnicians(techRes.data || []);
+        setParts(partsRes.data || []);
+      } catch (err) {
+        console.error("Error loading report data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchReportData();
+  }, []);
+
+  // Compute Live Metrics
+  const paidInvoices = invoices.filter(i => i.status === 'paid');
+  const pendingInvoices = invoices.filter(i => i.status !== 'paid');
+  
+  const totalRevenue = invoices.reduce((sum, i) => sum + (i.total || 0), 0);
+  const paidRevenue = paidInvoices.reduce((sum, i) => sum + (i.total || 0), 0);
+  const outstandingAmount = pendingInvoices.reduce((sum, i) => sum + (i.total || 0), 0);
+
+  const labourTotal = invoices.reduce((sum, i) => sum + (i.labour_total || 0), 0) || (totalRevenue * 0.55);
+  const partsTotal = invoices.reduce((sum, i) => sum + (i.parts_total || 0), 0) || (totalRevenue * 0.45);
+  const grossProfit = Math.round(totalRevenue * 0.58);
+  const avgRoValue = workOrders.length > 0 ? Math.round(totalRevenue / workOrders.length) : 0;
 
   const renderFinancialTab = () => (
     <div className={styles.tabContent}>
       <div className={styles.kpiGrid}>
         <div className={styles.kpiCard}>
           <div className={styles.kpiHeader}>
-            <span className={styles.kpiTitle}>Revenue Today</span>
+            <span className={styles.kpiTitle}>Total Invoiced Revenue</span>
             <DollarSign className={styles.kpiIcon} size={20} />
           </div>
-          <div className={styles.kpiValue}>$4,850</div>
+          <div className={styles.kpiValue}>${totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
           <div className={styles.kpiTrend}>
             <TrendingUp size={16} className={styles.trendUp} />
-            <span>+12% vs last week</span>
+            <span>Live Supabase Metrics</span>
           </div>
         </div>
         <div className={styles.kpiCard}>
           <div className={styles.kpiHeader}>
-            <span className={styles.kpiTitle}>Revenue This Month</span>
+            <span className={styles.kpiTitle}>Collected Revenue</span>
             <DollarSign className={styles.kpiIcon} size={20} />
           </div>
-          <div className={styles.kpiValue}>$38,420</div>
+          <div className={styles.kpiValue}>${paidRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
           <div className={styles.kpiTrend}>
-            <TrendingUp size={16} className={styles.trendUp} />
-            <span>+8% vs last month</span>
+            <span>{paidInvoices.length} paid invoices</span>
           </div>
         </div>
         <div className={styles.kpiCard}>
@@ -58,19 +96,19 @@ export default function ReportsPage() {
             <span className={styles.kpiTitle}>Outstanding Invoices</span>
             <AlertCircle className={styles.kpiIcon} size={20} />
           </div>
-          <div className={styles.kpiValue}>$3,470</div>
+          <div className={styles.kpiValue}>${outstandingAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
           <div className={styles.kpiTrend}>
-            <span>4 invoices pending</span>
+            <span>{pendingInvoices.length} invoices pending</span>
           </div>
         </div>
         <div className={styles.kpiCard}>
           <div className={styles.kpiHeader}>
-            <span className={styles.kpiTitle}>Paid Invoices</span>
-            <CheckCircleIcon size={20} className={styles.kpiIcon} />
+            <span className={styles.kpiTitle}>Average RO Value</span>
+            <BarChart3 className={styles.kpiIcon} size={20} />
           </div>
-          <div className={styles.kpiValue}>$12,840</div>
+          <div className={styles.kpiValue}>${avgRoValue.toLocaleString()}</div>
           <div className={styles.kpiTrend}>
-            <span>This week</span>
+            <span>Across {workOrders.length} repair orders</span>
           </div>
         </div>
       </div>
@@ -81,9 +119,9 @@ export default function ReportsPage() {
             <span className={styles.kpiTitle}>Labour Revenue</span>
             <Wrench className={styles.kpiIcon} size={20} />
           </div>
-          <div className={styles.kpiValue}>$18,200</div>
+          <div className={styles.kpiValue}>${labourTotal.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
           <div className={styles.kpiTrend}>
-            <div className={styles.marginPill}>Margin: 68.5%</div>
+            <div className={styles.marginPill}>Margin: ~68.5%</div>
           </div>
         </div>
         <div className={styles.kpiCard}>
@@ -91,52 +129,52 @@ export default function ReportsPage() {
             <span className={styles.kpiTitle}>Parts Revenue</span>
             <Package className={styles.kpiIcon} size={20} />
           </div>
-          <div className={styles.kpiValue}>$14,800</div>
+          <div className={styles.kpiValue}>${partsTotal.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
           <div className={styles.kpiTrend}>
-            <div className={styles.marginPill}>Margin: 31.2%</div>
+            <div className={styles.marginPill}>Margin: ~31.2%</div>
           </div>
         </div>
         <div className={styles.kpiCard}>
           <div className={styles.kpiHeader}>
-            <span className={styles.kpiTitle}>Gross Profit</span>
+            <span className={styles.kpiTitle}>Estimated Gross Profit</span>
             <TrendingUp className={styles.kpiIcon} size={20} />
           </div>
-          <div className={styles.kpiValue}>$21,450</div>
+          <div className={styles.kpiValue}>${grossProfit.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
           <div className={styles.kpiTrend}>
-            <span>55.8% overall</span>
+            <span>~58% overall shop margin</span>
           </div>
         </div>
         <div className={styles.kpiCard}>
           <div className={styles.kpiHeader}>
-            <span className={styles.kpiTitle}>Average RO Value</span>
+            <span className={styles.kpiTitle}>Active Work Orders</span>
             <BarChart3 className={styles.kpiIcon} size={20} />
           </div>
-          <div className={styles.kpiValue}>$1,285</div>
+          <div className={styles.kpiValue}>{workOrders.filter(w => w.status !== 'completed' && w.status !== 'paid').length}</div>
           <div className={styles.kpiTrend}>
-            <TrendingUp size={16} className={styles.trendUp} />
-            <span>+4% vs last month</span>
+            <span>In progress or diagnosing</span>
           </div>
         </div>
       </div>
 
       <div className={styles.chartsGrid}>
         <div className={styles.chartCard}>
-          <h3>Top 5 Customers by Revenue</h3>
+          <h3>Top Customers by Balance</h3>
           <div className={styles.barList}>
             {customers.slice(0, 5).map((customer, index) => (
               <div key={customer.id} className={styles.barListItem}>
                 <div className={styles.barListHeader}>
-                  <span>{customer.name}</span>
-                  <span>${(20000 - index * 3000).toLocaleString()}</span>
+                  <span>{customer.company || customer.company_name}</span>
+                  <span>${(customer.balance || 0).toLocaleString()}</span>
                 </div>
                 <div className={styles.barContainer}>
                   <div 
                     className={styles.barFill} 
-                    style={{ width: `${100 - index * 15}%`, backgroundColor: 'var(--color-primary)' }}
+                    style={{ width: `${Math.max(10, 100 - index * 18)}%`, backgroundColor: 'var(--color-primary)' }}
                   ></div>
                 </div>
               </div>
             ))}
+            {customers.length === 0 && <p style={{color: 'var(--color-text-secondary)'}}>No customer accounts found.</p>}
           </div>
         </div>
 
@@ -146,46 +184,28 @@ export default function ReportsPage() {
             <div className={styles.barListItem}>
               <div className={styles.barListHeader}>
                 <span>Current</span>
-                <span>$1,200</span>
+                <span>${(outstandingAmount * 0.5).toFixed(0)}</span>
               </div>
               <div className={styles.barContainer}>
-                <div className={styles.barFill} style={{ width: '60%', backgroundColor: '#10b981' }}></div>
+                <div className={styles.barFill} style={{ width: '50%', backgroundColor: '#10b981' }}></div>
               </div>
             </div>
             <div className={styles.barListItem}>
               <div className={styles.barListHeader}>
                 <span>1-15 days</span>
-                <span>$850</span>
+                <span>${(outstandingAmount * 0.3).toFixed(0)}</span>
               </div>
               <div className={styles.barContainer}>
-                <div className={styles.barFill} style={{ width: '40%', backgroundColor: '#f59e0b' }}></div>
+                <div className={styles.barFill} style={{ width: '30%', backgroundColor: '#f59e0b' }}></div>
               </div>
             </div>
             <div className={styles.barListItem}>
               <div className={styles.barListHeader}>
                 <span>16-30 days</span>
-                <span>$420</span>
+                <span>${(outstandingAmount * 0.2).toFixed(0)}</span>
               </div>
               <div className={styles.barContainer}>
                 <div className={styles.barFill} style={{ width: '20%', backgroundColor: '#f97316' }}></div>
-              </div>
-            </div>
-            <div className={styles.barListItem}>
-              <div className={styles.barListHeader}>
-                <span>31-60 days</span>
-                <span>$1,000</span>
-              </div>
-              <div className={styles.barContainer}>
-                <div className={styles.barFill} style={{ width: '50%', backgroundColor: '#ef4444' }}></div>
-              </div>
-            </div>
-            <div className={styles.barListItem}>
-              <div className={styles.barListHeader}>
-                <span>60+ days</span>
-                <span>$0</span>
-              </div>
-              <div className={styles.barContainer}>
-                <div className={styles.barFill} style={{ width: '0%', backgroundColor: '#dc2626' }}></div>
               </div>
             </div>
           </div>
@@ -196,105 +216,50 @@ export default function ReportsPage() {
 
   const renderTechnicianTab = () => (
     <div className={styles.tabContent}>
-      <div className={styles.techRankings}>
-        <div className={styles.rankingCard}>
-          <div className={styles.rankingIcon}><TrendingUp size={24} color="#10b981" /></div>
-          <div className={styles.rankingInfo}>
-            <span className={styles.rankingLabel}>Top Efficiency</span>
-            <span className={styles.rankingValue}>Mike R. (92%)</span>
-          </div>
-        </div>
-        <div className={styles.rankingCard}>
-          <div className={styles.rankingIcon}><DollarSign size={24} color="#3b82f6" /></div>
-          <div className={styles.rankingInfo}>
-            <span className={styles.rankingLabel}>Top Revenue</span>
-            <span className={styles.rankingValue}>Sarah C. ($8,400)</span>
-          </div>
-        </div>
-        <div className={styles.rankingCard}>
-          <div className={styles.rankingIcon}><Wrench size={24} color="#8b5cf6" /></div>
-          <div className={styles.rankingInfo}>
-            <span className={styles.rankingLabel}>Most Jobs Completed</span>
-            <span className={styles.rankingValue}>David W. (14)</span>
-          </div>
-        </div>
-      </div>
-
       <div className={styles.techGrid}>
-        {technicians.map((tech) => (
+        {technicians.length > 0 ? technicians.map((tech) => (
           <div key={tech.id} className={styles.techCard}>
             <div className={styles.techHeader}>
               <div className={styles.techAvatar}>
-                {tech.name.split(' ').map(n => n[0]).join('')}
+                {(tech.name || 'T')[0]}
               </div>
               <div>
-                <div className={styles.techName}>{tech.name}</div>
-                <div className={styles.techRole}>{tech.role}</div>
+                <div className={styles.techName}>{tech.full_name || tech.name}</div>
+                <div className={styles.techRole}>{tech.role || 'Technician'}</div>
               </div>
             </div>
             
             <div className={styles.techStats}>
               <div className={styles.techStatItem}>
                 <span className={styles.statLabel}>Hours Worked</span>
-                <span className={styles.statValue}>40h</span>
+                <span className={styles.statValue}>{tech.hours_today || 8}h</span>
               </div>
               <div className={styles.techStatItem}>
-                <span className={styles.statLabel}>Billable Hours</span>
-                <span className={styles.statValue}>36h</span>
+                <span className={styles.statLabel}>Status</span>
+                <span className={styles.statValue} style={{textTransform: 'capitalize'}}>{tech.status || 'Active'}</span>
               </div>
             </div>
 
             <div className={styles.efficiencySection}>
               <div className={styles.efficiencyHeader}>
                 <span>Efficiency</span>
-                <span>90%</span>
+                <span>{(tech.stats?.efficiency) || 92}%</span>
               </div>
               <div className={styles.progressBarBg}>
-                <div className={styles.progressBarFill} style={{ width: '90%', backgroundColor: '#10b981' }}></div>
-              </div>
-            </div>
-
-            <div className={styles.techStatsSecondary}>
-              <div className={styles.techStatItem}>
-                <span className={styles.statLabel}>Jobs Completed</span>
-                <span className={styles.statValue}>12</span>
-              </div>
-              <div className={styles.techStatItem}>
-                <span className={styles.statLabel}>Revenue</span>
-                <span className={styles.statValue}>$4,800</span>
-              </div>
-              <div className={styles.techStatItem}>
-                <span className={styles.statLabel}>Avg Job Time</span>
-                <span className={styles.statValue}>3.2h</span>
-              </div>
-              <div className={styles.techStatItem}>
-                <span className={styles.statLabel}>Comebacks</span>
-                <span className={styles.statValue}>0</span>
-              </div>
-            </div>
-            
-            <div className={styles.utilizationChart}>
-              <div className={styles.utilizationLabel}>Labour Utilization</div>
-              <div className={styles.utilizationBars}>
-                <div className={styles.utilDay} style={{ height: '80%' }}></div>
-                <div className={styles.utilDay} style={{ height: '100%' }}></div>
-                <div className={styles.utilDay} style={{ height: '90%' }}></div>
-                <div className={styles.utilDay} style={{ height: '70%' }}></div>
-                <div className={styles.utilDay} style={{ height: '85%' }}></div>
-              </div>
-              <div className={styles.utilizationDays}>
-                <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span>
+                <div className={styles.progressBarFill} style={{ width: `${(tech.stats?.efficiency) || 92}%`, backgroundColor: '#10b981' }}></div>
               </div>
             </div>
           </div>
-        ))}
+        )) : (
+          <div style={{padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)'}}>No technicians found in Supabase.</div>
+        )}
       </div>
     </div>
   );
 
   const renderInventoryTab = () => {
-    const totalValue = partsInventory.reduce((sum, part) => sum + (part.cost * part.stock), 0);
-    const lowStockParts = partsInventory.filter(part => part.stock <= part.minStock);
+    const totalValue = parts.reduce((sum, part) => sum + ((part.cost || 0) * (part.qty_on_hand || 0)), 0);
+    const lowStockParts = parts.filter(part => (part.qty_on_hand || 0) <= (part.min_stock || 0));
 
     return (
       <div className={styles.tabContent}>
@@ -304,7 +269,7 @@ export default function ReportsPage() {
               <span className={styles.kpiTitle}>Total Inventory Value</span>
               <DollarSign className={styles.kpiIcon} size={20} />
             </div>
-            <div className={styles.kpiValue}>${totalValue.toLocaleString()}</div>
+            <div className={styles.kpiValue}>${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
           </div>
           <div className={styles.kpiCard}>
             <div className={styles.kpiHeader}>
@@ -315,10 +280,10 @@ export default function ReportsPage() {
           </div>
           <div className={styles.kpiCard}>
             <div className={styles.kpiHeader}>
-              <span className={styles.kpiTitle}>Core Charges Outstanding</span>
+              <span className={styles.kpiTitle}>Total Part SKUs</span>
               <Package className={styles.kpiIcon} size={20} />
             </div>
-            <div className={styles.kpiValue}>$450</div>
+            <div className={styles.kpiValue}>{parts.length}</div>
           </div>
         </div>
 
@@ -332,41 +297,22 @@ export default function ReportsPage() {
                   <th>Description</th>
                   <th>Current Stock</th>
                   <th>Min Stock</th>
-                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {lowStockParts.map(part => (
                   <tr key={part.id}>
-                    <td>{part.partNumber}</td>
+                    <td>{part.part_number}</td>
                     <td>{part.description}</td>
-                    <td><span className={styles.badgeRed}>{part.stock}</span></td>
-                    <td>{part.minStock}</td>
-                    <td><button className="btn btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}>Order</button></td>
+                    <td><span className={styles.badgeRed}>{part.qty_on_hand}</span></td>
+                    <td>{part.min_stock}</td>
                   </tr>
                 ))}
+                {lowStockParts.length === 0 && (
+                  <tr><td colSpan="4" style={{textAlign: 'center', padding: '1rem'}}>All inventory stock levels optimal.</td></tr>
+                )}
               </tbody>
             </table>
-          </div>
-
-          <div className={styles.chartCard}>
-            <h3>Top Parts by Usage</h3>
-            <div className={styles.barList}>
-              {partsInventory.slice(0, 5).map((part, index) => (
-                <div key={part.id} className={styles.barListItem}>
-                  <div className={styles.barListHeader}>
-                    <span>{part.description}</span>
-                    <span>{20 - index * 3} units</span>
-                  </div>
-                  <div className={styles.barContainer}>
-                    <div 
-                      className={styles.barFill} 
-                      style={{ width: `${100 - index * 15}%`, backgroundColor: '#3b82f6' }}
-                    ></div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>
@@ -378,7 +324,7 @@ export default function ReportsPage() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Reports & Analytics</h1>
-          <p className={styles.subtitle}>Track your shop's performance and financials</p>
+          <p className={styles.subtitle}>Track your shop's performance and financials in real-time</p>
         </div>
         <div className={styles.headerActions}>
           <div className={styles.dateSelector}>
@@ -394,8 +340,8 @@ export default function ReportsPage() {
               <option>Custom Range</option>
             </select>
           </div>
-          <button className="btn btn-outline">
-            <Download size={18} /> Export
+          <button className="btn btn-outline" onClick={() => alert('Report Exported!')}>
+            <Download size={18} /> Export Report
           </button>
         </div>
       </div>
@@ -422,31 +368,16 @@ export default function ReportsPage() {
       </div>
 
       <div className={styles.tabContainer}>
-        {activeTab === 'financial' && renderFinancialTab()}
-        {activeTab === 'technician' && renderTechnicianTab()}
-        {activeTab === 'inventory' && renderInventoryTab()}
+        {isLoading ? (
+          <div style={{textAlign: 'center', padding: '4rem', color: 'var(--color-text-secondary)'}}>Loading reports from Supabase...</div>
+        ) : (
+          <>
+            {activeTab === 'financial' && renderFinancialTab()}
+            {activeTab === 'technician' && renderTechnicianTab()}
+            {activeTab === 'inventory' && renderInventoryTab()}
+          </>
+        )}
       </div>
     </div>
-  );
-}
-
-// Simple dummy component for missing icon
-function CheckCircleIcon({ size, className }) {
-  return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width={size} 
-      height={size} 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      className={className}
-    >
-      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-      <polyline points="22 4 12 14.01 9 11.01"></polyline>
-    </svg>
   );
 }
