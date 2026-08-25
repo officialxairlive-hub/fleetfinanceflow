@@ -102,6 +102,7 @@ export default function CustomerDetailPage() {
       const { data, error } = await supabase
         .from('units')
         .insert([{
+          id: `UNIT-${Date.now().toString().slice(-5)}`,
           customer_id: customerId,
           unit_number: unitForm.unitNumber,
           vin: unitForm.vin,
@@ -109,8 +110,8 @@ export default function CustomerDetailPage() {
           model: unitForm.model,
           year: parseInt(unitForm.year) || 2022,
           mileage: parseInt(unitForm.mileage) || 0,
-          engine: unitForm.engine,
-          status: 'in_service'
+          engine_type: unitForm.engine,
+          status: 'active'
         }])
         .select()
         .single();
