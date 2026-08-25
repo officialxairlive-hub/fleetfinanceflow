@@ -29,23 +29,52 @@ export default function SettingsPage() {
   const [addUserLoading, setAddUserLoading] = useState(false);
   const [addUserError, setAddUserError] = useState(null);
 
-  // Profile
+  // Profile & Shop State
   const [shopId, setShopId] = useState(null);
+  const [shopName, setShopName] = useState('');
+  const [ownerName, setOwnerName] = useState('');
+  const [shopSaveLoading, setShopSaveLoading] = useState(false);
 
   React.useEffect(() => {
-    async function fetchUsers() {
+    async function fetchShopData() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const { data: profile } = await supabase.from('profiles').select('shop_id').eq('id', session.user.id).single();
-      if (profile?.shop_id) {
-        setShopId(profile.shop_id);
-        const { data: t } = await supabase.from('technicians').select('*').eq('shop_id', profile.shop_id);
-        setTechs(t || []);
+      const { data: profile } = await supabase.from('profiles').select('*, shops(*)').eq('id', session.user.id).single();
+      if (profile) {
+        setOwnerName(profile.full_name || '');
+        if (profile.shop_id) {
+          setShopId(profile.shop_id);
+          if (profile.shops) {
+            setShopName(profile.shops.name || '');
+          }
+          const { data: t } = await supabase.from('technicians').select('*').eq('shop_id', profile.shop_id);
+          setTechs(t || []);
+        }
       }
     }
-    fetchUsers();
+    fetchShopData();
   }, []);
+
+  const handleSaveShopInfo = async (e) => {
+    e.preventDefault();
+    if (!shopId || !shopName.trim()) return;
+
+    setShopSaveLoading(true);
+    try {
+      const { error } = await supabase
+        .from('shops')
+        .update({ name: shopName })
+        .eq('id', shopId);
+
+      if (error) throw error;
+      alert('Shop settings updated live in Supabase!');
+    } catch (err) {
+      alert(`Error updating shop: ${err.message}`);
+    } finally {
+      setShopSaveLoading(false);
+    }
+  };
 
   const handleAddUser = async (e) => {
     e.preventDefault();
@@ -125,18 +154,18 @@ export default function SettingsPage() {
                 <h2>Shop Information</h2>
                 <p>Basic details about your business.</p>
               </div>
-              <div className={styles.card}>
+              <form onSubmit={handleSaveShopInfo} className={styles.card}>
                 <div className={styles.formGrid}>
                   <div className={styles.formGroup}>
-                    <label>Company Name</label>
-                    <input type="text" className={styles.input} defaultValue={settings.name} />
+                    <label>Company / Shop Name</label>
+                    <input type="text" required className={styles.input} value={shopName} onChange={e => setShopName(e.target.value)} />
                   </div>
                   <div className={styles.formGroup}>
                     <label>Owner Name</label>
-                    <input type="text" className={styles.input} defaultValue="John Doe" />
+                    <input type="text" className={styles.input} value={ownerName} onChange={e => setOwnerName(e.target.value)} readOnly />
                   </div>
                   <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
-                    <label>Address</label>
+                    <label>Shop Address</label>
                     <input type="text" className={styles.input} defaultValue={settings.address} />
                   </div>
                   <div className={styles.formGroup}>
@@ -153,9 +182,11 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className={styles.cardFooter}>
-                  <button className="btn btn-primary" onClick={handleSave}>Save Changes</button>
+                  <button type="submit" className="btn btn-primary" disabled={shopSaveLoading}>
+                    {shopSaveLoading ? 'Saving...' : 'Save Changes'}
+                  </button>
                 </div>
-              </div>
+              </form>
             </div>
           )}
 
