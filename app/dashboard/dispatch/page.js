@@ -83,8 +83,8 @@ export default function DispatchBoardPage() {
       const { error } = await supabase
         .from('work_orders')
         .update({ 
-          tech_id: tech.id, 
-          tech_name: tech.full_name || tech.name 
+          tech_id: tech ? tech.id : null, 
+          tech_name: tech ? (tech.full_name || tech.name) : null 
         })
         .eq('id', selectedJobId);
 
@@ -126,12 +126,17 @@ export default function DispatchBoardPage() {
           <span className={styles.jobLabel}>Technician</span>
           <span className={styles.jobValue}>
             {tech ? (
-              <>
+              <div 
+                onClick={() => handleAssignClick(wo.id)} 
+                title="Click to reassign or unassign technician"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', background: 'var(--color-surface)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--color-border)' }}
+              >
                 <div className={styles.techAvatar}>
                   {tech.avatar || (tech.name || 'T')[0]}
                 </div>
-                {tech.full_name || tech.name}
-              </>
+                <span>{tech.full_name || tech.name}</span>
+                <span style={{ fontSize: '10px', color: 'var(--color-primary)', marginLeft: '4px', textDecoration: 'underline' }}>Change</span>
+              </div>
             ) : (
               <button 
                 className={`btn btn-sm btn-outline`} 
@@ -294,9 +299,16 @@ export default function DispatchBoardPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto' }}>
               {technicians.map(t => (
                 <button key={t.id} className="btn btn-outline" style={{ justifyContent: 'flex-start' }} onClick={() => handleAssignTech(t)}>
-                  <UserPlus size={16} /> {t.full_name || t.name}
+                  <UserPlus size={16} /> {t.full_name || t.name} ({t.role || 'Mechanic'})
                 </button>
               ))}
+              <button 
+                className="btn btn-outline" 
+                style={{ justifyContent: 'flex-start', color: '#ef4444', borderColor: '#ef4444' }} 
+                onClick={() => handleAssignTech(null)}
+              >
+                <X size={16} /> Unassign (Leave Vacant)
+              </button>
             </div>
             <div className={styles.controls} style={{ justifyContent: 'flex-end', marginTop: '1.5rem' }}>
                <button className="btn btn-outline" onClick={() => setIsAssignModalOpen(false)}>Cancel</button>

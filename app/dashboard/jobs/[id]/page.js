@@ -67,6 +67,33 @@ export default function WorkOrderDetailPage() {
     await supabase.from('work_orders').update({ status: step }).eq('id', id);
   };
 
+  const handleTechChange = async (newTechId) => {
+    const selectedTech = technicians.find(t => t.id === newTechId);
+    const newTechName = selectedTech ? (selectedTech.full_name || selectedTech.name) : null;
+    
+    setWo(prev => ({
+      ...prev,
+      technicianId: newTechId || null,
+      tech_id: newTechId || null,
+      techName: newTechName,
+      tech_name: newTechName
+    }));
+
+    try {
+      const { error } = await supabase
+        .from('work_orders')
+        .update({
+          tech_id: newTechId || null,
+          tech_name: newTechName
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (err) {
+      alert(`Error updating technician: ${err.message}`);
+    }
+  };
+
   const getStatusClass = (status) => {
     const map = {
       'new': styles['status-new'],
@@ -279,10 +306,19 @@ export default function WorkOrderDetailPage() {
               </div>
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Technician</label>
-              <select className={styles.select} value={wo.technicianId || ''} onChange={() => {}}>
-                <option value="">Unassigned</option>
-                {technicians.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              <label className={styles.label}>Assigned Technician</label>
+              <select 
+                className={styles.select} 
+                value={wo.technicianId || wo.tech_id || ''} 
+                onChange={(e) => handleTechChange(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)', outline: 'none' }}
+              >
+                <option value="">Unassigned (None)</option>
+                {technicians.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.full_name || t.name} ({t.role || 'Mechanic'})
+                  </option>
+                ))}
               </select>
             </div>
           </div>
