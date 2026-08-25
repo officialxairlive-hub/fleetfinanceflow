@@ -561,7 +561,7 @@ export default function TechniciansHubPage() {
               </button>
             </div>
             
-            <form onSubmit={handleSaveTech}>
+            <form onSubmit={handleSaveTech} className={styles.modalForm}>
               <div className={styles.modalBody}>
                 {/* 1. Personal & Contact */}
                 <div className={styles.sectionHeader}>

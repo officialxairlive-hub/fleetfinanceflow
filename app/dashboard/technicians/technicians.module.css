@@ -303,6 +303,7 @@
   z-index: 1000;
   backdrop-filter: blur(4px);
   padding: 1rem;
+  overflow-y: auto;
 }
 
 .modal {
@@ -311,10 +312,19 @@
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 680px;
-  max-height: 90vh;
+  max-height: 88vh;
+  height: 88vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -324,6 +334,7 @@
   align-items: center;
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
 }
 
 .modalTitle {
@@ -357,6 +368,8 @@
   padding: 1.5rem;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .sectionHeader {
@@ -418,6 +431,7 @@
   padding: 1.25rem 1.5rem;
   border-top: 1px solid var(--color-border);
   background-color: var(--color-surface);
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
