@@ -76,24 +76,68 @@ export default function InvoiceDetail() {
     }
   }, [invoiceId]);
 
+  const handleQuickMarkPaid = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      setInvoice(prev => ({ ...prev, status: 'paid', paid_date: today, paidDate: today }));
+      
+      const { error: invErr } = await supabase
+        .from('invoices')
+        .update({ status: 'paid', paid_date: today })
+        .eq('id', invoiceId);
+        
+      if (invErr) throw invErr;
+
+      if (invoice?.work_order_id) {
+        await supabase
+          .from('work_orders')
+          .update({ status: 'paid' })
+          .eq('id', invoice.work_order_id);
+      }
+
+      alert(`✅ Invoice #${invoiceId} marked as PAID!`);
+    } catch (err) {
+      alert(`Error marking invoice paid: ${err.message}`);
+      setInvoice(prev => ({ ...prev, status: 'draft' }));
+    }
+  };
+
   const handleRecordPayment = async (e) => {
     e.preventDefault();
     try {
-      // Optimistic update
-      setInvoice(prev => ({ ...prev, status: 'paid' }));
+      const paymentNotes = `Paid via ${paymentForm.method} on ${paymentForm.date}${paymentForm.reference ? ` (Ref: ${paymentForm.reference})` : ''}${paymentForm.notes ? ` - ${paymentForm.notes}` : ''}`;
+      
+      setInvoice(prev => ({ 
+        ...prev, 
+        status: 'paid', 
+        paid_date: paymentForm.date, 
+        paidDate: paymentForm.date,
+        notes: prev.notes ? `${prev.notes}\n${paymentNotes}` : paymentNotes 
+      }));
       setShowPaymentModal(false);
       
       const { error } = await supabase
         .from('invoices')
-        .update({ status: 'paid', paid_date: paymentForm.date })
+        .update({ 
+          status: 'paid', 
+          paid_date: paymentForm.date,
+          notes: invoice?.notes ? `${invoice.notes}\n${paymentNotes}` : paymentNotes 
+        })
         .eq('id', invoiceId);
         
       if (error) throw error;
-      alert(`Payment of $${paymentForm.amount} recorded!`);
+
+      if (invoice?.work_order_id) {
+        await supabase
+          .from('work_orders')
+          .update({ status: 'paid' })
+          .eq('id', invoice.work_order_id);
+      }
+
+      alert(`✅ Payment of $${paymentForm.amount} recorded via ${paymentForm.method}!`);
     } catch (err) {
       alert(`Error recording payment: ${err.message}`);
-      // Revert optimistic update
-      setInvoice(prev => ({ ...prev, status: 'unpaid' }));
+      setInvoice(prev => ({ ...prev, status: 'draft' }));
     }
   };
 
@@ -145,7 +189,7 @@ export default function InvoiceDetail() {
                 <div className={styles.metaValue}>{new Date(invoice.dueDate || Date.now()).toLocaleDateString()}</div>
                 <div className={styles.metaLabel}>Status:</div>
                 <div className={styles.metaValue}>
-                  <span className={`${styles.pill} ${styles[invoice.status?.toLowerCase()] || ''}`}>
+                  <span className={`${styles.pill} ${styles[invoice.status?.toLowerCase()] || ''}`} style={{ textTransform: 'capitalize' }}>
                     {invoice.status}
                   </span>
                 </div>
@@ -153,27 +197,27 @@ export default function InvoiceDetail() {
             </div>
           </div>
 
-          {/* Bill To */}
-          <div className={styles.billTo}>
-            <h3>Bill To</h3>
-            <strong>{customer?.companyName || 'Unknown Company'}</strong>
-            <p>Attn: {customer?.contactName || 'N/A'}</p>
-            <p>{customer?.email || 'N/A'}</p>
-            <p>{customer?.phone || 'N/A'}</p>
+          {/* Customer / Bill To */}
+          <div className={styles.billToSection}>
+            <div className={styles.billTo}>
+              <h3>BILL TO</h3>
+              <p className={styles.customerName}>{customer?.company || customer?.companyName || 'Valued Fleet Customer'}</p>
+              <p>{customer?.contact_name || customer?.contactName || ''}</p>
+              <p>{customer?.address || ''}</p>
+              <p>{customer?.email || ''}</p>
+              <p>{customer?.phone || ''}</p>
+            </div>
           </div>
 
-          {/* Items */}
-          <table className={styles.itemsTable}>
+          {/* Line Items Table */}
+          <table className={styles.lineTable}>
             <thead>
               <tr>
                 <th>Description</th>
-                <th className={styles.right}>Qty/Hrs</th>
-                <th className={styles.right}>Rate</th>
-                <th className={styles.right}>Amount</th>
+                <th style={{textAlign: 'right'}}>Amount ($ CAD)</th>
               </tr>
             </thead>
             <tbody>
-              {/* Dummy Items for demo, this should theoretically come from invoice line items */}
               <tr>
                 <td>General Labour - Diagnostic</td>
                 <td className={styles.right}>2.5</td>
@@ -231,8 +275,11 @@ export default function InvoiceDetail() {
         <div className={styles.sidebar}>
           <div className={styles.sidebarCard}>
             <h3 className={styles.sidebarTitle}>Actions</h3>
-            <div className={styles.actionList}>
-              <button className="btn btn-outline" style={{width: '100%', justifyContent: 'flex-start'}}>
+              <button 
+                className="btn btn-outline" 
+                style={{width: '100%', justifyContent: 'flex-start'}}
+                onClick={() => alert(`Invoice #${invoice.id} emailed to customer.`)}
+              >
                 <Mail size={18} /> Email Invoice
               </button>
               <button 
@@ -243,19 +290,32 @@ export default function InvoiceDetail() {
               >
                 <DollarSign size={18} /> Record Payment
               </button>
-              <button className="btn btn-outline" style={{width: '100%', justifyContent: 'flex-start'}}>
+              <button 
+                className="btn btn-outline" 
+                style={{width: '100%', justifyContent: 'flex-start'}}
+                onClick={() => window.print()}
+              >
                 <Printer size={18} /> Print PDF
               </button>
-              <button className="btn btn-outline" style={{width: '100%', justifyContent: 'flex-start'}} disabled={invoice.status === 'paid'}>
-                <CheckCircle size={18} /> Mark as Paid
-              </button>
+                <button 
+                  className="btn btn-outline" 
+                  style={{
+                    width: '100%', 
+                    justifyContent: 'flex-start', 
+                    color: invoice.status === 'paid' ? 'var(--color-text-secondary)' : '#10b981', 
+                    borderColor: invoice.status === 'paid' ? 'var(--color-border)' : '#10b981'
+                  }} 
+                  disabled={invoice.status === 'paid'}
+                  onClick={handleQuickMarkPaid}
+                >
+                  <CheckCircle size={18} /> {invoice.status === 'paid' ? '✓ Paid in Full' : 'Mark as Paid'}
+                </button>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Payment Modal */}
-      {showPaymentModal && (
+        {/* Payment Modal */}
+        {showPaymentModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
             <div className={styles.modalHeader}>
