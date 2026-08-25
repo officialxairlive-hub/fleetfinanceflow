@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { ArrowLeft, Clock, Printer, Mail, CheckCircle, Plus, ChevronRight } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { ArrowLeft, Clock, Printer, Mail, CheckCircle, Plus, ChevronRight, Receipt } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { statusLabels } from '../../../lib/demoData';
 import styles from '../jobs.module.css';
@@ -12,6 +12,7 @@ const WORKFLOW_STEPS = ['new', 'diagnosing', 'waiting_parts', 'repairing', 'comp
 
 export default function WorkOrderDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id;
   
   const [wo, setWo] = useState(null);
@@ -142,6 +143,47 @@ export default function WorkOrderDetailPage() {
     );
   }
 
+  const handleConvertToInvoice = async () => {
+    try {
+      const invId = `INV-${wo.id.replace('WO-', '')}`;
+      const today = new Date().toISOString().split('T')[0];
+      const dueDate = new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
+
+      // 1. Upsert invoice in Supabase
+      const { data, error } = await supabase
+        .from('invoices')
+        .upsert([{
+          id: invId,
+          customer_id: wo.customer_id,
+          work_order_id: wo.id,
+          subtotal: totals.subtotal,
+          tax: totals.tax,
+          total: totals.total,
+          labour_total: totals.labourTotal,
+          parts_total: totals.partsTotal,
+          shop_supplies: totals.shopSupplies,
+          status: 'draft',
+          issue_date: today,
+          due_date: dueDate
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // 2. Update Work Order status to invoiced
+      await supabase
+        .from('work_orders')
+        .update({ status: 'invoiced' })
+        .eq('id', wo.id);
+
+      alert(`Invoice #${invId} created successfully!`);
+      router.push(`/dashboard/invoices/${invId}`);
+    } catch (err) {
+      alert(`Error generating invoice: ${err.message}`);
+    }
+  };
+
   const totals = calculateTotals();
 
   return (
@@ -159,10 +201,16 @@ export default function WorkOrderDetailPage() {
           <p>{wo.customerName} - {wo.unitNumber}</p>
         </div>
         <div className={styles.headerActions}>
-          <button className="btn btn-outline"><Printer size={18} /> Print</button>
-          <button className="btn btn-outline"><Mail size={18} /> Email</button>
-          {wo.status === 'ready_to_invoice' && (
-            <button className="btn btn-primary">Convert to Invoice</button>
+          <button className="btn btn-outline" onClick={() => window.print()}><Printer size={18} /> Print</button>
+          <button className="btn btn-outline" onClick={() => alert(`Emailing WO #${wo.id} summary to customer...`)}><Mail size={18} /> Email</button>
+          {wo.status === 'invoiced' || wo.status === 'paid' ? (
+            <Link href={`/dashboard/invoices/INV-${wo.id.replace('WO-', '')}`} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Receipt size={18} /> View Invoice
+            </Link>
+          ) : (
+            <button className="btn btn-primary" onClick={handleConvertToInvoice} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Receipt size={18} /> Convert to Invoice
+            </button>
           )}
         </div>
       </header>

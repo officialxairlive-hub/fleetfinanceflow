@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
 import Logo from '../components/Logo';
@@ -22,14 +21,32 @@ import {
   AlertCircle,
   Truck,
   Plus,
-  ShieldCheck
+  Receipt,
+  DollarSign,
+  X
 } from 'lucide-react';
 import styles from './bay.module.css';
 
+const ALL_STATUSES = [
+  { id: 'new', label: 'New', color: '#3B82F6' },
+  { id: 'diagnosing', label: 'Diagnosing', color: '#F59E0B' },
+  { id: 'waiting_parts', label: 'Waiting Parts', color: '#EF4444' },
+  { id: 'repairing', label: 'In Progress', color: '#10B981' },
+  { id: 'completed', label: 'Completed', color: '#6366F1' },
+  { id: 'ready_to_invoice', label: 'Ready to Invoice', color: '#8B5CF6' },
+  { id: 'invoiced', label: 'Invoiced', color: '#06B6D4' },
+  { id: 'paid', label: 'Paid', color: '#059669' }
+];
+
 export default function TechBayPage() {
+  const router = useRouter();
+
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [seconds, setSeconds] = useState(0);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [showPartsModal, setShowPartsModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
   const [notes, setNotes] = useState('');
   const [savedNotes, setSavedNotes] = useState([
     'Replaced left front brake rotor. Verified torque specs at 165 ft-lbs.',
@@ -38,61 +55,63 @@ export default function TechBayPage() {
 
   const [activeJob, setActiveJob] = useState(null);
   const [assignedQueue, setAssignedQueue] = useState([]);
+  const [availableParts, setAvailableParts] = useState([]);
+  const [selectedPartId, setSelectedPartId] = useState('');
+  const [partQty, setPartQty] = useState(1);
+  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState('Credit Card');
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const router = useRouter();
   const [profile, setProfile] = useState(null);
 
-  useEffect(() => {
-    async function fetchTechJobs() {
-      setIsLoading(true);
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError || !session) {
-          router.push('/login');
-          return;
-        }
-
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-          
-        setProfile(profileData);
-        const { data, error } = await supabase
-          .from('work_orders')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        
-        // Find a repairing job for the active one
-        const repairing = data.find(wo => wo.status === 'repairing' || wo.status === 'diagnosing');
-        setActiveJob(repairing || null);
-        
-        if (repairing && repairing.timer) {
-          setSeconds(repairing.timer);
-        }
-
-        // Use the rest as the queue
-        const queue = data.filter(wo => wo.id !== (repairing?.id) && ['new', 'waiting_parts', 'repairing', 'diagnosing'].includes(wo.status));
-        setAssignedQueue(queue);
-      } catch (err) {
-        console.error("Error fetching tech jobs:", err);
-        setError(err.message || 'Failed to fetch data from Supabase');
-      } finally {
-        setIsLoading(false);
+  const fetchTechJobs = async () => {
+    setIsLoading(true);
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        router.push('/login');
+        return;
       }
+
+      const [profileRes, woRes, partsRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', session.user.id).single(),
+        supabase.from('work_orders').select('*').order('created_at', { ascending: false }),
+        supabase.from('parts').select('*')
+      ]);
+
+      if (profileRes.error) throw profileRes.error;
+      setProfile(profileRes.data);
+      setAvailableParts(partsRes.data || []);
+
+      const data = woRes.data || [];
+      
+      // Find a repairing/diagnosing or first active job
+      const repairing = data.find(wo => ['repairing', 'diagnosing', 'waiting_parts', 'new'].includes(wo.status));
+      if (repairing) {
+        setActiveJob(repairing);
+        setSeconds(repairing.timer || 0);
+        setPaymentAmount(repairing.estimated_cost || 500);
+      }
+
+      const queue = data.filter(wo => wo.id !== (repairing?.id));
+      setAssignedQueue(queue);
+    } catch (err) {
+      console.error("Error fetching tech jobs:", err);
+      setError(err.message || 'Failed to fetch data from Supabase');
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
     fetchTechJobs();
   }, []);
 
   useEffect(() => {
     let interval = null;
-    if (isTimerRunning && activeJob) {
+    if (isTimerRunning && activeJob && activeJob.status !== 'completed' && activeJob.status !== 'invoiced' && activeJob.status !== 'paid') {
       interval = setInterval(() => {
         setSeconds((prev) => prev + 1);
       }, 1000);
@@ -121,14 +140,25 @@ export default function TechBayPage() {
     }
   };
 
+  const handleStatusChange = async (newStatus) => {
+    if (!activeJob) return;
+    try {
+      setActiveJob(prev => ({ ...prev, status: newStatus }));
+      await supabase.from('work_orders').update({
+        status: newStatus,
+        timer: seconds
+      }).eq('id', activeJob.id);
+    } catch (err) {
+      alert(`Error updating status: ${err.message}`);
+    }
+  };
+
   const handleStartJob = async (job) => {
     try {
-      // Save timer of current active job if exists
       if (activeJob) {
         await supabase.from('work_orders').update({ timer: seconds }).eq('id', activeJob.id);
       }
 
-      // Update new job status in Supabase
       const newStatus = 'repairing';
       await supabase.from('work_orders').update({
         status: newStatus
@@ -143,26 +173,80 @@ export default function TechBayPage() {
     }
   };
 
-  const handleCompleteJob = async () => {
+  const handleCreateInvoice = async () => {
     if (!activeJob) return;
     try {
+      const invId = `INV-${activeJob.id.replace('WO-', '')}`;
+      const today = new Date().toISOString().split('T')[0];
+      const dueDate = new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
+
+      await supabase.from('invoices').upsert([{
+        id: invId,
+        customer_id: activeJob.customer_id,
+        work_order_id: activeJob.id,
+        total: activeJob.estimated_cost || 650,
+        subtotal: (activeJob.estimated_cost || 650) * 0.9,
+        tax: (activeJob.estimated_cost || 650) * 0.1,
+        status: 'draft',
+        issue_date: today,
+        due_date: dueDate
+      }]);
+
+      await handleStatusChange('invoiced');
+      alert(`Invoice #${invId} created successfully!`);
+    } catch (err) {
+      alert(`Error creating invoice: ${err.message}`);
+    }
+  };
+
+  const handleRecordPayment = async (e) => {
+    e.preventDefault();
+    if (!activeJob) return;
+    try {
+      const invId = `INV-${activeJob.id.replace('WO-', '')}`;
+      await supabase.from('invoices').update({
+        status: 'paid',
+        payment_date: new Date().toISOString().split('T')[0]
+      }).eq('work_order_id', activeJob.id);
+
+      await handleStatusChange('paid');
+      setShowPaymentModal(false);
+      alert(`Payment of $${paymentAmount} recorded via ${paymentMethod}!`);
+    } catch (err) {
+      alert(`Error recording payment: ${err.message}`);
+    }
+  };
+
+  const handleAddPartToJob = async (e) => {
+    e.preventDefault();
+    if (!selectedPartId || !activeJob) return;
+
+    const partObj = availableParts.find(p => p.id === selectedPartId);
+    if (!partObj) return;
+
+    const newPartLine = {
+      id: partObj.id,
+      partNumber: partObj.part_number,
+      description: partObj.description,
+      quantity: parseInt(partQty) || 1,
+      sellPrice: partObj.sell_price || 45
+    };
+
+    const currentParts = activeJob.parts || [];
+    const updatedParts = [...currentParts, newPartLine];
+
+    try {
       await supabase.from('work_orders').update({
-        status: 'completed',
-        timer: seconds
+        parts: updatedParts
       }).eq('id', activeJob.id);
 
-      alert(`RO #${activeJob.id} completed! Sent to Service Manager for Invoicing.`);
-      
-      if (assignedQueue.length > 0) {
-        const nextJob = assignedQueue[0];
-        handleStartJob(nextJob);
-      } else {
-        setActiveJob(null);
-        setSeconds(0);
-        setIsTimerRunning(false);
-      }
+      setActiveJob(prev => ({ ...prev, parts: updatedParts }));
+      setShowPartsModal(false);
+      setSelectedPartId('');
+      setPartQty(1);
+      alert(`Part ${partObj.part_number} added to Repair Order!`);
     } catch (err) {
-      alert(`Error completing job: ${err.message}`);
+      alert(`Error adding part: ${err.message}`);
     }
   };
 
@@ -193,11 +277,11 @@ export default function TechBayPage() {
           </Link>
 
           <div className={styles.techProfileBox}>
-            <div className={styles.avatar}>SL</div>
+            <div className={styles.avatar}>{(profile?.full_name || 'M')[0]}</div>
             <div>
               <div className={styles.techName}>{profile?.full_name || 'Mechanic'}</div>
               <div className={styles.shiftStatus}>
-                <span className={styles.shiftDot} /> Clocked In
+                <span className={styles.shiftDot} /> Clocked In · {profile?.role || 'Mechanic'}
               </div>
             </div>
             <button onClick={async () => { await supabase.auth.signOut(); router.push('/login'); }} className={styles.logoutBtn} title="End Shift & Log Out" style={{background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer'}}>
@@ -225,9 +309,31 @@ export default function TechBayPage() {
                 <div className={styles.activeJobCard}>
                   <div className={styles.cardHeader}>
                     <div className={styles.roBadge}>CURRENT REPAIR ORDER · #{activeJob.id}</div>
-                    <div className={styles.statusPill}>
-                      {activeJob.status === 'repairing' ? '🔵 IN BAY — ACTIVE WORK' : '🟠 IN BAY — DIAGNOSING'}
-                      <span style={{marginLeft:'8px', fontSize:'9px', background:'rgba(255,255,255,0.2)', color:'white', padding:'2px 5px', borderRadius:'10px'}}>SUPABASE</span>
+                    
+                    {/* Live Status Selector for all 8 states */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <label style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Status:</label>
+                      <select
+                        value={activeJob.status || 'new'}
+                        onChange={(e) => handleStatusChange(e.target.value)}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid var(--color-border)',
+                          backgroundColor: 'var(--color-surface)',
+                          color: 'var(--color-text)',
+                          fontWeight: '600',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          outline: 'none'
+                        }}
+                      >
+                        {ALL_STATUSES.map(s => (
+                          <option key={s.id} value={s.id} style={{ color: '#000' }}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 
@@ -238,10 +344,62 @@ export default function TechBayPage() {
                     </div>
                   </div>
 
+                  {/* Status Progression Bar */}
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '6px',
+                    margin: '12px 0 16px 0',
+                    padding: '8px',
+                    backgroundColor: 'rgba(255,255,255,0.03)',
+                    borderRadius: '8px',
+                    border: '1px solid var(--color-border)'
+                  }}>
+                    {ALL_STATUSES.map((step) => {
+                      const isActive = activeJob.status === step.id;
+                      return (
+                        <button
+                          key={step.id}
+                          onClick={() => handleStatusChange(step.id)}
+                          style={{
+                            padding: '4px 10px',
+                            fontSize: '11px',
+                            fontWeight: isActive ? '700' : '500',
+                            borderRadius: '20px',
+                            border: '1px solid',
+                            borderColor: isActive ? step.color : 'transparent',
+                            backgroundColor: isActive ? step.color : 'transparent',
+                            color: isActive ? '#fff' : 'var(--color-text-secondary)',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {step.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
                   <div className={styles.issueBox}>
                     <Wrench size={18} className={styles.issueIcon} />
                     <span><strong>Job Description:</strong> {activeJob.complaint || 'No complaint specified'}</span>
                   </div>
+
+                  {/* Parts on this RO */}
+                  {activeJob.parts && activeJob.parts.length > 0 && (
+                    <div style={{ marginTop: '12px', padding: '10px 14px', backgroundColor: 'var(--color-surface)', borderRadius: '6px', border: '1px solid var(--color-border)' }}>
+                      <strong style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Package size={14} color="var(--color-primary)" /> Parts Logged on RO ({activeJob.parts.length}):
+                      </strong>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                        {activeJob.parts.map((p, i) => (
+                          <span key={i} style={{ fontSize: '11px', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px' }}>
+                            {p.partNumber || p.description} (x{p.quantity || 1})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Big Touch Job Timer */}
                   <div className={styles.timerContainer}>
@@ -266,13 +424,34 @@ export default function TechBayPage() {
                         )}
                       </button>
 
-                      <button
-                        onClick={handleCompleteJob}
-                        className={styles.completeBtn}
-                      >
-                        <CheckCircle size={20} />
-                        <span>Complete Job & Move to Invoice</span>
-                      </button>
+                      {/* Invoice & Payment Quick Actions */}
+                      {['completed', 'ready_to_invoice'].includes(activeJob.status) && (
+                        <button
+                          onClick={handleCreateInvoice}
+                          className="btn btn-primary"
+                          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <Receipt size={18} />
+                          <span>Generate Invoice</span>
+                        </button>
+                      )}
+
+                      {activeJob.status === 'invoiced' && (
+                        <button
+                          onClick={() => setShowPaymentModal(true)}
+                          className="btn btn-primary"
+                          style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#059669', borderColor: '#059669' }}
+                        >
+                          <DollarSign size={18} />
+                          <span>Collect Payment</span>
+                        </button>
+                      )}
+
+                      {activeJob.status === 'paid' && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10B981', fontWeight: 'bold' }}>
+                          <CheckCircle size={20} /> Paid in Full
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -296,17 +475,17 @@ export default function TechBayPage() {
                   </div>
                 </button>
 
-                <button onClick={() => alert('Parts Request sent to Parts Room!')} className={styles.toolBtn}>
+                <button onClick={() => setShowPartsModal(true)} className={styles.toolBtn}>
                   <div className={styles.toolIconWrapper}>
                     <Package size={22} />
                   </div>
                   <div>
-                    <div className={styles.toolTitle}>Request Parts</div>
-                    <div className={styles.toolDesc}>Notify parts counter for bay delivery</div>
+                    <div className={styles.toolTitle}>Request & Add Parts</div>
+                    <div className={styles.toolDesc}>Pick parts from stock to add to RO</div>
                   </div>
                 </button>
 
-                <button onClick={() => alert('Voice notes recorder ready')} className={styles.toolBtn}>
+                <button onClick={() => alert('Work notes can be typed directly into the Repair Work Log below.')} className={styles.toolBtn}>
                   <div className={styles.toolIconWrapper}>
                     <FileText size={22} />
                   </div>
@@ -353,14 +532,14 @@ export default function TechBayPage() {
                   <div className={styles.queueList}>
                     {assignedQueue.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>
-                        No jobs in queue.
+                        No other jobs in queue.
                       </div>
                     ) : (
                       assignedQueue.map((item) => (
                         <div key={item.id} className={styles.queueItem}>
                           <div className={styles.queueHeader}>
-                            <span className={styles.queueUnit}>{item.unit_display}</span>
-                            <span className={styles.priorityBadge}>{item.priority || 'Normal'}</span>
+                            <span className={styles.queueUnit}>{item.unit_display || item.id}</span>
+                            <span className={styles.priorityBadge}>{item.status || 'Normal'}</span>
                           </div>
                           <div className={styles.queueCustomer}>{item.customer_name}</div>
                           <div className={styles.queueIssue}>{item.complaint}</div>
@@ -378,6 +557,102 @@ export default function TechBayPage() {
           )}
         </div>
       </main>
+
+      {/* Parts Request & Add Modal */}
+      {showPartsModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowPartsModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+            <div className={styles.modalHeader}>
+              <h3>Add Parts to RO #{activeJob?.id}</h3>
+              <button onClick={() => setShowPartsModal(false)} className={styles.closeModalBtn}>✕</button>
+            </div>
+            
+            <form onSubmit={handleAddPartToJob} style={{ padding: '1rem 0' }}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Select Part from Stock</label>
+                <select 
+                  value={selectedPartId} 
+                  onChange={(e) => setSelectedPartId(e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                >
+                  <option value="">Choose a part SKU...</option>
+                  {availableParts.map(p => (
+                    <option key={p.id} value={p.id} style={{ color: '#000' }}>
+                      {p.part_number} - {p.description} (${p.sell_price || 0}) [Stock: {p.qty_on_hand || 0}]
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Quantity</label>
+                <input 
+                  type="number" 
+                  min="1" 
+                  value={partQty} 
+                  onChange={(e) => setPartQty(e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowPartsModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Add Part to Work Order</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Collect Payment Modal */}
+      {showPaymentModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowPaymentModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+            <div className={styles.modalHeader}>
+              <h3>Collect Payment for RO #{activeJob?.id}</h3>
+              <button onClick={() => setShowPaymentModal(false)} className={styles.closeModalBtn}>✕</button>
+            </div>
+            
+            <form onSubmit={handleRecordPayment} style={{ padding: '1rem 0' }}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Amount ($)</label>
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  value={paymentAmount} 
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Payment Method</label>
+                <select 
+                  value={paymentMethod} 
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                >
+                  <option value="Credit Card">Credit Card (POS Terminal)</option>
+                  <option value="Debit Card">Debit Card</option>
+                  <option value="EFT / Direct Deposit">EFT / Direct Deposit</option>
+                  <option value="Cheque">Company Cheque</option>
+                  <option value="Cash">Cash</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowPaymentModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ backgroundColor: '#059669', borderColor: '#059669' }}>
+                  Confirm Payment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Photo Upload Modal */}
       {showPhotoModal && (
