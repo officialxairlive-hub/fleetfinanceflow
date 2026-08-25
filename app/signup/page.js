@@ -57,6 +57,15 @@ export default function SignupPage() {
 
       if (profileError) throw profileError;
 
+      // 4. Record Membership in shop_members
+      await supabase
+        .from('shop_members')
+        .insert([{
+          user_id: authData.user.id,
+          shop_id: shopData.id,
+          role: 'owner'
+        }]);
+
       // Signup successful!
       router.push('/dashboard');
       

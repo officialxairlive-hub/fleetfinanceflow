@@ -62,6 +62,12 @@ export default function DashboardLayout({ children }) {
   const [dbTechs, setDbTechs] = useState([]);
   const [dbParts, setDbParts] = useState([]);
 
+  // Multi-Shop State
+  const [memberShops, setMemberShops] = useState([]);
+  const [showAddShopModal, setShowAddShopModal] = useState(false);
+  const [newShopName, setNewShopName] = useState('');
+  const [creatingShop, setCreatingShop] = useState(false);
+
   // Auth & Profile State
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [profile, setProfile] = useState(null);
@@ -87,7 +93,18 @@ export default function DashboardLayout({ children }) {
         if (profileError) throw profileError;
         setProfile(profileData);
 
-        // Fetch shop details
+        // Fetch all shop memberships for this user
+        const { data: members } = await supabase
+          .from('shop_members')
+          .select('shop_id, role, shops(*)')
+          .eq('user_id', session.user.id);
+
+        let userShops = [];
+        if (members && members.length > 0) {
+          userShops = members.map(m => m.shops).filter(Boolean);
+        }
+
+        // Fetch shop details for active shop
         if (profileData?.shop_id) {
           const [shopRes, jobsRes, custRes, techRes, partsRes] = await Promise.all([
             supabase.from('shops').select('*').eq('id', profileData.shop_id).single(),
@@ -97,13 +114,20 @@ export default function DashboardLayout({ children }) {
             supabase.from('parts').select('id, part_number, description')
           ]);
 
-          setShop(shopRes.data || null);
+          const activeShop = shopRes.data || null;
+          setShop(activeShop);
+
+          if (activeShop && !userShops.find(s => s.id === activeShop.id)) {
+            userShops.unshift(activeShop);
+          }
+
           setDbJobs(jobsRes.data || []);
           setDbCustomers(custRes.data || []);
           setDbTechs(techRes.data || []);
           setDbParts(partsRes.data || []);
         }
 
+        setMemberShops(userShops);
         setLoadingAuth(false);
       } catch (err) {
         console.error("Auth error:", err);
@@ -117,6 +141,72 @@ export default function DashboardLayout({ children }) {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/login');
+  };
+
+  const handleSwitchShop = async (selectedShopId) => {
+    if (selectedShopId === 'ADD_NEW') {
+      setShowAddShopModal(true);
+      return;
+    }
+
+    if (!selectedShopId || selectedShopId === shop?.id) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ shop_id: selectedShopId })
+        .eq('id', session.user.id);
+
+      if (error) throw error;
+      window.location.reload();
+    } catch (err) {
+      alert(`Error switching shop: ${err.message}`);
+    }
+  };
+
+  const handleCreateNewShop = async (e) => {
+    e.preventDefault();
+    if (!newShopName.trim()) return;
+
+    setCreatingShop(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // 1. Insert new shop
+      const { data: newShop, error: shopErr } = await supabase
+        .from('shops')
+        .insert([{ name: newShopName }])
+        .select()
+        .single();
+
+      if (shopErr) throw shopErr;
+
+      // 2. Insert into shop_members
+      await supabase
+        .from('shop_members')
+        .insert([{
+          user_id: session.user.id,
+          shop_id: newShop.id,
+          role: 'owner'
+        }]);
+
+      // 3. Set active shop_id in profile
+      await supabase
+        .from('profiles')
+        .update({ shop_id: newShop.id })
+        .eq('id', session.user.id);
+
+      setShowAddShopModal(false);
+      window.location.reload();
+    } catch (err) {
+      alert(`Error creating shop location: ${err.message}`);
+    } finally {
+      setCreatingShop(false);
+    }
   };
 
   // Search logic
@@ -170,13 +260,39 @@ export default function DashboardLayout({ children }) {
           </button>
         </div>
 
-        <div className={styles.shopSelector}>
+        <div className={styles.shopSelector} style={{ position: 'relative', cursor: 'pointer' }}>
           <div className={styles.shopIcon}>
             <Truck size={18} />
           </div>
-          <div className={styles.shopInfo}>
-            <div className={styles.shopName}>{shop?.name || 'Your Shop'}</div>
-            <div className={styles.shopMeta}>Main Location</div>
+          <div className={styles.shopInfo} style={{ width: '100%' }}>
+            <select
+              value={shop?.id || ''}
+              onChange={(e) => handleSwitchShop(e.target.value)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--color-text)',
+                fontWeight: '600',
+                fontSize: '13px',
+                width: '100%',
+                cursor: 'pointer',
+                outline: 'none'
+              }}
+            >
+              {memberShops.map(s => (
+                <option key={s.id} value={s.id} style={{ color: '#000' }}>
+                  {s.name}
+                </option>
+              ))}
+              {profile?.role === 'owner' && (
+                <option value="ADD_NEW" style={{ color: '#000', fontWeight: 'bold' }}>
+                  + Add New Location...
+                </option>
+              )}
+            </select>
+            <div className={styles.shopMeta} style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+              {memberShops.length > 1 ? `${memberShops.length} Locations (Click to switch)` : 'Main Location'}
+            </div>
           </div>
         </div>
 
@@ -251,7 +367,7 @@ export default function DashboardLayout({ children }) {
                             <div className={styles.searchGroupTitle}>Work Orders</div>
                             {searchResults.jobs.slice(0,3).map(job => (
                               <div key={job.id} className={styles.searchItem} onClick={() => handleSearchNav(`/dashboard/jobs/${job.id}`)}>
-                                <strong>{job.id}</strong> - {job.customer}
+                                <strong>{job.id}</strong> - {job.customer_name || job.customer}
                               </div>
                             ))}
                           </div>
@@ -271,7 +387,7 @@ export default function DashboardLayout({ children }) {
                             <div className={styles.searchGroupTitle}>Technicians</div>
                             {searchResults.techs.slice(0,3).map(tech => (
                               <div key={tech.id} className={styles.searchItem} onClick={() => handleSearchNav(`/dashboard/labour`)}>
-                                <strong>{tech.name}</strong> - {tech.role}
+                                <strong>{tech.full_name || tech.name}</strong> - {tech.role}
                               </div>
                             ))}
                           </div>
@@ -281,7 +397,7 @@ export default function DashboardLayout({ children }) {
                             <div className={styles.searchGroupTitle}>Parts</div>
                             {searchResults.parts.slice(0,3).map(part => (
                               <div key={part.id} className={styles.searchItem} onClick={() => handleSearchNav(`/dashboard/parts`)}>
-                                <strong>{part.partNumber}</strong> - {part.description}
+                                <strong>{part.part_number || part.partNumber}</strong> - {part.description}
                               </div>
                             ))}
                           </div>
@@ -312,6 +428,86 @@ export default function DashboardLayout({ children }) {
           {children}
         </main>
       </div>
+
+      {/* Add New Shop Location Modal */}
+      {showAddShopModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            backgroundColor: 'var(--color-bg)',
+            border: '1px solid var(--color-border)',
+            padding: '24px',
+            borderRadius: '12px',
+            width: '420px',
+            maxWidth: '90vw',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Truck size={20} color="var(--color-primary)" />
+                Add New Shop Location
+              </h2>
+              <button 
+                onClick={() => setShowAddShopModal(false)} 
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '16px', lineHeight: '1.4' }}>
+              Create an additional garage or bay location. All data for this new shop will be isolated automatically.
+            </p>
+            <form onSubmit={handleCreateNewShop}>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>
+                  Shop / Location Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Apex Repairs - West Facility"
+                  value={newShopName}
+                  onChange={(e) => setNewShopName(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-surface)',
+                    color: 'var(--color-text)',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setShowAddShopModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={creatingShop}
+                >
+                  {creatingShop ? 'Creating...' : 'Create Location'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

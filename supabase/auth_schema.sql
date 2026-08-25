@@ -1,5 +1,5 @@
 -- ============================================
--- FLEET FINANCE FLOW — Auth & Multi-Tenancy Schema
+-- FLEET FINANCE FLOW — Multi-Shop & Multi-Tenancy Schema
 -- Run this script in the Supabase SQL Editor
 -- ============================================
 
@@ -19,7 +19,17 @@ CREATE TABLE IF NOT EXISTS profiles (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 3. Add shop_id to all existing tables (if not already added)
+-- 3. Create Shop Members table (Allows an Owner to own multiple shops)
+CREATE TABLE IF NOT EXISTS shop_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  shop_id UUID REFERENCES shops(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('owner', 'mechanic')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE (user_id, shop_id)
+);
+
+-- 4. Add shop_id to all existing tables (if not already added)
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS shop_id UUID REFERENCES shops(id) ON DELETE CASCADE;
 ALTER TABLE units ADD COLUMN IF NOT EXISTS shop_id UUID REFERENCES shops(id) ON DELETE CASCADE;
 ALTER TABLE technicians ADD COLUMN IF NOT EXISTS shop_id UUID REFERENCES shops(id) ON DELETE CASCADE;
@@ -27,11 +37,12 @@ ALTER TABLE parts ADD COLUMN IF NOT EXISTS shop_id UUID REFERENCES shops(id) ON 
 ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS shop_id UUID REFERENCES shops(id) ON DELETE CASCADE;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS shop_id UUID REFERENCES shops(id) ON DELETE CASCADE;
 
--- 4. Enable RLS on new tables
+-- 5. Enable RLS on new tables
 ALTER TABLE shops ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shop_members ENABLE ROW LEVEL SECURITY;
 
--- 5. Drop old policies
+-- 6. Drop old policies
 DROP POLICY IF EXISTS "Enable all access for customers" ON customers;
 DROP POLICY IF EXISTS "Enable all access for units" ON units;
 DROP POLICY IF EXISTS "Enable all access for technicians" ON technicians;
@@ -51,8 +62,9 @@ DROP POLICY IF EXISTS "Shop access for technicians" ON technicians;
 DROP POLICY IF EXISTS "Shop access for parts" ON parts;
 DROP POLICY IF EXISTS "Shop access for work_orders" ON work_orders;
 DROP POLICY IF EXISTS "Shop access for invoices" ON invoices;
+DROP POLICY IF EXISTS "Members access for shop_members" ON shop_members;
 
--- 6. Helper Function to prevent infinite recursion
+-- 7. Helper Function to prevent infinite recursion
 CREATE OR REPLACE FUNCTION get_user_shop_id()
 RETURNS UUID
 LANGUAGE sql
@@ -62,7 +74,7 @@ AS $$
   SELECT shop_id FROM profiles WHERE id = auth.uid();
 $$;
 
--- 7. Create strict RLS policies
+-- 8. Create strict RLS policies
 
 -- Profiles
 CREATE POLICY "Users can view profiles in their shop" 
@@ -74,7 +86,11 @@ ON profiles FOR UPDATE USING (id = auth.uid());
 CREATE POLICY "Allow authenticated to insert their own profile" 
 ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Shops (Allow SELECT using true so shop creation returning inserted row during signup works)
+-- Shop Members (Allows users to see all shops they own or belong to)
+CREATE POLICY "Members access for shop_members" 
+ON shop_members FOR ALL USING (user_id = auth.uid());
+
+-- Shops (Allow SELECT for shops user belongs to or during signup)
 CREATE POLICY "Users can view shops" 
 ON shops FOR SELECT USING (true);
 
@@ -105,7 +121,7 @@ ON work_orders FOR ALL USING (shop_id = get_user_shop_id());
 CREATE POLICY "Shop access for invoices" 
 ON invoices FOR ALL USING (shop_id = get_user_shop_id());
 
--- 8. Function to automatically assign shop_id on insert for regular tables
+-- 9. Function to automatically assign shop_id on insert for regular tables
 CREATE OR REPLACE FUNCTION set_shop_id()
 RETURNS TRIGGER AS $$
 BEGIN
