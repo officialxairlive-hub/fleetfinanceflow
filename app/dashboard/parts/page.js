@@ -21,7 +21,9 @@ export default function PartsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
   const [selectedPart, setSelectedPart] = useState(null);
+  const [selectedRequest, setSelectedRequest] = useState(null);
 
   // Form States
   const [partForm, setPartForm] = useState({
@@ -42,6 +44,16 @@ export default function PartsPage() {
     adjustment: '',
     reason: 'Received',
     notes: ''
+  });
+
+  const [receiveForm, setReceiveForm] = useState({
+    neededQty: 1,
+    receivedQty: 1,
+    cost: '45.00',
+    sellPrice: '65.00',
+    category: 'Engine',
+    binLocation: 'A-01',
+    supplier: 'FleetPride'
   });
 
   // Sorting
@@ -270,6 +282,113 @@ export default function PartsPage() {
       fetchPartsAndRequests();
     } catch (err) {
       alert(`Error updating request: ${err.message}`);
+    }
+  };
+
+  const openReceiveModal = (req) => {
+    setSelectedRequest(req);
+    const costNum = 45.00;
+    const sellNum = (costNum * 1.35).toFixed(2);
+    setReceiveForm({
+      neededQty: req.quantity || 1,
+      receivedQty: req.quantity || 1,
+      cost: costNum.toFixed(2),
+      sellPrice: sellNum,
+      category: 'Engine',
+      binLocation: 'A-01',
+      supplier: 'FleetPride'
+    });
+    setIsReceiveModalOpen(true);
+  };
+
+  const handleExecuteReceive = async (e) => {
+    e.preventDefault();
+    if (!selectedRequest) return;
+
+    try {
+      const needed = parseInt(receiveForm.neededQty) || 1;
+      const totalRecv = parseInt(receiveForm.receivedQty) || needed;
+      const surplus = Math.max(0, totalRecv - needed);
+      const cost = parseFloat(receiveForm.cost) || 0;
+      const sell = parseFloat(receiveForm.sellPrice) || (cost * 1.35);
+
+      // 1. Allocate to the requested Repair Order
+      if (selectedRequest.work_order_id) {
+        const { data: woData } = await supabase
+          .from('work_orders')
+          .select('*')
+          .eq('id', selectedRequest.work_order_id)
+          .single();
+
+        if (woData) {
+          const currentParts = woData.parts || [];
+          const cleanParts = currentParts.filter(p => !p.isRequested || p.id !== selectedRequest.id);
+          const newPartLine = {
+            id: `PART-${Date.now().toString().slice(-4)}`,
+            partNumber: selectedRequest.part_number || 'SPEC-ORDER',
+            description: selectedRequest.part_name,
+            quantity: needed,
+            cost: cost,
+            sellPrice: sell,
+            price: sell
+          };
+
+          await supabase
+            .from('work_orders')
+            .update({
+              parts: [...cleanParts, newPartLine],
+              status: 'repairing' // Auto-advance from waiting_parts to In Progress!
+            })
+            .eq('id', selectedRequest.work_order_id);
+        }
+      }
+
+      // 2. Add surplus to warehouse inventory
+      if (surplus > 0) {
+        const partNum = selectedRequest.part_number || `P-${Date.now().toString().slice(-4)}`;
+        const existingPart = parts.find(p => p.partNumber?.toLowerCase() === partNum.toLowerCase());
+
+        if (existingPart) {
+          await supabase
+            .from('parts')
+            .update({
+              qty_on_hand: (existingPart.qtyOnHand || 0) + surplus
+            })
+            .eq('id', existingPart.id);
+        } else {
+          await supabase
+            .from('parts')
+            .insert([{
+              id: `PART-${Date.now().toString().slice(-6)}`,
+              part_number: partNum,
+              category: receiveForm.category || 'Engine',
+              description: selectedRequest.part_name,
+              supplier: receiveForm.supplier,
+              bin_location: receiveForm.binLocation,
+              cost: cost,
+              sell: sell,
+              markup: cost > 0 ? Math.round(((sell - cost) / cost) * 100) : 35,
+              qty_on_hand: surplus,
+              min_stock: 2,
+              max_stock: 10,
+              core_charge: 0
+            }]);
+        }
+      }
+
+      // 3. Mark request as received
+      await supabase
+        .from('part_requests')
+        .update({ status: 'received' })
+        .eq('id', selectedRequest.id);
+
+      setIsReceiveModalOpen(false);
+      setSelectedRequest(null);
+      fetchPartsAndRequests();
+
+      alert(`✅ Part received successfully!\n- ${needed} unit(s) allocated to RO #${selectedRequest.work_order_id || selectedRequest.unit_display} (Status moved to In Progress)\n- ${surplus} surplus unit(s) added to warehouse inventory.`);
+    } catch (err) {
+      alert(`Error processing part receipt: ${err.message}`);
     }
   };
 
@@ -538,8 +657,8 @@ export default function PartsPage() {
                             Mark Ordered
                           </button>
                         )}
-                        {req.status === 'ordered' && (
-                          <button className="btn btn-primary" onClick={() => handleUpdateRequestStatus(req.id, 'received')} style={{ padding: '4px 8px', fontSize: '12px', backgroundColor: '#10b981', borderColor: '#10b981' }}>
+                        {req.status !== 'received' && req.status !== 'cancelled' && (
+                          <button className="btn btn-primary" onClick={() => openReceiveModal(req)} style={{ padding: '4px 8px', fontSize: '12px', backgroundColor: '#10b981', borderColor: '#10b981' }}>
                             Receive Stock
                           </button>
                         )}
@@ -561,6 +680,107 @@ export default function PartsPage() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Receive Stock & Auto-Allocate Modal */}
+      {isReceiveModalOpen && selectedRequest && (
+        <div className={styles.modalOverlay}>
+          <div className={`${styles.modal} ${styles.large}`}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Receive Part: {selectedRequest.part_name}</h2>
+              <button className={styles.closeBtn} onClick={() => setIsReceiveModalOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleExecuteReceive}>
+              <div className={styles.modalBody}>
+                <div style={{ padding: '12px', backgroundColor: 'rgba(16, 185, 129, 0.08)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)', marginBottom: '1.5rem' }}>
+                  <div style={{ fontWeight: 'bold', color: '#10b981', fontSize: '13px' }}>
+                    🚚 Automated Job & Inventory Allocation:
+                  </div>
+                  <ul style={{ fontSize: '12px', marginTop: '6px', paddingLeft: '1.2rem', color: 'var(--color-text)' }}>
+                    <li><strong>{receiveForm.neededQty} unit(s)</strong> will be allocated immediately to <strong>RO #{selectedRequest.work_order_id || selectedRequest.unit_display}</strong>.</li>
+                    <li>RO status will be moved from <em>Waiting Parts</em> back to <strong>In Progress</strong> automatically.</li>
+                    <li><strong>{Math.max(0, (parseInt(receiveForm.receivedQty) || 0) - (parseInt(receiveForm.neededQty) || 0))} surplus unit(s)</strong> will be added to warehouse shelf inventory.</li>
+                  </ul>
+                </div>
+
+                <div className={styles.formGrid}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Requested for RO / Unit</label>
+                    <input type="text" className={styles.input} value={`${selectedRequest.unit_display || 'RO'} (${selectedRequest.work_order_id || ''})`} disabled />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Qty Needed on Truck</label>
+                    <input type="number" className={styles.input} value={receiveForm.neededQty} disabled />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Total Qty Received from Supplier</label>
+                    <input
+                      type="number"
+                      min={receiveForm.neededQty}
+                      className={styles.input}
+                      value={receiveForm.receivedQty}
+                      onChange={(e) => setReceiveForm({ ...receiveForm, receivedQty: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Supplier / Vendor</label>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      value={receiveForm.supplier}
+                      onChange={(e) => setReceiveForm({ ...receiveForm, supplier: e.target.value })}
+                      placeholder="e.g. FleetPride / Alliance"
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Unit Cost Price ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className={styles.input}
+                      value={receiveForm.cost}
+                      onChange={(e) => {
+                        const c = parseFloat(e.target.value) || 0;
+                        setReceiveForm({ ...receiveForm, cost: e.target.value, sellPrice: (c * 1.35).toFixed(2) });
+                      }}
+                      required
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Billable Sell Price ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className={styles.input}
+                      value={receiveForm.sellPrice}
+                      onChange={(e) => setReceiveForm({ ...receiveForm, sellPrice: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Shelf / Bin Location (for Surplus)</label>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      value={receiveForm.binLocation}
+                      onChange={(e) => setReceiveForm({ ...receiveForm, binLocation: e.target.value })}
+                      placeholder="e.g. B-04-2"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className={styles.modalFooter}>
+                <button type="button" className="btn btn-outline" onClick={() => setIsReceiveModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ backgroundColor: '#10b981', borderColor: '#10b981' }}>
+                  Confirm Receipt & Auto-Allocate
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -689,7 +909,10 @@ export default function PartsPage() {
                       step="0.01"
                       className={styles.input}
                       value={partForm.cost}
-                      onChange={(e) => setPartForm({ ...partForm, cost: e.target.value })}
+                      onChange={(e) => {
+                        const c = parseFloat(e.target.value) || 0;
+                        setPartForm({ ...partForm, cost: e.target.value, sellPrice: (c * 1.35).toFixed(2) });
+                      }}
                       required
                       placeholder="45.00"
                     />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../lib/supabaseClient';
@@ -15,6 +15,39 @@ export default function LoginPage() {
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    async function checkExistingSession() {
+      try {
+        const savedEmail = localStorage.getItem('fleet_saved_email');
+        if (savedEmail) {
+          setFormData(prev => ({ ...prev, email: savedEmail }));
+        }
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profile?.role === 'mechanic') {
+            router.push('/bay');
+          } else {
+            router.push('/dashboard');
+          }
+          return;
+        }
+      } catch (err) {
+        console.warn("Session check:", err);
+      } finally {
+        setCheckingSession(false);
+      }
+    }
+    checkExistingSession();
+  }, [router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,6 +55,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      if (formData.email) {
+        localStorage.setItem('fleet_saved_email', formData.email);
+      }
+
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
@@ -30,7 +67,6 @@ export default function LoginPage() {
       if (authError) throw authError;
 
       if (data.user) {
-        // Find their role
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')
@@ -38,9 +74,9 @@ export default function LoginPage() {
           .single();
 
         if (profile?.role === 'mechanic') {
-          router.push('/bay'); // Mechanics go straight to the bay
+          router.push('/bay');
         } else {
-          router.push('/dashboard'); // Owners go to dashboard
+          router.push('/dashboard');
         }
       }
     } catch (err) {
