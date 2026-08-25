@@ -263,9 +263,23 @@ export default function TechBayPage() {
     e.preventDefault();
     if (!specialPartForm.partName.trim() || !activeJob) return;
 
+    const newReqId = `REQ-${Date.now().toString().slice(-6)}`;
+    const requestedPartLine = {
+      id: newReqId,
+      partNumber: specialPartForm.partNumber || 'SPECIAL-ORDER',
+      description: `[SPECIAL ORDER - ${specialPartForm.urgency}]: ${specialPartForm.partName}`,
+      quantity: parseInt(specialPartForm.quantity) || 1,
+      sellPrice: 0,
+      isRequested: true,
+      notes: specialPartForm.notes || null
+    };
+
+    const currentParts = activeJob.parts || [];
+    const updatedParts = [...currentParts, requestedPartLine];
+
     try {
-      const newReqId = `REQ-${Date.now().toString().slice(-6)}`;
-      const { error } = await supabase
+      // 1. Try writing to part_requests table if it exists
+      await supabase
         .from('part_requests')
         .insert([{
           id: newReqId,
@@ -279,11 +293,25 @@ export default function TechBayPage() {
           notes: specialPartForm.notes || null,
           status: 'pending'
         }]);
+    } catch (err) {
+      console.warn("part_requests table not yet created, saving to RO directly:", err);
+    }
 
-      if (error) throw error;
+    try {
+      // 2. Save directly to the work order's parts array and update status to waiting_parts
+      await supabase
+        .from('work_orders')
+        .update({
+          parts: updatedParts,
+          status: 'waiting_parts'
+        })
+        .eq('id', activeJob.id);
 
-      // Update work order status to waiting_parts
-      await handleStatusChange('waiting_parts');
+      setActiveJob(prev => ({
+        ...prev,
+        parts: updatedParts,
+        status: 'waiting_parts'
+      }));
 
       setShowPartsModal(false);
       setSpecialPartForm({
@@ -293,9 +321,9 @@ export default function TechBayPage() {
         urgency: 'Standard',
         notes: ''
       });
-      alert(`Part Request #${newReqId} sent to Shop Manager! RO status updated to "Waiting Parts".`);
+      alert(`Special Part Request sent to Shop Manager! RO status updated to "Waiting Parts".`);
     } catch (err) {
-      alert(`Error submitting part request: ${err.message}`);
+      alert(`Error updating work order: ${err.message}`);
     }
   };
 
