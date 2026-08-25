@@ -230,10 +230,7 @@ export default function TechBayPage() {
         complaint: estimateForm.description,
         tech_id: techDetails?.id || null,
         tech_name: techName,
-        estimate_created_by: techName,
         status: canApprove ? 'diagnosing' : 'pending_owner_approval',
-        estimate_status: canApprove ? 'sent' : 'pending_owner_approval',
-        needs_owner_approval: !canApprove,
         estimated_cost: total,
         customer_notes: estimateForm.notes,
         labour: [{

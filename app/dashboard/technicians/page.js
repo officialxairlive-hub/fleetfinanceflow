@@ -237,7 +237,7 @@ export default function TechniciansHubPage() {
       const overtimeCad = parseFloat(form.overtimePayCad) || (hourlyCad * 1.5);
       const labourRate = parseFloat(form.labourRate) || 145;
 
-      const payload = {
+      const basePayload = {
         name: form.fullName.split(' ')[0] || form.fullName,
         full_name: form.fullName,
         email: form.email,
@@ -257,33 +257,58 @@ export default function TechniciansHubPage() {
         account_number: form.accountNumber,
         pay_frequency: form.payFrequency,
         next_pay_date: form.nextPayDate,
-        direct_deposit_notes: form.directDepositNotes,
+        direct_deposit_notes: form.directDepositNotes
+      };
+
+      const fullPayload = {
+        ...basePayload,
         can_create_estimates: form.canCreateEstimates,
         can_approve_estimates: form.canApproveEstimates,
         can_create_work_orders: form.canCreateWorkOrders
       };
 
       if (isEditModalOpen && selectedTech) {
-        const { error } = await supabase
+        let updateRes = await supabase
           .from('technicians')
-          .update(payload)
+          .update(fullPayload)
           .eq('id', selectedTech.id);
 
-        if (error) throw error;
+        if (updateRes.error && updateRes.error.message.includes('column')) {
+          // Fallback to base payload if schema cache does not have custom permission columns
+          updateRes = await supabase
+            .from('technicians')
+            .update(basePayload)
+            .eq('id', selectedTech.id);
+        }
+
+        if (updateRes.error) throw updateRes.error;
         alert(`Technician ${form.fullName} updated successfully!`);
       } else {
         const newId = `TECH-${Date.now().toString().slice(-4)}`;
-        const { error } = await supabase
+        let insertRes = await supabase
           .from('technicians')
           .insert([{
             id: newId,
             status: 'off',
             hours_today: 0,
             avatar: form.fullName.charAt(0).toUpperCase(),
-            ...payload
+            ...fullPayload
           }]);
 
-        if (error) throw error;
+        if (insertRes.error && insertRes.error.message.includes('column')) {
+          // Fallback to base payload
+          insertRes = await supabase
+            .from('technicians')
+            .insert([{
+              id: newId,
+              status: 'off',
+              hours_today: 0,
+              avatar: form.fullName.charAt(0).toUpperCase(),
+              ...basePayload
+            }]);
+        }
+
+        if (insertRes.error) throw insertRes.error;
         alert(`New technician ${form.fullName} added to team!`);
       }
 

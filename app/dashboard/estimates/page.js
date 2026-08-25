@@ -56,7 +56,7 @@ export default function EstimatesList() {
         const totalCalc = wo.estimated_cost || (labourTotal + partsTotal ? (labourTotal + partsTotal) * 1.05 : 1250.00);
 
         let estStatus = 'draft';
-        if (wo.status === 'pending_owner_approval' || wo.needs_owner_approval) estStatus = 'pending_owner_approval';
+        if (wo.status === 'pending_owner_approval') estStatus = 'pending_owner_approval';
         else if (wo.status === 'diagnosing') estStatus = 'sent';
         else if (wo.authorized || wo.status === 'ready_to_invoice' || wo.status === 'repairing' || wo.status === 'completed' || wo.status === 'invoiced' || wo.status === 'paid') estStatus = 'approved';
 
@@ -72,8 +72,8 @@ export default function EstimatesList() {
           total: totalCalc,
           status: estStatus,
           rawStatus: wo.status,
-          techName: wo.tech_name || wo.estimate_created_by,
-          needsOwnerApproval: wo.needs_owner_approval || wo.status === 'pending_owner_approval',
+          techName: wo.tech_name || 'Shop Assigned',
+          needsOwnerApproval: wo.status === 'pending_owner_approval',
           createdAt: wo.created_at,
           expiresAt: new Date(new Date(wo.created_at).getTime() + 14*24*60*60*1000).toISOString()
         };
@@ -122,7 +122,6 @@ export default function EstimatesList() {
         unit_display: selectedUnit ? `#${selectedUnit.unit_number} - ${selectedUnit.make} ${selectedUnit.model}` : 'Shop Unit',
         complaint: estimateForm.description,
         status: 'draft',
-        estimate_status: 'draft',
         estimated_cost: total,
         customer_notes: estimateForm.notes,
         labour: [{
@@ -167,9 +166,7 @@ export default function EstimatesList() {
       await supabase
         .from('work_orders')
         .update({ 
-          status: 'diagnosing', 
-          needs_owner_approval: false,
-          estimate_status: 'sent'
+          status: 'diagnosing'
         })
         .eq('id', est.woId);
 
@@ -184,7 +181,7 @@ export default function EstimatesList() {
 
   const handleSendEstimate = async (est) => {
     try {
-      await supabase.from('work_orders').update({ status: 'diagnosing', estimate_status: 'sent' }).eq('id', est.woId);
+      await supabase.from('work_orders').update({ status: 'diagnosing' }).eq('id', est.woId);
       const approveLink = `${window.location.origin}/approve/${est.woId}`;
       navigator.clipboard?.writeText(approveLink);
       alert(`✅ Estimate approval link copied to clipboard:\n${approveLink}\n\nStatus marked as SENT to customer.`);
