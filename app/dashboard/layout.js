@@ -289,10 +289,10 @@ export default function DashboardLayout({ children }) {
               <span className={styles.notifDot} />
             </button>
 
-            <button className="btn btn-primary" onClick={() => alert('Demo Mode: Launching Repair Order Wizard...')}>
+            <Link href="/dashboard/jobs/new" className="btn btn-primary">
               <Plus size={18} />
               <span>New Repair Order</span>
-            </button>
+            </Link>
           </div>
         </header>
 

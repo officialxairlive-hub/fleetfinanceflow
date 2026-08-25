@@ -174,35 +174,74 @@ export default function CustomersPage() {
               <h2>Add New Customer</h2>
               <button className={styles.closeBtn} onClick={() => setIsModalOpen(false)}><X size={24} /></button>
             </div>
-            <form onSubmit={(e) => { e.preventDefault(); setIsModalOpen(false); }}>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const form = e.target;
+              const company = form.company.value;
+              const contact = form.contact.value;
+              const email = form.email.value;
+              const phone = form.phone.value;
+              const address = form.address.value;
+              const creditLimit = parseFloat(form.creditLimit.value) || 0;
+              const paymentTerms = form.paymentTerms.value;
+              const labourRate = parseFloat(form.labourRate.value) || 125;
+              const partsMarkup = parseFloat(form.partsMarkup.value) || 30;
+              const taxSetting = form.taxSetting.value;
+
+              const newId = `CUST-${Math.floor(100 + Math.random() * 900)}`;
+
+              try {
+                const { data, error: insertErr } = await supabase.from('customers').insert([{
+                  id: newId,
+                  company,
+                  contact,
+                  email,
+                  phone,
+                  address,
+                  credit_limit: creditLimit,
+                  payment_terms: paymentTerms,
+                  labour_rate: labourRate,
+                  parts_markup: partsMarkup,
+                  tax_setting: taxSetting,
+                  balance: 0,
+                  status: 'active'
+                }]).select().single();
+
+                if (insertErr) throw insertErr;
+                setCustomers(prev => [data, ...prev]);
+                setIsModalOpen(false);
+              } catch (err) {
+                alert(`Error adding customer: ${err.message}`);
+              }
+            }}>
               <div className={styles.formGrid}>
                 <div className={styles.formGroup}>
                   <label>Company Name</label>
-                  <input type="text" required />
+                  <input name="company" type="text" required />
                 </div>
                 <div className={styles.formGroup}>
                   <label>Contact Name</label>
-                  <input type="text" required />
+                  <input name="contact" type="text" required />
                 </div>
                 <div className={styles.formGroup}>
                   <label>Email</label>
-                  <input type="email" required />
+                  <input name="email" type="email" required />
                 </div>
                 <div className={styles.formGroup}>
                   <label>Phone</label>
-                  <input type="tel" required />
+                  <input name="phone" type="tel" required />
                 </div>
                 <div className={`${styles.formGroup} ${styles.full}`}>
                   <label>Address</label>
-                  <input type="text" required />
+                  <input name="address" type="text" required />
                 </div>
                 <div className={styles.formGroup}>
                   <label>Credit Limit</label>
-                  <input type="number" step="0.01" />
+                  <input name="creditLimit" type="number" step="0.01" />
                 </div>
                 <div className={styles.formGroup}>
                   <label>Payment Terms</label>
-                  <select>
+                  <select name="paymentTerms">
                     <option>Net 15</option>
                     <option>Net 30</option>
                     <option>Net 45</option>
@@ -212,15 +251,15 @@ export default function CustomersPage() {
                 </div>
                 <div className={styles.formGroup}>
                   <label>Labour Rate ($)</label>
-                  <input type="number" step="0.01" />
+                  <input name="labourRate" type="number" step="0.01" defaultValue="125" />
                 </div>
                 <div className={styles.formGroup}>
                   <label>Parts Markup (%)</label>
-                  <input type="number" />
+                  <input name="partsMarkup" type="number" defaultValue="30" />
                 </div>
                 <div className={styles.formGroup}>
                   <label>Tax Setting</label>
-                  <select>
+                  <select name="taxSetting">
                     <option>GST+PST</option>
                     <option>GST</option>
                     <option>Exempt</option>
