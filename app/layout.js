@@ -5,12 +5,14 @@ const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
+  fallback: ["system-ui", "-apple-system", "sans-serif"],
 });
 
 const manrope = Manrope({
   variable: "--font-manrope",
   subsets: ["latin"],
   display: "swap",
+  fallback: ["system-ui", "-apple-system", "sans-serif"],
 });
 
 export const metadata = {
