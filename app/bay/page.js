@@ -109,10 +109,77 @@ export default function TechBayPage() {
     return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  const handleAddNote = (e) => {
+  const toggleTimer = async () => {
+    const nextState = !isTimerRunning;
+    setIsTimerRunning(nextState);
+    if (activeJob) {
+      try {
+        await supabase.from('work_orders').update({ timer: seconds }).eq('id', activeJob.id);
+      } catch (err) {
+        console.error("Error saving timer:", err);
+      }
+    }
+  };
+
+  const handleStartJob = async (job) => {
+    try {
+      // Save timer of current active job if exists
+      if (activeJob) {
+        await supabase.from('work_orders').update({ timer: seconds }).eq('id', activeJob.id);
+      }
+
+      // Update new job status in Supabase
+      const newStatus = 'repairing';
+      await supabase.from('work_orders').update({
+        status: newStatus
+      }).eq('id', job.id);
+
+      setActiveJob({ ...job, status: newStatus });
+      setSeconds(job.timer || 0);
+      setIsTimerRunning(true);
+      setAssignedQueue(prev => prev.filter(item => item.id !== job.id));
+    } catch (err) {
+      alert(`Error starting job: ${err.message}`);
+    }
+  };
+
+  const handleCompleteJob = async () => {
+    if (!activeJob) return;
+    try {
+      await supabase.from('work_orders').update({
+        status: 'completed',
+        timer: seconds
+      }).eq('id', activeJob.id);
+
+      alert(`RO #${activeJob.id} completed! Sent to Service Manager for Invoicing.`);
+      
+      if (assignedQueue.length > 0) {
+        const nextJob = assignedQueue[0];
+        handleStartJob(nextJob);
+      } else {
+        setActiveJob(null);
+        setSeconds(0);
+        setIsTimerRunning(false);
+      }
+    } catch (err) {
+      alert(`Error completing job: ${err.message}`);
+    }
+  };
+
+  const handleAddNote = async (e) => {
     e.preventDefault();
     if (!notes.trim()) return;
     setSavedNotes([notes, ...savedNotes]);
+    
+    if (activeJob) {
+      try {
+        await supabase.from('work_orders').update({
+          correction: notes
+        }).eq('id', activeJob.id);
+      } catch (err) {
+        console.error("Error saving work note:", err);
+      }
+    }
     setNotes('');
   };
 
@@ -183,7 +250,7 @@ export default function TechBayPage() {
                     
                     <div className={styles.timerControls}>
                       <button
-                        onClick={() => setIsTimerRunning(!isTimerRunning)}
+                        onClick={toggleTimer}
                         className={`${styles.timerControlBtn} ${isTimerRunning ? styles.pauseBtn : styles.playBtn}`}
                       >
                         {isTimerRunning ? (
@@ -200,7 +267,7 @@ export default function TechBayPage() {
                       </button>
 
                       <button
-                        onClick={() => alert('Job Completed! Sent to Service Manager for Final Invoice Review.')}
+                        onClick={handleCompleteJob}
                         className={styles.completeBtn}
                       >
                         <CheckCircle size={20} />
@@ -298,8 +365,8 @@ export default function TechBayPage() {
                           <div className={styles.queueCustomer}>{item.customer_name}</div>
                           <div className={styles.queueIssue}>{item.complaint}</div>
                           <div className={styles.queueFooter}>
-                            <span className={styles.queueEst}>Est: ${item.estimated_cost}</span>
-                            <button className={styles.startJobBtn}>Start Job →</button>
+                            <span className={styles.queueEst}>Est: ${item.estimated_cost || 0}</span>
+                            <button className={styles.startJobBtn} onClick={() => handleStartJob(item)}>Start Job →</button>
                           </div>
                         </div>
                       ))
