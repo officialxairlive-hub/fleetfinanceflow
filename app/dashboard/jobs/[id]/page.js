@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Clock, Printer, Mail, CheckCircle, Plus, ChevronRight, Receipt } from 'lucide-react';
+import { ArrowLeft, Clock, Printer, Mail, CheckCircle, Plus, ChevronRight, Receipt, X, Wrench, Package, Trash2 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { statusLabels } from '../../../lib/demoData';
 import styles from '../jobs.module.css';
@@ -17,17 +17,42 @@ export default function WorkOrderDetailPage() {
   
   const [wo, setWo] = useState(null);
   const [technicians, setTechnicians] = useState([]);
+  const [inventoryParts, setInventoryParts] = useState([]);
   const [activeNotesTab, setActiveNotesTab] = useState('internal');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Labour Modal State
+  const [showAddLabourModal, setShowAddLabourModal] = useState(false);
+  const [savingLabour, setSavingLabour] = useState(false);
+  const [labourForm, setLabourForm] = useState({
+    description: '',
+    hours: '1.5',
+    rate: '145.00',
+    technician: ''
+  });
+
+  // Parts Modal State
+  const [showAddPartModal, setShowAddPartModal] = useState(false);
+  const [savingPart, setSavingPart] = useState(false);
+  const [selectedInventoryPartId, setSelectedInventoryPartId] = useState('');
+  const [partForm, setPartForm] = useState({
+    partNumber: '',
+    description: '',
+    quantity: '1',
+    cost: '45.00',
+    sellPrice: '65.00',
+    markup: '44'
+  });
 
   useEffect(() => {
     async function fetchJob() {
       setIsLoading(true);
       try {
-        const [woRes, techRes] = await Promise.all([
+        const [woRes, techRes, partsRes] = await Promise.all([
           supabase.from('work_orders').select('*').eq('id', id).single(),
-          supabase.from('technicians').select('*')
+          supabase.from('technicians').select('*'),
+          supabase.from('parts').select('*').order('part_number')
         ]);
 
         if (woRes.error) throw woRes.error;
@@ -42,13 +67,14 @@ export default function WorkOrderDetailPage() {
           ...data,
           customerName: data.customer_name,
           unitNumber: data.unit_display,
-          technicianId: data.technician_id,
+          technicianId: data.technician_id || data.tech_id,
           timerDisplay: `${hours}:${mins.toString().padStart(2, '0')}`,
           labour: data.labour || [],
           parts: data.parts || []
         });
 
         setTechnicians(techRes.data || []);
+        setInventoryParts(partsRes.data || []);
       } catch (err) {
         console.error("Error fetching job details:", err);
         setError(err.message || 'Failed to load work order from Supabase.');
@@ -64,7 +90,6 @@ export default function WorkOrderDetailPage() {
 
   const handleStatusAdvance = async (step) => {
     setWo(prev => ({ ...prev, status: step }));
-    // Optimistic update, but you'd typically await the supabase update here
     await supabase.from('work_orders').update({ status: step }).eq('id', id);
   };
 
@@ -95,6 +120,219 @@ export default function WorkOrderDetailPage() {
     }
   };
 
+  // Labour Handlers
+  const handleAddLabourLine = async (e) => {
+    e.preventDefault();
+    if (!labourForm.description.trim()) return;
+
+    setSavingLabour(true);
+    try {
+      const hoursNum = parseFloat(labourForm.hours) || 0;
+      const rateNum = parseFloat(labourForm.rate) || 145.00;
+      const newLine = {
+        description: labourForm.description,
+        hours: hoursNum,
+        rate: rateNum,
+        technician: labourForm.technician || wo.techName || 'Shop Tech'
+      };
+
+      const updatedLabour = [...(wo.labour || []), newLine];
+      
+      const labourTotal = updatedLabour.reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0);
+      const partsTotal = (wo.parts || []).reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.price || 0)), 0);
+      const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
+      const subtotal = labourTotal + partsTotal + shopSupplies;
+      const tax = subtotal * 0.05;
+      const newEstimatedCost = subtotal + tax;
+
+      const { error } = await supabase
+        .from('work_orders')
+        .update({
+          labour: updatedLabour,
+          estimated_cost: newEstimatedCost
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setWo(prev => ({
+        ...prev,
+        labour: updatedLabour,
+        estimated_cost: newEstimatedCost
+      }));
+
+      setShowAddLabourModal(false);
+      setLabourForm({
+        description: '',
+        hours: '1.5',
+        rate: '145.00',
+        technician: ''
+      });
+    } catch (err) {
+      alert(`Error adding labour line: ${err.message}`);
+    } finally {
+      setSavingLabour(false);
+    }
+  };
+
+  const handleRemoveLabourLine = async (indexToRemove) => {
+    if (!confirm('Are you sure you want to remove this labour line?')) return;
+
+    const updatedLabour = (wo.labour || []).filter((_, i) => i !== indexToRemove);
+    const labourTotal = updatedLabour.reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0);
+    const partsTotal = (wo.parts || []).reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.price || 0)), 0);
+    const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
+    const subtotal = labourTotal + partsTotal + shopSupplies;
+    const tax = subtotal * 0.05;
+    const newEstimatedCost = subtotal + tax;
+
+    try {
+      const { error } = await supabase
+        .from('work_orders')
+        .update({
+          labour: updatedLabour,
+          estimated_cost: newEstimatedCost
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setWo(prev => ({
+        ...prev,
+        labour: updatedLabour,
+        estimated_cost: newEstimatedCost
+      }));
+    } catch (err) {
+      alert(`Error removing labour line: ${err.message}`);
+    }
+  };
+
+  // Parts Handlers
+  const handleSelectInventoryPart = (e) => {
+    const partId = e.target.value;
+    setSelectedInventoryPartId(partId);
+
+    if (partId) {
+      const p = inventoryParts.find(item => item.id === partId);
+      if (p) {
+        const costVal = p.cost || 0;
+        const sellVal = p.sell || p.price || (costVal * 1.35);
+        const markupVal = costVal > 0 ? (((sellVal - costVal) / costVal) * 100).toFixed(0) : '35';
+
+        setPartForm({
+          partNumber: p.part_number,
+          description: p.description,
+          quantity: '1',
+          cost: costVal.toString(),
+          sellPrice: sellVal.toString(),
+          markup: markupVal
+        });
+      }
+    }
+  };
+
+  const handleAddPartLine = async (e) => {
+    e.preventDefault();
+    if (!partForm.partNumber.trim() || !partForm.description.trim()) return;
+
+    setSavingPart(true);
+    try {
+      const qtyNum = parseInt(partForm.quantity) || 1;
+      const costNum = parseFloat(partForm.cost) || 0;
+      const sellPriceNum = parseFloat(partForm.sellPrice) || 0;
+
+      const newPartItem = {
+        partNumber: partForm.partNumber,
+        part_number: partForm.partNumber,
+        description: partForm.description,
+        quantity: qtyNum,
+        cost: costNum,
+        sellPrice: sellPriceNum,
+        price: sellPriceNum
+      };
+
+      const updatedParts = [...(wo.parts || []), newPartItem];
+      
+      const labourTotal = (wo.labour || []).reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0);
+      const partsTotal = updatedParts.reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.price || 0)), 0);
+      const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
+      const subtotal = labourTotal + partsTotal + shopSupplies;
+      const tax = subtotal * 0.05;
+      const newEstimatedCost = subtotal + tax;
+
+      const { error } = await supabase
+        .from('work_orders')
+        .update({
+          parts: updatedParts,
+          estimated_cost: newEstimatedCost
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      if (selectedInventoryPartId) {
+        const invPart = inventoryParts.find(p => p.id === selectedInventoryPartId);
+        if (invPart) {
+          const newQty = Math.max(0, (invPart.qty_on_hand || 0) - qtyNum);
+          await supabase.from('parts').update({ qty_on_hand: newQty }).eq('id', selectedInventoryPartId);
+        }
+      }
+
+      setWo(prev => ({
+        ...prev,
+        parts: updatedParts,
+        estimated_cost: newEstimatedCost
+      }));
+
+      setShowAddPartModal(false);
+      setSelectedInventoryPartId('');
+      setPartForm({
+        partNumber: '',
+        description: '',
+        quantity: '1',
+        cost: '45.00',
+        sellPrice: '65.00',
+        markup: '44'
+      });
+    } catch (err) {
+      alert(`Error adding part: ${err.message}`);
+    } finally {
+      setSavingPart(false);
+    }
+  };
+
+  const handleRemovePartLine = async (indexToRemove) => {
+    if (!confirm('Are you sure you want to remove this part?')) return;
+
+    const updatedParts = (wo.parts || []).filter((_, i) => i !== indexToRemove);
+    const labourTotal = (wo.labour || []).reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0);
+    const partsTotal = updatedParts.reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.price || 0)), 0);
+    const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
+    const subtotal = labourTotal + partsTotal + shopSupplies;
+    const tax = subtotal * 0.05;
+    const newEstimatedCost = subtotal + tax;
+
+    try {
+      const { error } = await supabase
+        .from('work_orders')
+        .update({
+          parts: updatedParts,
+          estimated_cost: newEstimatedCost
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setWo(prev => ({
+        ...prev,
+        parts: updatedParts,
+        estimated_cost: newEstimatedCost
+      }));
+    } catch (err) {
+      alert(`Error removing part: ${err.message}`);
+    }
+  };
+
   const getStatusClass = (status) => {
     const map = {
       'new': styles['status-new'],
@@ -114,9 +352,9 @@ export default function WorkOrderDetailPage() {
     
     const labourTotal = (wo.labour || []).reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0);
     const partsTotal = (wo.parts || []).reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.price || 0)), 0);
-    const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50); // 5% capped at $50
+    const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50); 
     const subtotal = labourTotal + partsTotal + shopSupplies;
-    const tax = subtotal * 0.05; // 5% tax
+    const tax = subtotal * 0.05; 
     
     return {
       labourTotal,
@@ -149,7 +387,6 @@ export default function WorkOrderDetailPage() {
       const today = new Date().toISOString().split('T')[0];
       const dueDate = new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
 
-      // 1. Upsert invoice in Supabase matching exact schema columns
       const { data, error } = await supabase
         .from('invoices')
         .upsert([{
@@ -170,7 +407,6 @@ export default function WorkOrderDetailPage() {
 
       if (error) throw error;
 
-      // 2. Update Work Order status to invoiced
       await supabase
         .from('work_orders')
         .update({ status: 'invoiced' })
@@ -218,19 +454,15 @@ export default function WorkOrderDetailPage() {
       <div className={styles.workflowBar}>
         {WORKFLOW_STEPS.map((step, idx) => {
           const isActive = wo.status === step;
-          const isCompleted = WORKFLOW_STEPS.indexOf(wo.status) > idx;
-          
           return (
-            <React.Fragment key={step}>
-              <div 
-                className={`${styles.workflowStep} ${isActive ? styles.active : ''} ${isCompleted ? styles.completed : ''}`}
-                onClick={() => handleStatusAdvance(step)}
-              >
-                {isCompleted ? <CheckCircle size={16} /> : <span style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid currentColor' }}></span>}
-                {(statusLabels[step] || {}).label || step}
-              </div>
-              {idx < WORKFLOW_STEPS.length - 1 && <ChevronRight size={16} className={styles.workflowDivider} />}
-            </React.Fragment>
+            <button 
+              key={step} 
+              className={`${styles.workflowStep} ${isActive ? styles.workflowStepActive : ''}`}
+              onClick={() => handleStatusAdvance(step)}
+            >
+              <span className={styles.stepNum}>{idx + 1}</span>
+              <span className={styles.stepLabel}>{(statusLabels[step] || {}).label || step}</span>
+            </button>
           );
         })}
       </div>
@@ -238,43 +470,60 @@ export default function WorkOrderDetailPage() {
       <div className={styles.gridTwoCol}>
         <div className={styles.leftCol} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          {/* Unit Info */}
+          {/* Unit & Customer Info */}
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Unit Information</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
               <div>
-                <p className={styles.label}>Customer</p>
-                <p>{wo.customerName}</p>
+                <span className={styles.label}>Customer</span>
+                <p style={{ fontWeight: 'bold' }}>{wo.customerName || 'N/A'}</p>
               </div>
               <div>
-                <p className={styles.label}>Unit #</p>
-                <p>{wo.unitNumber}</p>
+                <span className={styles.label}>Unit #</span>
+                <p style={{ fontWeight: 'bold' }}>{wo.unitNumber || 'N/A'}</p>
+              </div>
+              <div>
+                <span className={styles.label}>Trailer</span>
+                <p>{wo.trailer || 'None'}</p>
+              </div>
+              <div>
+                <span className={styles.label}>Priority</span>
+                <p style={{ textTransform: 'capitalize' }}>{wo.priority || 'Normal'}</p>
               </div>
             </div>
           </div>
 
-          {/* 3Cs */}
+          {/* Complaint / Cause / Correction */}
           <div className={styles.card}>
-            <h2 className={styles.cardTitle}>Complaint, Cause, Correction</h2>
-            <div className={styles.formGroup} style={{ marginBottom: '1rem' }}>
-              <label className={styles.label}>Complaint</label>
-              <textarea className={styles.textarea} readOnly defaultValue={wo.complaint || 'Customer reported issue.'}></textarea>
+            <h2 className={styles.cardTitle}>Service Details</h2>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Customer Complaint</label>
+              <p style={{ margin: 0, padding: '0.75rem', backgroundColor: 'var(--color-bg)', borderRadius: 'var(--radius-md)' }}>
+                {wo.complaint || 'No complaint details recorded.'}
+              </p>
             </div>
-            <div className={styles.formGroup} style={{ marginBottom: '1rem' }}>
+            <div className={styles.formGroup}>
               <label className={styles.label}>Cause</label>
-              <textarea className={styles.textarea} placeholder="Enter diagnosed cause..."></textarea>
+              <textarea className={styles.textarea} placeholder="Enter diagnosed cause..." defaultValue={wo.cause || ''}></textarea>
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Correction</label>
-              <textarea className={styles.textarea} placeholder="Enter repairs performed..."></textarea>
+              <textarea className={styles.textarea} placeholder="Enter repairs performed..." defaultValue={wo.correction || ''}></textarea>
             </div>
           </div>
 
           {/* Labour */}
           <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <h2 className={styles.cardTitle}>Labour</h2>
-              <button className="btn btn-outline" style={{ padding: '0.25rem 0.75rem' }}><Plus size={16} /> Add Labour</button>
+            <div className={styles.cardHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 className={styles.cardTitle} style={{ margin: 0 }}>Labour Lines</h2>
+              <button 
+                type="button"
+                className="btn btn-outline" 
+                onClick={() => setShowAddLabourModal(true)}
+                style={{ padding: '0.35rem 0.85rem', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+              >
+                <Plus size={15} /> + Add Labour
+              </button>
             </div>
             <div className={styles.tableContainer}>
               <table className={styles.table}>
@@ -282,22 +531,36 @@ export default function WorkOrderDetailPage() {
                   <tr>
                     <th>Description</th>
                     <th>Hours</th>
-                    <th>Rate</th>
-                    <th>Total</th>
+                    <th>Rate ($/hr)</th>
+                    <th>Total ($ CAD)</th>
+                    <th style={{ width: '40px' }}></th>
                   </tr>
                 </thead>
                 <tbody>
                   {wo.labour && wo.labour.length > 0 ? (
                     wo.labour.map((l, i) => (
                       <tr key={i}>
-                        <td>{l.description}</td>
-                        <td>{l.hours}</td>
-                        <td>${l.rate}</td>
-                        <td>${((l.hours || 0) * (l.rate || 0)).toFixed(2)}</td>
+                        <td>
+                          <strong>{l.description}</strong>
+                          {l.technician && <span style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-secondary)' }}>Tech: {l.technician}</span>}
+                        </td>
+                        <td>{l.hours} hrs</td>
+                        <td>${parseFloat(l.rate || 0).toFixed(2)}</td>
+                        <td><strong>${((parseFloat(l.hours || 0)) * (parseFloat(l.rate || 0))).toFixed(2)}</strong></td>
+                        <td>
+                          <button 
+                            type="button"
+                            onClick={() => handleRemoveLabourLine(i)}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                            title="Remove Labour Line"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </td>
                       </tr>
                     ))
                   ) : (
-                    <tr><td colSpan="4" style={{ textAlign: 'center' }}>No labour lines added.</td></tr>
+                    <tr><td colSpan="5" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--color-text-secondary)' }}>No labour lines added. Click "+ Add Labour" to record technician time.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -306,9 +569,16 @@ export default function WorkOrderDetailPage() {
 
           {/* Parts */}
           <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <h2 className={styles.cardTitle}>Parts</h2>
-              <button className="btn btn-outline" style={{ padding: '0.25rem 0.75rem' }}><Plus size={16} /> Add Part</button>
+            <div className={styles.cardHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 className={styles.cardTitle} style={{ margin: 0 }}>Parts & Materials</h2>
+              <button 
+                type="button"
+                className="btn btn-outline" 
+                onClick={() => setShowAddPartModal(true)}
+                style={{ padding: '0.35rem 0.85rem', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+              >
+                <Plus size={15} /> + Add Part
+              </button>
             </div>
             <div className={styles.tableContainer}>
               <table className={styles.table}>
@@ -317,23 +587,34 @@ export default function WorkOrderDetailPage() {
                     <th>Part #</th>
                     <th>Description</th>
                     <th>Qty</th>
-                    <th>Price</th>
-                    <th>Total</th>
+                    <th>Price ($ CAD)</th>
+                    <th>Total ($ CAD)</th>
+                    <th style={{ width: '40px' }}></th>
                   </tr>
                 </thead>
                 <tbody>
                   {wo.parts && wo.parts.length > 0 ? (
                     wo.parts.map((p, i) => (
                       <tr key={i}>
-                        <td>{p.partNumber || p.part_number}</td>
+                        <td><strong>{p.partNumber || p.part_number}</strong></td>
                         <td>{p.description}</td>
                         <td>{p.quantity}</td>
-                        <td>${p.sellPrice || p.price}</td>
-                        <td>${((p.quantity || 0) * (p.sellPrice || p.price || 0)).toFixed(2)}</td>
+                        <td>${parseFloat(p.sellPrice || p.price || 0).toFixed(2)}</td>
+                        <td><strong>${((parseFloat(p.quantity || 0)) * (parseFloat(p.sellPrice || p.price || 0))).toFixed(2)}</strong></td>
+                        <td>
+                          <button 
+                            type="button"
+                            onClick={() => handleRemovePartLine(i)}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                            title="Remove Part Line"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </td>
                       </tr>
                     ))
                   ) : (
-                    <tr><td colSpan="5" style={{ textAlign: 'center' }}>No parts added.</td></tr>
+                    <tr><td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--color-text-secondary)' }}>No parts added. Click "+ Add Part" to add parts from inventory or manual entry.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -363,7 +644,7 @@ export default function WorkOrderDetailPage() {
                 <option value="">Unassigned (None)</option>
                 {technicians.map(t => (
                   <option key={t.id} value={t.id}>
-                    {t.full_name || t.name} ({t.role || 'Mechanic'})
+                    {t.full_name || t.name} ({t.role || t.tech_type || 'Mechanic'})
                   </option>
                 ))}
               </select>
@@ -382,7 +663,7 @@ export default function WorkOrderDetailPage() {
               <span>${totals.partsTotal.toFixed(2)}</span>
             </div>
             <div className={styles.summaryRow}>
-              <span>Shop Supplies</span>
+              <span>Shop Supplies (5% max $50)</span>
               <span>${totals.shopSupplies.toFixed(2)}</span>
             </div>
             <div className={styles.summaryRow} style={{ borderTop: '1px solid var(--color-border)', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
@@ -390,11 +671,11 @@ export default function WorkOrderDetailPage() {
               <span>${totals.subtotal.toFixed(2)}</span>
             </div>
             <div className={styles.summaryRow}>
-              <span>Tax</span>
+              <span>Tax (5% GST)</span>
               <span>${totals.tax.toFixed(2)}</span>
             </div>
             <div className={`${styles.summaryRow} ${styles.summaryTotal}`}>
-              <span>Total</span>
+              <span>Total ($ CAD)</span>
               <span>${totals.total.toFixed(2)}</span>
             </div>
           </div>
@@ -420,11 +701,203 @@ export default function WorkOrderDetailPage() {
             <textarea 
               className={styles.textarea} 
               placeholder={activeNotesTab === 'internal' ? "Shop notes (not printed)..." : "Notes to appear on invoice..."}
+              defaultValue={activeNotesTab === 'internal' ? wo.internal_notes : wo.customer_notes}
             ></textarea>
           </div>
 
         </div>
       </div>
+
+      {/* Add Labour Modal */}
+      {showAddLabourModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: '12px', width: '100%', maxWidth: '480px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Wrench size={20} color="var(--color-primary)" />
+                Add Labour Line
+              </h2>
+              <button onClick={() => setShowAddLabourModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddLabourLine}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Labour Description *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Front Axle Brake Pad & Rotor Overhaul"
+                    value={labourForm.description}
+                    onChange={(e) => setLabourForm({ ...labourForm, description: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Billed Hours</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      required
+                      placeholder="1.5"
+                      value={labourForm.hours}
+                      onChange={(e) => setLabourForm({ ...labourForm, hours: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Rate ($ CAD/hr)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      placeholder="145.00"
+                      value={labourForm.rate}
+                      onChange={(e) => setLabourForm({ ...labourForm, rate: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Technician</label>
+                  <select
+                    value={labourForm.technician}
+                    onChange={(e) => setLabourForm({ ...labourForm, technician: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  >
+                    <option value="">{wo.techName || 'Assign to general shop'}</option>
+                    {technicians.map(t => (
+                      <option key={t.id} value={t.full_name || t.name}>{t.full_name || t.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowAddLabourModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={savingLabour}>
+                  {savingLabour ? 'Saving...' : 'Add Labour Line'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Part Modal */}
+      {showAddPartModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: '12px', width: '100%', maxWidth: '520px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Package size={20} color="var(--color-primary)" />
+                Add Part / Material
+              </h2>
+              <button onClick={() => setShowAddPartModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddPartLine}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginBottom: '20px' }}>
+                {inventoryParts.length > 0 && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Pick from Warehouse Inventory</label>
+                    <select
+                      value={selectedInventoryPartId}
+                      onChange={handleSelectInventoryPart}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                    >
+                      <option value="">-- Or enter custom part below --</option>
+                      {inventoryParts.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.part_number} - {p.description} (Stock: {p.qty_on_hand}) - ${(p.sell || p.price || 0).toFixed(2)} CAD
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Part # *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. FL-2040-BRK"
+                      value={partForm.partNumber}
+                      onChange={(e) => setPartForm({ ...partForm, partNumber: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Quantity</label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      placeholder="1"
+                      value={partForm.quantity}
+                      onChange={(e) => setPartForm({ ...partForm, quantity: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Part Description *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Heavy Duty Brake Shoes Set"
+                    value={partForm.description}
+                    onChange={(e) => setPartForm({ ...partForm, description: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Unit Cost ($ CAD)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="45.00"
+                      value={partForm.cost}
+                      onChange={(e) => setPartForm({ ...partForm, cost: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Customer Sell Price ($ CAD)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      placeholder="65.00"
+                      value={partForm.sellPrice}
+                      onChange={(e) => setPartForm({ ...partForm, sellPrice: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowAddPartModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={savingPart}>
+                  {savingPart ? 'Adding...' : 'Add Part to RO'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

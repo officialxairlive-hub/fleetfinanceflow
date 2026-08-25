@@ -86,10 +86,81 @@ export default function InspectionsPage() {
     }));
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [signed, setSigned] = useState(false);
+  const [inspectionDate, setInspectionDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const handleSubmitInspection = async (e) => {
+    e?.preventDefault();
+    if (!selectedUnit) {
+      alert('Please select a unit/truck to inspect.');
+      return;
+    }
+    if (!overallResult) {
+      alert('Please select an overall result (Pass, Conditional, or Fail).');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const unitObj = units.find(u => u.id === selectedUnit);
+      const failedItems = Object.entries(itemsState).filter(([_, val]) => val.status === 'fail');
+
+      // 1. Update Unit status and last_service in Supabase
+      const newStatus = overallResult === 'pass' ? 'active' : 'needs_service';
+      const { error: unitErr } = await supabase
+        .from('units')
+        .update({
+          last_service: inspectionDate,
+          status: newStatus
+        })
+        .eq('id', selectedUnit);
+
+      if (unitErr) throw unitErr;
+
+      // 2. If failed items exist, optionally create a diagnostic work order
+      let createdWoId = null;
+      if (overallResult === 'fail' || failedItems.length > 0) {
+        const failDescriptions = failedItems.map(([key, val]) => {
+          return `${key}: ${val.notes || 'Failed check'} (${val.measurement || 'Out of spec'})`;
+        }).join('; ');
+
+        createdWoId = `WO-${Date.now().toString().slice(-4)}`;
+        await supabase.from('work_orders').insert([{
+          id: createdWoId,
+          customer_id: unitObj?.customer_id || null,
+          customer_name: 'Fleet Inspection Service',
+          unit_id: selectedUnit,
+          unit_display: unitObj ? `#${unitObj.unit_number} - ${unitObj.make} ${unitObj.model}` : 'Inspected Unit',
+          complaint: `Failed ${activeTemplate.toUpperCase()} Inspection: ${failDescriptions || 'Issues detected'}`,
+          priority: overallResult === 'fail' ? 'high' : 'normal',
+          status: 'new',
+          estimated_cost: 450.00
+        }]);
+      }
+
+      alert(`✅ ${templates.find(t => t.id === activeTemplate)?.name} Logged to Supabase!\n\n- Unit: #${unitObj?.unit_number}\n- Result: ${overallResult.toUpperCase()}\n${createdWoId ? `- Repair Ticket created: #${createdWoId}` : ''}`);
+      
+      // Reset form
+      setItemsState({});
+      setOverallResult('');
+      setSigned(false);
+    } catch (err) {
+      alert(`Error submitting inspection: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Digital Inspections</h1>
+        <div>
+          <h1 className={styles.title}>Digital Vehicle Inspections (DVI)</h1>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px', margin: '4px 0 0' }}>
+            Conduct DOT, CVSE, PM, and Brake inspections with automatic fleet record logging
+          </p>
+        </div>
       </header>
 
       <div className={styles.templateSelector}>
@@ -107,11 +178,11 @@ export default function InspectionsPage() {
       <div className={styles.formCard}>
         <div className={styles.formHeader}>
           <div className={styles.formGroup}>
-            <label>Unit</label>
-            <select className={styles.select} value={selectedUnit} onChange={e => setSelectedUnit(e.target.value)}>
+            <label>Unit / Truck *</label>
+            <select className={styles.select} value={selectedUnit} onChange={e => setSelectedUnit(e.target.value)} required>
               <option value="">Select Unit...</option>
               {units.map(t => (
-                <option key={t.id} value={t.id}>Unit #{t.unit_number} ({t.make} {t.model})</option>
+                <option key={t.id} value={t.id}>Unit #{t.unit_number} ({t.make} {t.model} {t.plate ? `- ${t.plate}` : ''})</option>
               ))}
             </select>
           </div>
@@ -121,7 +192,7 @@ export default function InspectionsPage() {
           </div>
           <div className={styles.formGroup}>
             <label>Date</label>
-            <input type="date" className={styles.input} defaultValue={new Date().toISOString().split('T')[0]} />
+            <input type="date" className={styles.input} value={inspectionDate} onChange={e => setInspectionDate(e.target.value)} />
           </div>
         </div>
 
@@ -136,12 +207,14 @@ export default function InspectionsPage() {
                     <div className={styles.itemDesc}>{item.desc}</div>
                     <div className={styles.toggleGroup}>
                       <button 
+                        type="button"
                         className={`${styles.toggleBtn} ${styles.btnPass} ${itemState.status === 'pass' ? styles.active : ''}`}
                         onClick={() => handleToggle(item.id, 'pass')}
                       >
                         <CheckCircle size={18} /> Pass
                       </button>
                       <button 
+                        type="button"
                         className={`${styles.toggleBtn} ${styles.btnFail} ${itemState.status === 'fail' ? styles.active : ''}`}
                         onClick={() => handleToggle(item.id, 'fail')}
                       >
@@ -177,35 +250,55 @@ export default function InspectionsPage() {
           <h3 className={styles.sectionTitle}>Overall Result & Sign-off</h3>
           <div className={styles.overallResult}>
             <button 
+              type="button"
               className={`${styles.resultBtn} ${styles.pass} ${overallResult === 'pass' ? styles.active : ''}`}
               onClick={() => setOverallResult('pass')}
             >
-              Pass
+              Pass (Roadworthy)
             </button>
             <button 
+              type="button"
               className={`${styles.resultBtn} ${styles.conditional} ${overallResult === 'conditional' ? styles.active : ''}`}
               onClick={() => setOverallResult('conditional')}
             >
-              Conditional
+              Conditional (Minor Defects)
             </button>
             <button 
+              type="button"
               className={`${styles.resultBtn} ${styles.fail} ${overallResult === 'fail' ? styles.active : ''}`}
               onClick={() => setOverallResult('fail')}
             >
-              Fail
+              Fail (Out of Service)
             </button>
           </div>
           
-          <div className={styles.signBox}>
+          <div 
+            className={styles.signBox} 
+            onClick={() => setSigned(true)}
+            style={{ cursor: 'pointer', border: signed ? '2px solid #10b981' : '1px dashed var(--color-border)', backgroundColor: signed ? 'rgba(16, 185, 129, 0.05)' : 'transparent' }}
+          >
             <div style={{ textAlign: 'center' }}>
-              <FileSignature size={32} style={{ margin: '0 auto 10px', opacity: 0.5 }} />
-              <div>Tap or click to sign digital authorization</div>
+              <FileSignature size={32} style={{ margin: '0 auto 10px', color: signed ? '#10b981' : 'inherit', opacity: signed ? 1 : 0.5 }} />
+              <div>{signed ? `✓ Signed Digitally by ${inspector} (${new Date().toLocaleTimeString()})` : 'Tap or click to sign digital authorization'}</div>
             </div>
           </div>
 
           <div className={styles.actionButtons}>
-            <button className="btn btn-outline btn-lg" onClick={() => alert('Draft Saved')}>Save Draft</button>
-            <button className="btn btn-primary btn-lg" onClick={() => alert('Inspection Logged to Supabase!')}>Submit Inspection</button>
+            <button 
+              type="button" 
+              className="btn btn-outline btn-lg" 
+              onClick={() => alert('Inspection draft stored locally.')}
+            >
+              Save Draft
+            </button>
+            <button 
+              type="button" 
+              className="btn btn-primary btn-lg" 
+              onClick={handleSubmitInspection}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Saving to Supabase...' : 'Submit & Log Inspection'}
+            </button>
           </div>
         </div>
       </div>

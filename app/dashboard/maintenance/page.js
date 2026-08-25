@@ -79,6 +79,52 @@ export default function MaintenancePage() {
   const normalCount = maintenanceItems.filter(s => s.urgency === 'normal').length;
   const totalCount = maintenanceItems.length;
 
+  const [pmForm, setPmForm] = useState({
+    unitId: '',
+    pmType: 'PM A (Dry Service - Lube, Oil, Filter)',
+    dueIn: '5,000 km',
+    dueDate: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0]
+  });
+  const [savingPM, setSavingPM] = useState(false);
+
+  const handleSavePM = async (e) => {
+    e?.preventDefault();
+    if (!pmForm.unitId) {
+      alert('Please select a unit/truck.');
+      return;
+    }
+
+    setSavingPM(true);
+    try {
+      const pmData = {
+        type: pmForm.pmType,
+        dueIn: pmForm.dueIn,
+        urgency: 'upcoming',
+        dueDate: pmForm.dueDate
+      };
+
+      const { error: pmErr } = await supabase
+        .from('units')
+        .update({
+          next_pm: pmData
+        })
+        .eq('id', pmForm.unitId);
+
+      if (pmErr) throw pmErr;
+
+      alert(`✅ PM Schedule updated for Unit!`);
+      setShowModal(false);
+      
+      // Refresh
+      const { data: updatedUnits } = await supabase.from('units').select('*').order('unit_number');
+      setUnits(updatedUnits || []);
+    } catch (err) {
+      alert(`Error saving PM schedule: ${err.message}`);
+    } finally {
+      setSavingPM(false);
+    }
+  };
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -201,34 +247,62 @@ export default function MaintenancePage() {
                 <X size={20} />
               </button>
             </div>
-            <div className={styles.modalBody}>
-              <div className={styles.formGroup}>
-                <label>Select Unit</label>
-                <select className={styles.select}>
-                  <option value="">Select a unit...</option>
-                  {units.map(t => (
-                    <option key={t.id} value={t.id}>Unit #{t.unit_number} - {t.make} {t.model}</option>
-                  ))}
-                </select>
+            <form onSubmit={handleSavePM}>
+              <div className={styles.modalBody}>
+                <div className={styles.formGroup}>
+                  <label>Select Unit *</label>
+                  <select 
+                    className={styles.select} 
+                    value={pmForm.unitId} 
+                    onChange={(e) => setPmForm({ ...pmForm, unitId: e.target.value })}
+                    required
+                  >
+                    <option value="">Select a unit...</option>
+                    {units.map(t => (
+                      <option key={t.id} value={t.id}>Unit #{t.unit_number} - {t.make} {t.model}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className={styles.formGroup}>
+                  <label>PM Type</label>
+                  <select 
+                    className={styles.select}
+                    value={pmForm.pmType}
+                    onChange={(e) => setPmForm({ ...pmForm, pmType: e.target.value })}
+                  >
+                    <option>PM A (Dry Service - Lube, Oil, Filter)</option>
+                    <option>PM B (Wet Service - Transmission, Diffs, Coolant)</option>
+                    <option>PM C (Annual Safety & Brake Inspection)</option>
+                    <option>DOT / CVSE Annual Provincial Inspection</option>
+                  </select>
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Due Interval</label>
+                  <input 
+                    type="text" 
+                    className={styles.input} 
+                    placeholder="e.g. 5,000 km or 30 days"
+                    value={pmForm.dueIn}
+                    onChange={(e) => setPmForm({ ...pmForm, dueIn: e.target.value })}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Next Due Date</label>
+                  <input 
+                    type="date" 
+                    className={styles.input} 
+                    value={pmForm.dueDate}
+                    onChange={(e) => setPmForm({ ...pmForm, dueDate: e.target.value })}
+                  />
+                </div>
               </div>
-              <div className={styles.formGroup}>
-                <label>PM Type</label>
-                <select className={styles.select}>
-                  <option value="pm-a">PM A (Dry Service)</option>
-                  <option value="pm-b">PM B (Wet Service)</option>
-                  <option value="pm-c">PM C (Annual Inspection)</option>
-                  <option value="dot">DOT Inspection</option>
-                </select>
+              <div className={styles.modalFooter}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={savingPM}>
+                  {savingPM ? 'Saving...' : 'Save PM Schedule'}
+                </button>
               </div>
-              <div className={styles.formGroup}>
-                <label>Next Due Date</label>
-                <input type="date" className={styles.input} />
-              </div>
-            </div>
-            <div className={styles.modalFooter}>
-              <button className="btn btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={() => { alert('PM Schedule Saved!'); setShowModal(false); }}>Save Schedule</button>
-            </div>
+            </form>
           </div>
         </div>
       )}

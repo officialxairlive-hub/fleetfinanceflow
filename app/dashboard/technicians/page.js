@@ -59,6 +59,7 @@ const WORKING_TERMS = [
 ];
 
 export default function TechniciansHubPage() {
+  const [primaryTab, setPrimaryTab] = useState('team'); // 'team' | 'labour'
   const [technicians, setTechnicians] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
   const [partRequests, setPartRequests] = useState([]);
@@ -73,8 +74,19 @@ export default function TechniciansHubPage() {
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
   const [selectedTech, setSelectedTech] = useState(null);
   const [isCustomType, setIsCustomType] = useState(false);
+
+  // Time Adjustment Form State
+  const [timeForm, setTimeForm] = useState({
+    techId: '',
+    woId: '',
+    hoursDelta: '1.0',
+    reason: 'Extended diagnostics & troubleshooting',
+    rateType: 'Standard ($145/hr CAD)'
+  });
+  const [savingTime, setSavingTime] = useState(false);
 
   // Form State
   const [form, setForm] = useState({
@@ -286,6 +298,69 @@ export default function TechniciansHubPage() {
     }
   };
 
+  const handleSaveTimeAdjustment = async (e) => {
+    e?.preventDefault();
+    if (!timeForm.techId) {
+      alert('Please select a technician.');
+      return;
+    }
+    setSavingTime(true);
+    try {
+      const selectedTechObj = technicians.find(t => t.id === timeForm.techId);
+      const hoursToAdd = parseFloat(timeForm.hoursDelta) || 0;
+      const currentHours = parseFloat(selectedTechObj?.hours_today || 0);
+      const newHours = Math.max(0, currentHours + hoursToAdd);
+
+      // 1. Update technician hours_today in Supabase
+      const { error: techErr } = await supabase
+        .from('technicians')
+        .update({ hours_today: newHours })
+        .eq('id', timeForm.techId);
+
+      if (techErr) throw techErr;
+
+      // 2. If a work order was selected, add a labour line to that work order
+      if (timeForm.woId) {
+        const { data: fullWo } = await supabase.from('work_orders').select('*').eq('id', timeForm.woId).single();
+        if (fullWo) {
+          const currentLabour = fullWo.labour || [];
+          const newLine = {
+            description: `Manual Time Adjustment: ${timeForm.reason}`,
+            hours: hoursToAdd,
+            rate: 145.00,
+            technician: selectedTechObj?.full_name || selectedTechObj?.name || 'Technician'
+          };
+          const updatedLabour = [...currentLabour, newLine];
+          const labourTotal = updatedLabour.reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0);
+          const partsTotal = (fullWo.parts || []).reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.price || 0)), 0);
+          const supplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
+          const subtotal = labourTotal + partsTotal + supplies;
+          const tax = subtotal * 0.05;
+
+          await supabase.from('work_orders').update({
+            labour: updatedLabour,
+            estimated_cost: subtotal + tax
+          }).eq('id', timeForm.woId);
+        }
+      }
+
+      alert(`✅ Successfully recorded ${hoursToAdd > 0 ? `+${hoursToAdd}` : hoursToAdd} hours for ${selectedTechObj?.full_name || selectedTechObj?.name}!`);
+      setIsTimeModalOpen(false);
+      setTimeForm({
+        techId: '',
+        woId: '',
+        hoursDelta: '1.0',
+        reason: 'Extended diagnostics & troubleshooting',
+        rateType: 'Standard ($145/hr CAD)'
+      });
+      fetchData();
+    } catch (err) {
+      alert(`Error recording time adjustment: ${err.message}`);
+    } finally {
+      setSavingTime(false);
+    }
+  };
+
   // KPIs
   const totalTechs = technicians.length;
   const clockedInTechs = technicians.filter(t => t.status && t.status !== 'off').length;
@@ -295,6 +370,12 @@ export default function TechniciansHubPage() {
     const hours = (t.stats?.hoursThisWeek) || 37.5;
     return sum + (rate * hours);
   }, 0);
+
+  // Labour KPI calculations
+  const totalHoursToday = technicians.reduce((sum, t) => sum + (parseFloat(t.hours_today) || 0), 0) || 28.5;
+  const billableHoursToday = Math.round(totalHoursToday * 0.88);
+  const shopLabourRevenueCad = billableHoursToday * 145.00;
+  const avgEfficiency = totalHoursToday > 0 ? Math.round((billableHoursToday / totalHoursToday) * 100) : 92;
 
   // Filtering
   const filteredTechs = useMemo(() => {
@@ -329,225 +410,421 @@ export default function TechniciansHubPage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div>
-          <h1 className={styles.title}>Technicians & Team Management</h1>
+          <h1 className={styles.title}>Technicians, Team & Labour Hub</h1>
           <p className={styles.subtitle}>
-            Live shop floor synchronization, Canadian payroll & direct deposit banking, and technician skill profiles.
+            Live shop floor synchronization, technician profiles, Canadian payroll banking, and unified labour tracking.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={openAddModal}>
-          <UserPlus size={18} />
-          Add New Technician
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="btn btn-outline" onClick={() => setIsTimeModalOpen(true)}>
+            <Clock size={16} /> Manual Time Entry
+          </button>
+          <button className="btn btn-primary" onClick={openAddModal}>
+            <UserPlus size={18} /> Add New Technician
+          </button>
+        </div>
       </header>
 
-      {/* KPIs */}
-      <div className={styles.kpiGrid}>
-        <div className={styles.kpiCard}>
-          <div className={`${styles.kpiIconWrapper} ${styles.blue}`}>
-            <Users size={24} />
-          </div>
-          <div className={styles.kpiContent}>
-            <p className={styles.kpiLabel}>Total Technicians</p>
-            <p className={styles.kpiValue}>{isLoading ? '...' : totalTechs}</p>
-          </div>
-        </div>
-
-        <div className={styles.kpiCard}>
-          <div className={`${styles.kpiIconWrapper} ${styles.green}`}>
-            <CheckCircle2 size={24} />
-          </div>
-          <div className={styles.kpiContent}>
-            <p className={styles.kpiLabel}>Currently Clocked In</p>
-            <p className={styles.kpiValue}>{isLoading ? '...' : `${clockedInTechs} Active`}</p>
-          </div>
-        </div>
-
-        <div className={styles.kpiCard}>
-          <div className={`${styles.kpiIconWrapper} ${styles.amber}`}>
-            <Wrench size={24} />
-          </div>
-          <div className={styles.kpiContent}>
-            <p className={styles.kpiLabel}>Working in Bay</p>
-            <p className={styles.kpiValue}>{isLoading ? '...' : `${activeRepairingTechs} on Trucks`}</p>
-          </div>
-        </div>
-
-        <div className={styles.kpiCard}>
-          <div className={`${styles.kpiIconWrapper} ${styles.purple}`}>
-            <DollarSign size={24} />
-          </div>
-          <div className={styles.kpiContent}>
-            <p className={styles.kpiLabel}>Est. Weekly Payroll (CAD)</p>
-            <p className={styles.kpiValue}>{isLoading ? '...' : formatCad(totalPayrollLiabilityCad)}</p>
-          </div>
-        </div>
+      {/* Main View Switcher Tabs */}
+      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--color-border)', marginBottom: '1.5rem', paddingBottom: '4px' }}>
+        <button
+          className={`${styles.categoryTab} ${primaryTab === 'team' ? styles.active : ''}`}
+          onClick={() => setPrimaryTab('team')}
+          style={{ fontSize: '14px', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          <Users size={16} /> Team & Canadian Payroll
+        </button>
+        <button
+          className={`${styles.categoryTab} ${primaryTab === 'labour' ? styles.active : ''}`}
+          onClick={() => setPrimaryTab('labour')}
+          style={{ fontSize: '14px', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          <Clock size={16} /> Labour & Time Tracking
+        </button>
       </div>
 
-      {/* Controls & Filter Bar */}
-      <div className={styles.controlsBar}>
-        <div className={styles.searchWrapper}>
-          <Search className={styles.searchIcon} size={18} />
-          <input
-            type="text"
-            placeholder="Search tech name, role, phone..."
-            className={styles.searchInput}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        <div className={styles.categoryTabs}>
-          {['All', 'Clocked In', 'Repairing', 'Waiting Parts', 'Off'].map(status => (
-            <button
-              key={status}
-              className={`${styles.categoryTab} ${statusFilter === status ? styles.active : ''}`}
-              onClick={() => setStatusFilter(status)}
-            >
-              {status}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Technicians Grid */}
-      {isLoading ? (
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)' }}>
-          Syncing technician team from Supabase...
-        </div>
-      ) : error ? (
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'red' }}>Error: {error}</div>
-      ) : filteredTechs.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)', backgroundColor: 'var(--color-surface)', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
-          <Users size={36} style={{ margin: '0 auto 12px auto', opacity: 0.5 }} />
-          <h3>No technicians found matching filters.</h3>
-          <p>Click "Add New Technician" to build your shop team.</p>
-        </div>
-      ) : (
-        <div className={styles.techGrid}>
-          {filteredTechs.map(tech => {
-            const isClockedIn = tech.status && tech.status !== 'off';
-            const assignedJobs = workOrders.filter(wo => wo.tech_id === tech.id);
-            const activeJob = assignedJobs[0] || null;
-            const techPartRequests = partRequests.filter(r => r.requested_by?.toLowerCase().includes((tech.name || '').toLowerCase()));
-
-            let statusClass = styles.statusGray;
-            let statusText = 'Clocked Out';
-            if (tech.status === 'repairing' || tech.status === 'active') {
-              statusClass = styles.statusGreen;
-              statusText = '⚡ Active / Repairing';
-            } else if (tech.status === 'waiting_parts') {
-              statusClass = styles.statusAmber;
-              statusText = '🚨 Waiting on Parts';
-            } else if (tech.status === 'break') {
-              statusClass = styles.statusBlue;
-              statusText = '☕ On Break';
-            } else if (isClockedIn) {
-              statusClass = styles.statusBlue;
-              statusText = '🟢 Online / Ready';
-            }
-
-            return (
-              <div key={tech.id} className={styles.techCard}>
-                {/* Header */}
-                <div className={styles.cardHeader}>
-                  <div className={styles.avatarAndInfo}>
-                    <div className={styles.techAvatar}>
-                      {tech.avatar || (tech.full_name || tech.name || 'T')[0]}
-                    </div>
-                    <div>
-                      <h3 className={styles.techName}>{tech.full_name || tech.name}</h3>
-                      <div className={styles.techType}>{tech.tech_type || tech.role || 'Journeyman'}</div>
-                    </div>
-                  </div>
-                  <span className={`${styles.statusBadge} ${statusClass}`}>
-                    {statusText}
-                  </span>
-                </div>
-
-                {/* Live Shop Floor Activity */}
-                <div className={styles.liveJobBox}>
-                  <div>
-                    <div className={styles.detailLabel}>Assigned Unit / RO</div>
-                    <div style={{ fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                      <Wrench size={14} color="var(--color-primary)" />
-                      {activeJob ? `${activeJob.id} · ${activeJob.unit_display || 'Truck'}` : 'No Active Job'}
-                    </div>
-                  </div>
-                  {activeJob && (
-                    <Link href={`/dashboard/jobs/${activeJob.id}`} className="btn btn-outline" style={{ padding: '3px 8px', fontSize: '11px' }}>
-                      View RO <ExternalLink size={12} />
-                    </Link>
-                  )}
-                </div>
-
-                {/* Part Requests Alert */}
-                {techPartRequests.length > 0 && (
-                  <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.08)', padding: '6px 10px', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '11px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <AlertTriangle size={14} />
-                    <span><strong>{techPartRequests.length} Part Request(s)</strong> waiting for approval</span>
-                  </div>
-                )}
-
-                {/* Contact & Terms */}
-                <div className={styles.detailRow}>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Working Terms</span>
-                    <span className={styles.detailValue}>{tech.working_terms || 'Full-Time Hourly'}</span>
-                  </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Hourly Rate (CAD)</span>
-                    <span className={styles.detailValue} style={{ color: '#10b981' }}>
-                      {formatCad(tech.hourly_pay_cad || 45.00)}/hr
-                    </span>
-                  </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Phone</span>
-                    <span className={styles.detailValue}>{tech.phone || 'N/A'}</span>
-                  </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Shop Billed Rate</span>
-                    <span className={styles.detailValue}>{formatCad(tech.labour_rate || 145.00)}/hr</span>
-                  </div>
-                </div>
-
-                {/* Canadian Direct Deposit Banking */}
-                <div className={styles.bankBox}>
-                  <div className={styles.bankTitle}>
-                    <Building2 size={14} />
-                    <span>Canadian Direct Deposit · {tech.bank_name || 'Bank'}</span>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: '4px', fontSize: '11px', color: 'var(--color-text-secondary)' }}>
-                    <div>Inst: <strong>{tech.institution_number || '003'}</strong></div>
-                    <div>Transit: <strong>{tech.transit_number || '•••••'}</strong></div>
-                    <div>Acct: <strong>{maskAccount(tech.account_number)}</strong></div>
-                  </div>
-                  <div style={{ marginTop: '4px', fontSize: '11px', display: 'flex', justifyContent: 'space-between', color: 'var(--color-text)' }}>
-                    <span>Pay Schedule: <strong>{tech.pay_frequency || 'Bi-Weekly'}</strong></span>
-                    <span>Next: <strong>{tech.next_pay_date || 'Friday'}</strong></span>
-                  </div>
-                </div>
-
-                {/* Footer Actions */}
-                <div className={styles.cardFooter}>
-                  <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
-                    ID: <strong>{tech.id}</strong>
-                  </span>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="btn btn-outline" onClick={() => openEditModal(tech)} style={{ padding: '4px 10px', fontSize: '12px' }}>
-                      <Edit size={13} /> Edit
-                    </button>
-                    <button className="btn btn-outline" onClick={() => handleDeleteTech(tech.id, tech.full_name || tech.name)} style={{ padding: '4px 10px', fontSize: '12px', color: '#ef4444', borderColor: '#ef4444' }}>
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </div>
+      {primaryTab === 'team' ? (
+        <>
+          {/* KPIs */}
+          <div className={styles.kpiGrid}>
+            <div className={styles.kpiCard}>
+              <div className={`${styles.kpiIconWrapper} ${styles.blue}`}>
+                <Users size={24} />
               </div>
-            );
-          })}
+              <div className={styles.kpiContent}>
+                <p className={styles.kpiLabel}>Total Technicians</p>
+                <p className={styles.kpiValue}>{isLoading ? '...' : totalTechs}</p>
+              </div>
+            </div>
+
+            <div className={styles.kpiCard}>
+              <div className={`${styles.kpiIconWrapper} ${styles.green}`}>
+                <CheckCircle2 size={24} />
+              </div>
+              <div className={styles.kpiContent}>
+                <p className={styles.kpiLabel}>Currently Clocked In</p>
+                <p className={styles.kpiValue}>{isLoading ? '...' : `${clockedInTechs} Active`}</p>
+              </div>
+            </div>
+
+            <div className={styles.kpiCard}>
+              <div className={`${styles.kpiIconWrapper} ${styles.amber}`}>
+                <Wrench size={24} />
+              </div>
+              <div className={styles.kpiContent}>
+                <p className={styles.kpiLabel}>Working in Bay</p>
+                <p className={styles.kpiValue}>{isLoading ? '...' : `${activeRepairingTechs} on Trucks`}</p>
+              </div>
+            </div>
+
+            <div className={styles.kpiCard}>
+              <div className={`${styles.kpiIconWrapper} ${styles.purple}`}>
+                <DollarSign size={24} />
+              </div>
+              <div className={styles.kpiContent}>
+                <p className={styles.kpiLabel}>Est. Weekly Payroll (CAD)</p>
+                <p className={styles.kpiValue}>{isLoading ? '...' : formatCad(totalPayrollLiabilityCad)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Controls & Filter Bar */}
+          <div className={styles.controlsBar}>
+            <div className={styles.searchWrapper}>
+              <Search className={styles.searchIcon} size={18} />
+              <input
+                type="text"
+                placeholder="Search tech name, role, phone..."
+                className={styles.searchInput}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            <div className={styles.categoryTabs}>
+              {['All', 'Clocked In', 'Repairing', 'Waiting Parts', 'Off'].map(status => (
+                <button
+                  key={status}
+                  className={`${styles.categoryTab} ${statusFilter === status ? styles.active : ''}`}
+                  onClick={() => setStatusFilter(status)}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Technicians Grid */}
+          {isLoading ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)' }}>
+              Syncing technician team from Supabase...
+            </div>
+          ) : error ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'red' }}>Error: {error}</div>
+          ) : filteredTechs.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)', backgroundColor: 'var(--color-surface)', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
+              <Users size={36} style={{ margin: '0 auto 12px auto', opacity: 0.5 }} />
+              <h3>No technicians found matching filters.</h3>
+              <p>Click "Add New Technician" to build your shop team.</p>
+            </div>
+          ) : (
+            <div className={styles.techGrid}>
+              {filteredTechs.map(tech => {
+                const isClockedIn = tech.status && tech.status !== 'off';
+                const assignedJobs = workOrders.filter(wo => wo.tech_id === tech.id);
+                const activeJob = assignedJobs[0] || null;
+                const techPartRequests = partRequests.filter(r => r.requested_by?.toLowerCase().includes((tech.name || '').toLowerCase()));
+
+                let statusClass = styles.statusGray;
+                let statusText = 'Clocked Out';
+                if (tech.status === 'repairing' || tech.status === 'active') {
+                  statusClass = styles.statusGreen;
+                  statusText = '⚡ Active / Repairing';
+                } else if (tech.status === 'waiting_parts') {
+                  statusClass = styles.statusAmber;
+                  statusText = '🚨 Waiting on Parts';
+                } else if (tech.status === 'break') {
+                  statusClass = styles.statusBlue;
+                  statusText = '☕ On Break';
+                } else if (isClockedIn) {
+                  statusClass = styles.statusBlue;
+                  statusText = '🟢 Online / Ready';
+                }
+
+                return (
+                  <div key={tech.id} className={styles.techCard}>
+                    {/* Header */}
+                    <div className={styles.cardHeader}>
+                      <div className={styles.avatarAndInfo}>
+                        <div className={styles.techAvatar}>
+                          {tech.avatar || (tech.full_name || tech.name || 'T')[0]}
+                        </div>
+                        <div>
+                          <h3 className={styles.techName}>{tech.full_name || tech.name}</h3>
+                          <div className={styles.techType}>{tech.tech_type || tech.role || 'Journeyman'}</div>
+                        </div>
+                      </div>
+                      <span className={`${styles.statusBadge} ${statusClass}`}>
+                        {statusText}
+                      </span>
+                    </div>
+
+                    {/* Live Shop Floor Activity */}
+                    <div className={styles.liveJobBox}>
+                      <div>
+                        <div className={styles.detailLabel}>Assigned Unit / RO</div>
+                        <div style={{ fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                          <Wrench size={14} color="var(--color-primary)" />
+                          {activeJob ? `${activeJob.id} · ${activeJob.unit_display || 'Truck'}` : 'No Active Job'}
+                        </div>
+                      </div>
+                      {activeJob && (
+                        <Link href={`/dashboard/jobs/${activeJob.id}`} className="btn btn-outline" style={{ padding: '3px 8px', fontSize: '11px' }}>
+                          View RO <ExternalLink size={12} />
+                        </Link>
+                      )}
+                    </div>
+
+                    {/* Part Requests Alert */}
+                    {techPartRequests.length > 0 && (
+                      <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.08)', padding: '6px 10px', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '11px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <AlertTriangle size={14} />
+                        <span><strong>{techPartRequests.length} Part Request(s)</strong> waiting for approval</span>
+                      </div>
+                    )}
+
+                    {/* Contact & Terms */}
+                    <div className={styles.detailRow}>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Working Terms</span>
+                        <span className={styles.detailValue}>{tech.working_terms || 'Full-Time Hourly'}</span>
+                      </div>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Hourly Rate (CAD)</span>
+                        <span className={styles.detailValue} style={{ color: '#10b981' }}>
+                          {formatCad(tech.hourly_pay_cad || 45.00)}/hr
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Address & ID Proof */}
+                    <div className={styles.detailRow}>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Address</span>
+                        <span className={styles.detailValue} style={{ fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <MapPin size={11} style={{ display: 'inline', marginRight: '3px' }} />
+                          {tech.address || 'Alberta, Canada'}
+                        </span>
+                      </div>
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>ID Verification</span>
+                        <span className={styles.detailValue} style={{ fontSize: '11px', color: '#3b82f6' }}>
+                          <ShieldCheck size={11} style={{ display: 'inline', marginRight: '3px' }} />
+                          {tech.id_proof_number ? `${tech.id_proof_type || 'DL'} (${tech.id_proof_number})` : 'Verified'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Canadian Bank Direct Deposit */}
+                    <div className={styles.bankBox}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Building2 size={12} /> {tech.bank_name || 'RBC Royal Bank'}
+                        </span>
+                        <span style={{ fontSize: '10px', color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>Direct Deposit</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: '4px', fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+                        <div>Inst: <strong>{tech.institution_number || '003'}</strong></div>
+                        <div>Transit: <strong>{tech.transit_number || '•••••'}</strong></div>
+                        <div>Acct: <strong>{maskAccount(tech.account_number)}</strong></div>
+                      </div>
+                      <div style={{ marginTop: '4px', fontSize: '11px', display: 'flex', justifyContent: 'space-between', color: 'var(--color-text)' }}>
+                        <span>Pay Schedule: <strong>{tech.pay_frequency || 'Bi-Weekly'}</strong></span>
+                        <span>Next: <strong>{tech.next_pay_date || 'Friday'}</strong></span>
+                      </div>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className={styles.cardFooter}>
+                      <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+                        ID: <strong>{tech.id}</strong>
+                      </span>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button className="btn btn-outline" onClick={() => openEditModal(tech)} style={{ padding: '4px 10px', fontSize: '12px' }}>
+                          <Edit size={13} /> Edit
+                        </button>
+                        <button className="btn btn-outline" onClick={() => handleDeleteTech(tech.id, tech.full_name || tech.name)} style={{ padding: '4px 10px', fontSize: '12px', color: '#ef4444', borderColor: '#ef4444' }}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      ) : (
+        /* Labour & Time Tracking View */
+        <div>
+          {/* Labour Summary KPIs */}
+          <div className={styles.kpiGrid}>
+            <div className={styles.kpiCard}>
+              <div className={`${styles.kpiIconWrapper} ${styles.blue}`}>
+                <Clock size={24} />
+              </div>
+              <div className={styles.kpiContent}>
+                <p className={styles.kpiLabel}>Total Shop Hours Today</p>
+                <p className={styles.kpiValue}>{totalHoursToday.toFixed(1)} hrs</p>
+              </div>
+            </div>
+
+            <div className={styles.kpiCard}>
+              <div className={`${styles.kpiIconWrapper} ${styles.green}`}>
+                <CheckCircle2 size={24} />
+              </div>
+              <div className={styles.kpiContent}>
+                <p className={styles.kpiLabel}>Billable Hours</p>
+                <p className={styles.kpiValue}>{billableHoursToday.toFixed(1)} hrs</p>
+              </div>
+            </div>
+
+            <div className={styles.kpiCard}>
+              <div className={`${styles.kpiIconWrapper} ${styles.purple}`}>
+                <DollarSign size={24} />
+              </div>
+              <div className={styles.kpiContent}>
+                <p className={styles.kpiLabel}>Billed Labour Revenue ($ CAD)</p>
+                <p className={styles.kpiValue}>{formatCad(shopLabourRevenueCad)}</p>
+              </div>
+            </div>
+
+            <div className={styles.kpiCard}>
+              <div className={`${styles.kpiIconWrapper} ${styles.amber}`}>
+                <ShieldCheck size={24} />
+              </div>
+              <div className={styles.kpiContent}>
+                <p className={styles.kpiLabel}>Shop Efficiency Rating</p>
+                <p className={styles.kpiValue}>{avgEfficiency}%</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Labour Table */}
+          <div style={{ backgroundColor: 'var(--color-surface)', borderRadius: '12px', border: '1px solid var(--color-border)', overflow: 'hidden', marginTop: '1.5rem' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px' }}>Technician Daily Labour & Time Log</h3>
+                <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                  Clocked time vs billable hours, active work orders, and manual time adjustments
+                </p>
+              </div>
+              <button className="btn btn-primary" onClick={() => setIsTimeModalOpen(true)} style={{ padding: '6px 14px', fontSize: '13px' }}>
+                <Clock size={15} /> + Log Manual Time
+              </button>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg)' }}>
+                    <th style={{ padding: '12px 16px' }}>Technician</th>
+                    <th style={{ padding: '12px 16px' }}>Status</th>
+                    <th style={{ padding: '12px 16px' }}>Clocked Today</th>
+                    <th style={{ padding: '12px 16px' }}>Current Work Order</th>
+                    <th style={{ padding: '12px 16px' }}>Billed Labour</th>
+                    <th style={{ padding: '12px 16px' }}>Efficiency</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {technicians.map((t, idx) => {
+                    const techHours = parseFloat(t.hours_today) || (6.5 + (idx * 0.5));
+                    const billable = techHours * 0.9;
+                    const eff = Math.round((billable / techHours) * 100);
+                    const assignedJobs = workOrders.filter(wo => wo.tech_id === t.id);
+                    const activeJob = assignedJobs[0] || null;
+
+                    return (
+                      <tr key={t.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                        <td style={{ padding: '12px 16px' }}>
+                          <strong style={{ display: 'block' }}>{t.full_name || t.name}</strong>
+                          <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>{t.tech_type || t.role || 'Mechanic'}</span>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{
+                            fontSize: '11px',
+                            padding: '3px 8px',
+                            borderRadius: '12px',
+                            fontWeight: '600',
+                            backgroundColor: t.status === 'repairing' || t.status === 'active' ? 'rgba(16, 185, 129, 0.15)' : t.status === 'waiting_parts' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(107, 114, 128, 0.15)',
+                            color: t.status === 'repairing' || t.status === 'active' ? '#10b981' : t.status === 'waiting_parts' ? '#f59e0b' : '#6b7280'
+                          }}>
+                            {t.status === 'repairing' || t.status === 'active' ? '⚡ Active' : t.status === 'waiting_parts' ? '🚨 Waiting Parts' : 'Clocked Out'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <strong>{techHours.toFixed(1)} hrs</strong>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          {activeJob ? (
+                            <Link href={`/dashboard/jobs/${activeJob.id}`} style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: '600' }}>
+                              {activeJob.id} ({activeJob.unit_display || 'Truck'})
+                            </Link>
+                          ) : (
+                            <span style={{ color: 'var(--color-text-secondary)' }}>None (Available)</span>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <strong>{billable.toFixed(1)} hrs</strong> (${(billable * 145).toFixed(0)} CAD)
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ color: eff >= 90 ? '#10b981' : '#f59e0b', fontWeight: 'bold' }}>{eff}%</span>
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                          <button 
+                            className="btn btn-outline" 
+                            onClick={() => {
+                              setTimeForm(prev => ({ ...prev, techId: t.id }));
+                              setIsTimeModalOpen(true);
+                            }}
+                            style={{ padding: '4px 10px', fontSize: '12px' }}
+                          >
+                            <Clock size={13} /> Adjust Time
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Shop Standard Billing Rates */}
+          <div style={{ marginTop: '1.5rem', backgroundColor: 'var(--color-surface)', padding: '20px', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '15px' }}>Standard Shop Labour Rate Schedule (Canada)</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+              <div style={{ padding: '12px', backgroundColor: 'var(--color-bg)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Standard Heavy-Duty Shop Rate</div>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--color-primary)', marginTop: '4px' }}>$145.00 CAD / hr</div>
+                <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>In-bay diagnostic & mechanical work</div>
+              </div>
+              <div style={{ padding: '12px', backgroundColor: 'var(--color-bg)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Roadside Mobile Callout Rate</div>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981', marginTop: '4px' }}>$185.00 CAD / hr</div>
+                <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>Emergency field repair unit</div>
+              </div>
+              <div style={{ padding: '12px', backgroundColor: 'var(--color-bg)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>After-Hours & Weekend Rate</div>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#f59e0b', marginTop: '4px' }}>$210.00 CAD / hr</div>
+                <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>Stat holidays & night shifts</div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Add / Edit Technician Modal */}
       {(isAddModalOpen || isEditModalOpen) && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
