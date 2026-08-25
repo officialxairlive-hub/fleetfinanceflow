@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Edit2, MapPin, Mail, Phone, CreditCard, Percent, FileText, Settings, History } from 'lucide-react';
+import { ArrowLeft, Edit2, MapPin, Mail, Phone, CreditCard, Percent, FileText, Settings, History, Plus, X, Truck } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import styles from '../customers.module.css';
 
@@ -20,6 +20,19 @@ export default function CustomerDetailPage() {
   const [error, setError] = useState(null);
   
   const [activeTab, setActiveTab] = useState('fleet');
+
+  // Add Unit State
+  const [showAddUnitModal, setShowAddUnitModal] = useState(false);
+  const [savingUnit, setSavingUnit] = useState(false);
+  const [unitForm, setUnitForm] = useState({
+    unitNumber: '',
+    vin: '',
+    make: 'Freightliner',
+    model: 'Cascadia',
+    year: 2022,
+    mileage: 185000,
+    engine: 'Detroit DD15'
+  });
   
   useEffect(() => {
     async function fetchCustomerDetails() {
@@ -79,6 +92,49 @@ export default function CustomerDetailPage() {
       fetchCustomerDetails();
     }
   }, [customerId]);
+
+  const handleAddUnit = async (e) => {
+    e.preventDefault();
+    if (!unitForm.unitNumber.trim()) return;
+
+    setSavingUnit(true);
+    try {
+      const { data, error } = await supabase
+        .from('units')
+        .insert([{
+          customer_id: customerId,
+          unit_number: unitForm.unitNumber,
+          vin: unitForm.vin,
+          make: unitForm.make,
+          model: unitForm.model,
+          year: parseInt(unitForm.year) || 2022,
+          mileage: parseInt(unitForm.mileage) || 0,
+          engine: unitForm.engine,
+          status: 'in_service'
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setFleet(prev => [data, ...prev]);
+      setShowAddUnitModal(false);
+      setUnitForm({
+        unitNumber: '',
+        vin: '',
+        make: 'Freightliner',
+        model: 'Cascadia',
+        year: 2022,
+        mileage: 185000,
+        engine: 'Detroit DD15'
+      });
+      alert('Fleet unit added successfully!');
+    } catch (err) {
+      alert(`Error creating unit: ${err.message}`);
+    } finally {
+      setSavingUnit(false);
+    }
+  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(amount || 0);
@@ -225,6 +281,15 @@ export default function CustomerDetailPage() {
       <div className={styles.tabContent}>
         {activeTab === 'fleet' && (
           <div className={styles.tableContainer} style={{ border: 'none', boxShadow: 'none' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => setShowAddUnitModal(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Plus size={16} /> Add Fleet Unit
+              </button>
+            </div>
             <table className={styles.table}>
               <thead>
                 <tr>
@@ -240,7 +305,7 @@ export default function CustomerDetailPage() {
               <tbody>
                 {fleet.length > 0 ? fleet.map(truck => (
                   <tr key={truck.id}>
-                    <td data-label="Unit #"><strong>{truck.unitNumber}</strong></td>
+                    <td data-label="Unit #"><strong>{truck.unitNumber || truck.unit_number}</strong></td>
                     <td data-label="VIN"><small>{truck.vin || '-'}</small></td>
                     <td data-label="Make / Model">{truck.make} {truck.model}</td>
                     <td data-label="Year">{truck.year || '-'}</td>
@@ -253,16 +318,16 @@ export default function CustomerDetailPage() {
                             Due in {truck.nextPM.dueIn}
                           </small>
                         </div>
-                      ) : 'N/A'}
+                      ) : 'PM A (Due 30d)'}
                     </td>
                     <td data-label="Status">
-                      <span className={`${styles.statusPill} ${truck.status === 'ready' || truck.status === 'active' ? styles.active : styles.inactive}`}>
-                        {truck.status?.replace('_', ' ')}
+                      <span className={`${styles.statusPill} ${truck.status === 'ready' || truck.status === 'active' || truck.status === 'in_service' ? styles.active : styles.inactive}`}>
+                        {truck.status?.replace('_', ' ') || 'Active'}
                       </span>
                     </td>
                   </tr>
                 )) : (
-                  <tr><td colSpan="7" style={{textAlign: 'center', padding: '2rem'}}>No fleet units found.</td></tr>
+                  <tr><td colSpan="7" style={{textAlign: 'center', padding: '2rem'}}>No fleet units registered for this customer yet. Click "Add Fleet Unit" to register one!</td></tr>
                 )}
               </tbody>
             </table>
@@ -368,6 +433,195 @@ export default function CustomerDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Add Fleet Unit Modal */}
+      {showAddUnitModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            backgroundColor: 'var(--color-bg)',
+            border: '1px solid var(--color-border)',
+            padding: '24px',
+            borderRadius: '12px',
+            width: '480px',
+            maxWidth: '90vw',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Truck size={20} color="var(--color-primary)" />
+                Add Fleet Unit to {customer.company}
+              </h2>
+              <button 
+                onClick={() => setShowAddUnitModal(false)} 
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddUnit}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                    Unit # (Required)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Unit 2049"
+                    value={unitForm.unitNumber}
+                    onChange={(e) => setUnitForm({ ...unitForm, unitNumber: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--color-border)',
+                      backgroundColor: 'var(--color-surface)',
+                      color: 'var(--color-text)',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                    VIN
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="1FUJGLDR8ML..."
+                    value={unitForm.vin}
+                    onChange={(e) => setUnitForm({ ...unitForm, vin: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--color-border)',
+                      backgroundColor: 'var(--color-surface)',
+                      color: 'var(--color-text)',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                    Make
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Freightliner"
+                    value={unitForm.make}
+                    onChange={(e) => setUnitForm({ ...unitForm, make: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--color-border)',
+                      backgroundColor: 'var(--color-surface)',
+                      color: 'var(--color-text)',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                    Model
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Cascadia"
+                    value={unitForm.model}
+                    onChange={(e) => setUnitForm({ ...unitForm, model: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--color-border)',
+                      backgroundColor: 'var(--color-surface)',
+                      color: 'var(--color-text)',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                    Year
+                  </label>
+                  <input
+                    type="number"
+                    value={unitForm.year}
+                    onChange={(e) => setUnitForm({ ...unitForm, year: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--color-border)',
+                      backgroundColor: 'var(--color-surface)',
+                      color: 'var(--color-text)',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                    Mileage (km)
+                  </label>
+                  <input
+                    type="number"
+                    value={unitForm.mileage}
+                    onChange={(e) => setUnitForm({ ...unitForm, mileage: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--color-border)',
+                      backgroundColor: 'var(--color-surface)',
+                      color: 'var(--color-text)',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setShowAddUnitModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={savingUnit}
+                >
+                  {savingUnit ? 'Saving Unit...' : 'Save Fleet Unit'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
