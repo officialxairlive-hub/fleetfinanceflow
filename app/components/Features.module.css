@@ -156,15 +156,49 @@
 }
 
 @media (max-width: 768px) {
+  .featuresSection {
+    padding: 3.5rem 0;
+  }
+
   .grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-top: 2rem;
   }
   
-  .featuresSection {
-    padding: 4rem 0;
+  .card:nth-child(1),
+  .card:nth-child(2) {
+    grid-column: auto !important;
+    grid-row: auto !important;
   }
-  
+
   .card {
-    padding: 1.5rem;
+    padding: 1.35rem;
+    border-radius: 18px;
+  }
+
+  .cardHeader {
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .cardTitle {
+    font-size: 1.25rem;
+  }
+
+  .subFeatures {
+    gap: 1rem;
+  }
+
+  .subFeature {
+    gap: 0.75rem;
+  }
+
+  .subFeatureTitle {
+    font-size: 0.9375rem;
+  }
+
+  .subFeatureDesc {
+    font-size: 0.8125rem;
   }
 }

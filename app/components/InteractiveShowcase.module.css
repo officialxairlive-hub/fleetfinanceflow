@@ -181,3 +181,57 @@
     font-size: 1.15rem;
   }
 }
+
+@media (max-width: 640px) {
+  .tabBar {
+    gap: 6px;
+    margin-bottom: 1.5rem;
+  }
+
+  .tabBtn {
+    padding: 7px 12px;
+    font-size: 0.75rem;
+    gap: 6px;
+  }
+
+  .contentCard {
+    padding: 1.25rem;
+    border-radius: 18px;
+  }
+
+  .viewHeadline {
+    font-size: 1.0625rem;
+    line-height: 1.35;
+    margin-bottom: 0.75rem;
+  }
+
+  .pointsList {
+    gap: 8px;
+    margin-bottom: 1rem;
+  }
+
+  .pointItem {
+    font-size: 0.78125rem;
+    gap: 8px;
+  }
+
+  .statBox {
+    padding: 8px 12px;
+    margin-bottom: 1.25rem;
+  }
+
+  .statNumber {
+    font-size: 1.15rem;
+  }
+
+  .ctaRow {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .ctaRow a {
+    width: 100%;
+    justify-content: center;
+  }
+}

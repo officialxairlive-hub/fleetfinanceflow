@@ -168,18 +168,54 @@
 }
 
 @media (max-width: 768px) {
+  .testimonialsSection {
+    padding: 3.5rem 0;
+  }
+
+  .header {
+    margin-bottom: 2rem;
+    padding: 0 1rem;
+  }
+
+  .title {
+    font-size: clamp(1.65rem, 6vw, 2.25rem);
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.875rem;
+  }
+
   .marqueeContainer {
-    gap: var(--space-md);
+    gap: 0.875rem;
   }
   
   .card {
-    width: 300px;
-    padding: var(--space-md);
+    width: 280px;
+    padding: 1.15rem;
+    gap: 0.75rem;
+    border-radius: 14px;
+  }
+
+  .quote {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+
+  .starIcon {
+    width: 16px;
+    height: 16px;
   }
   
   .marqueeContent,
   .marqueeContentReverse {
-    gap: var(--space-md);
-    padding-right: var(--space-md);
+    gap: 0.875rem;
+    padding-right: 0.875rem;
+  }
+
+  .gradientLeft,
+  .gradientRight {
+    width: 8vw;
+    max-width: 50px;
   }
 }

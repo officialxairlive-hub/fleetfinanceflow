@@ -87,3 +87,27 @@
     font-size: 1.75rem;
   }
 }
+
+@media (max-width: 640px) {
+  .section {
+    padding: 2.25rem 0;
+  }
+
+  .container {
+    gap: 1.25rem;
+  }
+
+  .label {
+    font-size: 11px;
+    padding: 0 0.5rem;
+    line-height: 1.4;
+  }
+
+  .logoGrid {
+    gap: 1.25rem 2rem;
+  }
+
+  .logoText {
+    font-size: 1.25rem;
+  }
+}

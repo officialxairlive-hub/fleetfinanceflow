@@ -309,6 +309,14 @@
     border-right: 1px solid rgba(255, 255, 255, 0.08);
   }
 
+  .ribbonCard:nth-child(5) {
+    grid-column: span 2;
+    border-right: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    align-items: center;
+    text-align: center;
+  }
+
   .ribbonValue {
     font-size: 1.15rem;
   }
