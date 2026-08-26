@@ -7,12 +7,10 @@ import Integrations from "./components/Integrations";
 import InteractiveShowcase from "./components/InteractiveShowcase";
 import ComparisonTable from "./components/ComparisonTable";
 import Features from "./components/Features";
-import HowItWorks from "./components/HowItWorks";
 import ROICalculator from "./components/ROICalculator";
 import Testimonials from "./components/Testimonials";
-import CommonProblems from "./components/CommonProblems";
-import CTABanner from "./components/CTABanner";
 import FAQ from "./components/FAQ";
+import CTABanner from "./components/CTABanner";
 import Footer from "./components/Footer";
 
 export default function Home() {
@@ -27,12 +25,10 @@ export default function Home() {
       <InteractiveShowcase />
       <ComparisonTable />
       <Features />
-      <HowItWorks />
       <ROICalculator />
       <Testimonials />
-      <CommonProblems />
-      <CTABanner />
       <FAQ />
+      <CTABanner />
       <Footer />
     </main>
   );

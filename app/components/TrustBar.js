@@ -3,51 +3,67 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import styles from './TrustBar.module.css';
-import { Star } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, ArrowRight, Zap, RefreshCw } from 'lucide-react';
 
-const reviews = [
-  { platform: 'Google', rating: '4.9', count: '1,200+' },
-  { platform: 'Capterra', rating: '4.8', count: '850+' },
-  { platform: 'G2', rating: '4.7', count: '900+' },
-  { platform: 'Trustpilot', rating: '4.9', count: '2,100+' },
+const trustPillars = [
+  {
+    title: 'North American HD Standards',
+    desc: 'Built specifically for Class 6-8 commercial truck, trailer, diesel & vocational shops. Full CAD & USD multi-currency with provincial & state tax rules.',
+    tag: 'US & Canada Certified',
+  },
+  {
+    title: '2-Way QuickBooks Sync',
+    desc: 'Live bidirectional sync for repair orders, customer ledgers, parts invoices, and payments. Zero duplicate bookkeeping entries on Friday afternoons.',
+    tag: 'Official Accounting Integration',
+  },
+  {
+    title: 'Stripe Verified Commercial Payments',
+    desc: 'Instant online credit card, debit, ACH & EFT payment links sent with digital estimates. Money lands directly in your commercial operating account.',
+    tag: 'Bank-Grade Security',
+  },
+  {
+    title: 'Zero Lock-in Contract Guarantee',
+    desc: 'Transparent month-to-month terms. Free 1-on-1 white glove data onboarding — we import your existing units, inventory, and customer accounts.',
+    tag: 'Honest Business Terms',
+  },
 ];
 
 export default function TrustBar() {
   return (
     <section className={styles.section}>
       <div className={`container ${styles.container}`}>
-        <motion.h2 
-          className={styles.label}
-          initial={{ opacity: 0, y: 20 }}
+        <motion.div 
+          className={styles.headerArea}
+          initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-50px" }}
+          viewport={{ once: true, margin: "-40px" }}
           transition={{ duration: 0.5 }}
         >
-          Trusted by heavy-duty shops across the country
-        </motion.h2>
+          <span className="section-label">BUILT FOR REAL COMMERCIAL REPAIR OPERATIONS</span>
+          <h2 className={styles.headline}>
+            A Serious Tool for Shops That Value Real Numbers Over Gimmicks.
+          </h2>
+          <p className={styles.subheadline}>
+            We aren't a generic startup app. Fleet Finance Flow was engineered around the daily reality of commercial diesel bays — protecting your labor recovery, parts markup, and cash flow.
+          </p>
+        </motion.div>
 
         <div className={styles.grid}>
-          {reviews.map((review, index) => (
+          {trustPillars.map((item, index) => (
             <motion.div 
-              key={review.platform}
+              key={item.title}
               className={styles.card}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 18 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.45, delay: index * 0.08 }}
             >
-              <div className={styles.platformName}>{review.platform}</div>
-              <div className={styles.ratingRow}>
-                <span className={styles.ratingNumber}>{review.rating}</span>
-                <span className={styles.stars}>
-                  <Star className={styles.starIcon} fill="currentColor" size={16} />
-                  <Star className={styles.starIcon} fill="currentColor" size={16} />
-                  <Star className={styles.starIcon} fill="currentColor" size={16} />
-                  <Star className={styles.starIcon} fill="currentColor" size={16} />
-                  <Star className={styles.starIcon} fill="currentColor" size={16} />
-                </span>
+              <div className={styles.tagBadge}>
+                <CheckCircle2 size={13} className={styles.badgeIcon} />
+                <span>{item.tag}</span>
               </div>
-              <div className={styles.count}>{review.count} reviews</div>
+              <h3 className={styles.cardTitle}>{item.title}</h3>
+              <p className={styles.cardDesc}>{item.desc}</p>
             </motion.div>
           ))}
         </div>
