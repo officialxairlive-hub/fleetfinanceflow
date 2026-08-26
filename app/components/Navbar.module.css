@@ -1,44 +1,35 @@
-/* ─── Navbar Base ─────────────────────────────────────── */
+/* ─── Modern Tech Floating Pill Navbar ─────────────────────────────────── */
 .navbar {
   position: fixed;
   top: 14px;
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 2.5rem);
-  max-width: 1200px;
+  max-width: 1160px;
   height: 52px;
   display: flex;
   align-items: center;
   z-index: 1000;
   border-radius: 9999px;
-  transition: background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
+  transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
-/* Slightly smaller on mobile */
-@media (max-width: 640px) {
-  .navbar {
-    top: 10px;
-    height: 46px;
-    width: calc(100% - 1.5rem);
-  }
-}
-
-/* Over the hero image: dark-tinted glass pill — belongs on the photo */
+/* Over the hero image: dark-tinted frosted glass */
 .atTop {
-  background: rgba(10, 15, 30, 0.35);
+  background: rgba(10, 15, 30, 0.40);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.20);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
 }
 
-/* After scroll: crisp frosted white pill */
+/* After scroll: crisp white frosted glass */
 .scrolled {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(226, 232, 240, 0.75);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.90);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 }
 
 /* ─── Inner Container ─────────────────────────────────── */
@@ -47,14 +38,14 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 0 1.5rem;
+  padding: 0 1.25rem;
 }
 
 /* ─── Nav Links ───────────────────────────────────────── */
 .navLinks {
   display: none;
   align-items: center;
-  gap: 2rem;
+  gap: 1.75rem;
 }
 
 @media (min-width: 768px) {
@@ -64,28 +55,26 @@
 }
 
 .navLink {
-  font-size: var(--text-sm, 0.8125rem);
+  font-family: var(--font-body);
+  font-size: 0.8125rem; /* 13px */
   font-weight: 500;
-  letter-spacing: var(--tracking-normal, -0.01em);
+  letter-spacing: -0.01em;
   text-decoration: none;
-  transition: color 0.2s ease, opacity 0.2s ease;
+  transition: color 0.15s ease, opacity 0.15s ease;
 }
 
-/* Light (white) links — over dark hero image */
 .navLinkLight {
   color: rgba(255, 255, 255, 0.85);
 }
 .navLinkLight:hover {
   color: #FFFFFF;
-  opacity: 1;
 }
 
-/* Dark links — scrolled state */
 .navLinkDark {
   color: #475569;
 }
 .navLinkDark:hover {
-  color: #0F172A;
+  color: #090D16;
 }
 
 /* ─── Desktop Actions ─────────────────────────────────── */
@@ -102,12 +91,14 @@
 }
 
 .signInLink {
-  font-size: 0.9rem;
+  font-family: var(--font-body);
+  font-size: 0.8125rem; /* 13px */
   font-weight: 600;
+  letter-spacing: -0.01em;
   text-decoration: none;
-  padding: 8px 14px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
 }
 
 .signInLight {
@@ -122,28 +113,29 @@
   color: #475569;
 }
 .signInDark:hover {
-  color: #0F172A;
+  color: #090D16;
   background: #F1F5F9;
 }
 
 .signUpBtn {
-  font-size: var(--text-sm, 0.8125rem);
-  font-weight: 700;
+  font-family: var(--font-body);
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 600;
   letter-spacing: -0.01em;
   text-decoration: none;
-  padding: 8px 18px;
+  padding: 7px 16px;
   background: #2563FF;
   color: #FFFFFF;
   border-radius: 9999px;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 10px rgba(37, 99, 255, 0.4);
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(37, 99, 255, 0.35);
   white-space: nowrap;
 }
 
 .signUpBtn:hover {
   background: #1D4ED8;
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(37, 99, 255, 0.5);
+  box-shadow: 0 4px 12px rgba(37, 99, 255, 0.45);
 }
 
 /* ─── Mobile Toggle ───────────────────────────────────── */
@@ -154,9 +146,9 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 6px;
-  border-radius: 8px;
-  transition: background 0.2s ease, color 0.2s ease;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .toggleLight {
@@ -167,7 +159,7 @@
 }
 
 .toggleDark {
-  color: #0F172A;
+  color: #090D16;
 }
 .toggleDark:hover {
   background: #F1F5F9;
@@ -176,6 +168,19 @@
 @media (min-width: 768px) {
   .mobileToggle {
     display: none;
+  }
+}
+
+/* ─── Mobile Adjustments ──────────────────────────────── */
+@media (max-width: 768px) {
+  .navbar {
+    top: 10px;
+    height: 44px;
+    width: calc(100% - 1.5rem);
+  }
+
+  .container {
+    padding: 0 0.875rem;
   }
 }
 
@@ -193,20 +198,20 @@
   top: 0;
   right: 0;
   bottom: 0;
-  width: 300px;
+  width: 270px;
   background: #FFFFFF;
   border-left: 1px solid #E2E8F0;
   z-index: 999;
   display: flex;
   flex-direction: column;
-  box-shadow: -20px 0 50px rgba(0, 0, 0, 0.12);
+  box-shadow: -15px 0 40px rgba(0, 0, 0, 0.10);
 }
 
 .mobileMenuHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 1.5rem;
+  padding: 1rem 1.25rem;
   border-bottom: 1px solid #F1F5F9;
 }
 
@@ -215,77 +220,83 @@
   border: none;
   color: #475569;
   cursor: pointer;
-  padding: 6px;
-  border-radius: 8px;
+  padding: 5px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .mobileCloseBtn:hover {
   background: #E2E8F0;
-  color: #0F172A;
+  color: #090D16;
 }
 
 .mobileLinks {
   display: flex;
   flex-direction: column;
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1rem;
   gap: 2px;
   flex: 1;
 }
 
 .mobileLink {
-  font-size: 1.0625rem;
-  font-weight: 600;
+  font-family: var(--font-body);
+  font-size: 0.875rem; /* 14px */
+  font-weight: 500;
+  letter-spacing: -0.01em;
   color: #334155;
   text-decoration: none;
-  padding: 12px 10px;
-  border-radius: 10px;
+  padding: 10px 10px;
+  border-radius: 8px;
   transition: all 0.15s ease;
 }
 
 .mobileLink:hover {
-  color: #0F172A;
+  color: #090D16;
   background: #F8FAFC;
 }
 
 .mobileActions {
-  padding: 1.25rem 1.5rem;
+  padding: 1rem 1.25rem;
   border-top: 1px solid #F1F5F9;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .mobileSignIn {
   text-align: center;
-  padding: 10px;
-  font-size: 0.875rem;
+  padding: 9px;
+  font-family: var(--font-body);
+  font-size: 0.8125rem; /* 13px */
   font-weight: 600;
+  letter-spacing: -0.01em;
   color: #475569;
   text-decoration: none;
   background: #F8FAFC;
   border: 1px solid #E2E8F0;
-  border-radius: 10px;
+  border-radius: 8px;
   transition: all 0.15s ease;
 }
 
 .mobileSignIn:hover {
   background: #F1F5F9;
-  color: #0F172A;
+  color: #090D16;
 }
 
 .mobileSignUp {
   text-align: center;
-  padding: 11px;
-  font-size: 0.875rem;
-  font-weight: 700;
+  padding: 9px;
+  font-family: var(--font-body);
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: #FFFFFF;
   text-decoration: none;
   background: #2563FF;
-  border-radius: 10px;
-  box-shadow: 0 4px 14px rgba(37, 99, 255, 0.35);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(37, 99, 255, 0.30);
   transition: all 0.15s ease;
 }
 

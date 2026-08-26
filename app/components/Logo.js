@@ -2,9 +2,9 @@ import React from 'react';
 
 const Logo = ({ size = 'default', showText = true, inverted = false }) => {
   const isSmall = size === 'small';
-  const iconSize = isSmall ? 28 : 40;
-  const textSize = isSmall ? '16px' : '20px';
-  const gapSize = isSmall ? 8 : 12;
+  const iconSize = isSmall ? 22 : 30;
+  const textSize = isSmall ? '0.875rem' : '1.05rem';
+  const gapSize = isSmall ? 7 : 10;
 
   const cellStyle = {
     fill: '#0F172A',
@@ -18,14 +18,13 @@ const Logo = ({ size = 'default', showText = true, inverted = false }) => {
 
   const textStyle = {
     fill: '#FFFFFF',
-    fontFamily: 'var(--font-heading), Manrope, sans-serif',
+    fontFamily: 'var(--font-heading), sans-serif',
     fontSize: '6px',
-    fontWeight: 600,
+    fontWeight: 700,
     textAnchor: 'middle',
     dominantBaseline: 'central'
   };
 
-  // When inverted (on dark backgrounds), flip icon cell bg to white/light
   const invertedCellStyle = {
     fill: 'rgba(255, 255, 255, 0.18)',
     rx: 2
@@ -38,7 +37,7 @@ const Logo = ({ size = 'default', showText = true, inverted = false }) => {
 
   const activeCellStyle = inverted ? invertedCellStyle : cellStyle;
   const activeBlueCellBg = inverted ? invertedBlueCellBg : blueCellBg;
-  const strokeColor = inverted ? 'rgba(255,255,255,0.85)' : 'white';
+  const strokeColor = inverted ? 'rgba(255,255,255,0.9)' : 'white';
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: gapSize, textDecoration: 'none' }}>
@@ -77,11 +76,11 @@ const Logo = ({ size = 'default', showText = true, inverted = false }) => {
       </svg>
       {showText && (
         <span style={{
-          fontFamily: 'var(--font-heading), Manrope, sans-serif',
+          fontFamily: 'var(--font-heading), sans-serif',
           fontSize: textSize,
           fontWeight: 700,
-          lineHeight: 1.2,
-          letterSpacing: '-0.02em',
+          lineHeight: 1.1,
+          letterSpacing: '-0.03em',
           color: inverted ? '#FFFFFF' : 'var(--color-text)'
         }}>
           Fleet Finance <span style={{ color: '#2563FF' }}>Flow</span>
