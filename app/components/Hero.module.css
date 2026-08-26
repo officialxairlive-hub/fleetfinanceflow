@@ -1,7 +1,7 @@
 .heroSection {
   position: relative;
   background-color: #FFFFFF;
-  padding: 1.5rem 1rem 3.5rem;
+  padding: 3rem 1rem 4rem;
   overflow: hidden;
   font-family: var(--font-heading, "Manrope", sans-serif);
 }
@@ -11,81 +11,34 @@
   margin: 0 auto;
 }
 
-/* Master Canvas Frame with Background Image */
-.showcaseCanvas {
-  position: relative;
-  border-radius: 24px;
-  overflow: hidden;
-  border: 1px solid #E2E8F0;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
-  min-height: 760px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 2.5rem 2rem 1.5rem;
-  background: #FAFAFA;
-}
-
-/* Background Image Layer */
-.imageBackgroundWrapper {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-.heroBackgroundImage {
-  object-fit: cover;
-  object-position: center bottom;
-  width: 100%;
-  height: 100%;
-}
-
-/* Soft Ambient Scrim for Flawless Text Legibility */
-.imageScrimOverlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(255, 255, 255, 0.85) 24%,
-    rgba(255, 255, 255, 0.25) 55%,
-    rgba(255, 255, 255, 0.05) 75%,
-    rgba(255, 255, 255, 0.95) 100%
-  );
-  pointer-events: none;
-}
-
-/* Overlaid Content (Title, Subtitle, CTAs, Trust) */
-.overlaidContent {
-  position: relative;
-  z-index: 2;
+/* 1. Clean Top Header & CTAs */
+.heroIntro {
   text-align: center;
-  max-width: 860px;
-  margin: 0 auto;
+  max-width: 880px;
+  margin: 0 auto 3rem;
 }
 
 .mainTitle {
-  font-size: clamp(2.2rem, 4.8vw, 3.8rem);
+  font-size: clamp(2.4rem, 5vw, 4rem);
   font-weight: 800;
   letter-spacing: -0.035em;
   color: #0F172A;
   line-height: 1.12;
-  margin: 0 auto 1rem;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  margin: 0 auto 1.25rem;
 }
 
 .mainSubtitle {
-  font-size: clamp(0.95rem, 1.8vw, 1.125rem);
-  color: #334155;
-  line-height: 1.55;
-  margin: 0 auto 1.75rem;
-  font-weight: 500;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  font-size: clamp(1rem, 2vw, 1.1875rem);
+  color: #475569;
+  line-height: 1.6;
+  max-width: 780px;
+  margin: 0 auto 2rem;
+  font-weight: 400;
 }
 
 .mainSubtitle strong {
   color: #0F172A;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 /* CTAs */
@@ -93,23 +46,22 @@
   display: flex;
   justify-content: center;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
   flex-wrap: wrap;
 }
 
 .primaryBtn {
-  box-shadow: 0 4px 20px rgba(37, 99, 255, 0.4);
+  box-shadow: 0 4px 20px rgba(37, 99, 255, 0.35);
   transition: all 0.2s ease;
 }
 
 .primaryBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(37, 99, 255, 0.5);
+  box-shadow: 0 8px 25px rgba(37, 99, 255, 0.45);
 }
 
 .secondaryBtn {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(8px);
+  background: #FFFFFF;
   border: 1px solid #CBD5E1;
   color: #0F172A;
   font-weight: 700;
@@ -117,7 +69,7 @@
 }
 
 .secondaryBtn:hover {
-  background: #FFFFFF;
+  background: #F8FAFC;
   border-color: #94A3B8;
   transform: translateY(-2px);
 }
@@ -127,11 +79,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 14px;
   font-size: 0.8125rem;
-  color: #475569;
-  font-weight: 600;
-  margin-bottom: 2rem;
+  color: #64748B;
+  font-weight: 500;
   flex-wrap: wrap;
 }
 
@@ -142,91 +93,114 @@
 }
 
 .divider {
-  color: #94A3B8;
+  color: #CBD5E1;
 }
 
-/* Perspective Overlay Pills */
-.povPillLeft,
-.povPillCenter,
-.povPillRight {
+/* 2. Pristine 3-POV Visual Showcase Frame */
+.showcaseCanvas {
+  background: #FAFAFA;
+  border: 1px solid #E2E8F0;
+  border-radius: 24px;
+  padding: 1.5rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.06);
+  position: relative;
+  text-align: left;
+}
+
+.imageWrapper {
+  position: relative;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+}
+
+.heroMasterImage {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+/* Perspective Overlay Indicators */
+.povIndicatorLeft,
+.povIndicatorCenter,
+.povIndicatorRight {
   position: absolute;
-  bottom: 110px;
+  bottom: 20px;
   background: rgba(15, 23, 42, 0.88);
   backdrop-filter: blur(12px);
   color: #FFFFFF;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   padding: 8px 14px;
   display: flex;
   align-items: center;
   gap: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
   z-index: 5;
   transition: transform 0.2s ease;
 }
 
-.povPillLeft:hover,
-.povPillCenter:hover,
-.povPillRight:hover {
+.povIndicatorLeft:hover,
+.povIndicatorCenter:hover,
+.povIndicatorRight:hover {
   transform: translateY(-2px);
   background: #0F172A;
 }
 
-.povPillLeft {
-  left: 28px;
+.povIndicatorLeft {
+  left: 24px;
 }
 
-.povPillCenter {
+.povIndicatorCenter {
   left: 50%;
   transform: translateX(-50%);
 }
 
-.povPillRight {
-  right: 28px;
+.povIndicatorRight {
+  right: 24px;
 }
 
-.povPillIcon {
+.povIconWrap {
   color: #38BDF8;
   display: flex;
   align-items: center;
 }
 
-.povPillRole {
+.povRoleTitle {
   display: block;
   font-size: 0.75rem;
   font-weight: 800;
   color: #FFFFFF;
-  letter-spacing: 0.02em;
 }
 
-.povPillDesc {
+.povSubTitle {
   display: block;
   font-size: 0.65rem;
-  color: #CBD5E1;
+  color: #94A3B8;
   font-weight: 500;
 }
 
-/* Bottom Feature Highlights Spec Ribbon (Aston Martin Configurator Style) */
+/* 3. Bottom Telemetry Spec Ribbon (Aston Martin Configurator Style) */
 .specRibbon {
-  position: relative;
-  z-index: 5;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 12px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
   border-radius: 16px;
-  padding: 12px 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
-  margin-top: auto;
+  padding: 14px 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  margin-top: 1.25rem;
 }
 
 .specCard {
-  background: #FFFFFF;
+  background: #F8FAFC;
   border: 1px solid #E2E8F0;
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 10px 14px;
   text-align: left;
   transition: transform 0.15s ease;
 }
@@ -234,13 +208,14 @@
 .specCard:hover {
   transform: translateY(-1px);
   border-color: #CBD5E1;
+  background: #FFFFFF;
 }
 
 .specLabel {
   font-size: 0.6875rem;
   font-weight: 600;
   color: #64748B;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 
 .specValue {
@@ -260,47 +235,45 @@
 
 /* Responsive Adjustments */
 @media (max-width: 1024px) {
-  .showcaseCanvas {
-    min-height: 840px;
-    padding: 2rem 1.25rem 1.25rem;
-  }
-
-  .povPillLeft,
-  .povPillCenter,
-  .povPillRight {
+  .povIndicatorLeft,
+  .povIndicatorCenter,
+  .povIndicatorRight {
     position: relative;
     bottom: auto;
     left: auto;
     right: auto;
     transform: none !important;
-    margin: 6px auto;
-    width: 100%;
-    max-width: 380px;
+    margin: 8px 12px;
+    width: calc(100% - 24px);
+    max-width: 360px;
+  }
+
+  .imageWrapper {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 8px;
   }
 
   .specRibbon {
     grid-template-columns: repeat(2, 1fr);
-    margin-top: 1rem;
   }
 }
 
 @media (max-width: 640px) {
   .heroSection {
-    padding: 1rem 0.5rem 2.5rem;
+    padding: 2rem 0.75rem 3rem;
   }
 
-  .showcaseCanvas {
-    padding: 1.5rem 0.875rem 1rem;
-    min-height: auto;
-    border-radius: 18px;
+  .heroIntro {
+    margin-bottom: 2rem;
   }
 
   .mainTitle {
-    font-size: 2rem;
+    font-size: 2.1rem;
   }
 
   .mainSubtitle {
-    font-size: 0.9375rem;
+    font-size: 0.95rem;
   }
 
   .ctaGroup {
@@ -328,6 +301,10 @@
   .specRibbon {
     grid-template-columns: 1fr;
     gap: 8px;
-    padding: 10px;
+  }
+
+  .showcaseCanvas {
+    padding: 1rem;
+    border-radius: 18px;
   }
 }

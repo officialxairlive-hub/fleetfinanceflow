@@ -14,7 +14,6 @@ import CommonProblems from "./components/CommonProblems";
 import CTABanner from "./components/CTABanner";
 import FAQ from "./components/FAQ";
 import Footer from "./components/Footer";
-import AIAssistantWidget from "./components/AIAssistantWidget";
 
 export default function Home() {
   return (
@@ -35,7 +34,6 @@ export default function Home() {
       <CTABanner />
       <FAQ />
       <Footer />
-      <AIAssistantWidget />
     </main>
   );
 }
