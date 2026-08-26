@@ -66,10 +66,10 @@ export default function Hero() {
             transition={{ duration: 0.6, delay: 0.3 }}
           >
             <Link href="/signup" className={styles.btnPrimary}>
-              Start 14-Day Free Trial <ArrowRight size={18} />
+              Start 14-Day Free Trial <ArrowRight size={15} />
             </Link>
             <Link href="/bay" className={styles.btnGhost}>
-              <PlayCircle size={18} /> Launch Live Demo
+              <PlayCircle size={15} /> Launch Live Demo
             </Link>
           </motion.div>
 
