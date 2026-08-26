@@ -72,30 +72,33 @@
 
 .eyebrow {
   display: inline-block;
-  font-size: 0.75rem;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
   font-weight: 700;
-  letter-spacing: 0.10em;
+  letter-spacing: var(--tracking-wider);
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.60);
   margin: 0 0 1rem;
 }
 
 .headline {
-  font-size: clamp(2.4rem, 5.5vw, 4.25rem);
+  font-family: var(--font-heading);
+  font-size: var(--text-6xl);
   font-weight: 800;
-  letter-spacing: -0.035em;
-  line-height: 1.1;
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
   color: #FFFFFF;
-  margin: 0 0 1.5rem;
+  margin: 0 0 1.25rem;
 }
 
 .subline {
-  font-size: clamp(1rem, 1.8vw, 1.125rem);
-  line-height: 1.65;
-  color: rgba(255, 255, 255, 0.78);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: rgba(255, 255, 255, 0.72);
   font-weight: 400;
   max-width: 520px;
-  margin: 0 0 2.25rem;
+  margin: 0 0 2rem;
 }
 
 /* ── CTA Buttons ── */
@@ -208,25 +211,29 @@
 }
 
 .ribbonLabel {
-  font-size: 0.6875rem;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
   font-weight: 600;
   color: rgba(255, 255, 255, 0.55);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-wider);
 }
 
 .ribbonValue {
-  font-size: 1.5rem;
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
   font-weight: 800;
   color: #FFFFFF;
-  letter-spacing: -0.03em;
+  letter-spacing: var(--tracking-tight);
   line-height: 1;
 }
 
 .ribbonSub {
-  font-size: 0.625rem;
-  color: rgba(255, 255, 255, 0.40);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: rgba(255, 255, 255, 0.38);
   font-weight: 500;
+  letter-spacing: var(--tracking-normal);
 }
 
 /* ──────────────────────────────────────────────────────

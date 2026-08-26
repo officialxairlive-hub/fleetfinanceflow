@@ -55,8 +55,9 @@
 }
 
 .navLink {
-  font-size: 0.9375rem;
+  font-size: var(--text-sm, 0.8125rem);
   font-weight: 500;
+  letter-spacing: var(--tracking-normal, -0.01em);
   text-decoration: none;
   transition: color 0.2s ease, opacity 0.2s ease;
 }
@@ -117,10 +118,11 @@
 }
 
 .signUpBtn {
-  font-size: 0.875rem;
+  font-size: var(--text-sm, 0.8125rem);
   font-weight: 700;
+  letter-spacing: -0.01em;
   text-decoration: none;
-  padding: 9px 20px;
+  padding: 8px 18px;
   background: #2563FF;
   color: #FFFFFF;
   border-radius: 9999px;
