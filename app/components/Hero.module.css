@@ -1,83 +1,94 @@
 .heroSection {
   position: relative;
   background-color: #FFFFFF;
-  padding: 3rem 1rem 4rem;
+  padding: 1.5rem 1rem 3.5rem;
   overflow: hidden;
   font-family: var(--font-heading, "Manrope", sans-serif);
 }
 
 .container {
-  max-width: 1280px;
+  max-width: 1320px;
   margin: 0 auto;
-  text-align: center;
 }
 
-/* 1. Top Announcement */
-.announcementWrapper {
+/* Master Canvas Frame with Background Image */
+.showcaseCanvas {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+  min-height: 760px;
   display: flex;
-  justify-content: center;
-  margin-bottom: 1.25rem;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2.5rem 2rem 1.5rem;
+  background: #FAFAFA;
 }
 
-.announcementPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: #F1F5F9;
-  border: 1px solid #CBD5E1;
-  padding: 6px 16px;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: #0F172A;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+/* Background Image Layer */
+.imageBackgroundWrapper {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
 }
 
-.pillPulse {
-  width: 8px;
-  height: 8px;
-  background: #2563FF;
-  border-radius: 50%;
-  animation: pulseDot 2s infinite;
+.heroBackgroundImage {
+  object-fit: cover;
+  object-position: center bottom;
+  width: 100%;
+  height: 100%;
 }
 
-@keyframes pulseDot {
-  0% { box-shadow: 0 0 0 0 rgba(37, 99, 255, 0.7); }
-  70% { box-shadow: 0 0 0 8px rgba(37, 99, 255, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(37, 99, 255, 0); }
+/* Soft Ambient Scrim for Flawless Text Legibility */
+.imageScrimOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.85) 24%,
+    rgba(255, 255, 255, 0.25) 55%,
+    rgba(255, 255, 255, 0.05) 75%,
+    rgba(255, 255, 255, 0.95) 100%
+  );
+  pointer-events: none;
 }
 
-.pillSparkle {
-  color: #2563FF;
+/* Overlaid Content (Title, Subtitle, CTAs, Trust) */
+.overlaidContent {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  max-width: 860px;
+  margin: 0 auto;
 }
 
-/* 2. Main Title & Subtitle */
 .mainTitle {
-  font-size: clamp(2.2rem, 5vw, 3.8rem);
+  font-size: clamp(2.2rem, 4.8vw, 3.8rem);
   font-weight: 800;
   letter-spacing: -0.035em;
   color: #0F172A;
-  line-height: 1.15;
-  margin: 0 auto 1.25rem;
-  max-width: 900px;
+  line-height: 1.12;
+  margin: 0 auto 1rem;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 .mainSubtitle {
-  font-size: clamp(1rem, 2vw, 1.1875rem);
-  color: #475569;
-  line-height: 1.6;
-  max-width: 800px;
-  margin: 0 auto 2rem;
-  font-weight: 400;
+  font-size: clamp(0.95rem, 1.8vw, 1.125rem);
+  color: #334155;
+  line-height: 1.55;
+  margin: 0 auto 1.75rem;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 .mainSubtitle strong {
   color: #0F172A;
-  font-weight: 700;
+  font-weight: 800;
 }
 
-/* 3. CTA Buttons */
+/* CTAs */
 .ctaGroup {
   display: flex;
   justify-content: center;
@@ -87,38 +98,40 @@
 }
 
 .primaryBtn {
-  box-shadow: 0 4px 20px rgba(37, 99, 255, 0.35);
+  box-shadow: 0 4px 20px rgba(37, 99, 255, 0.4);
   transition: all 0.2s ease;
 }
 
 .primaryBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(37, 99, 255, 0.45);
+  box-shadow: 0 8px 25px rgba(37, 99, 255, 0.5);
 }
 
 .secondaryBtn {
-  background: #FFFFFF;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
   border: 1px solid #CBD5E1;
-  color: #334155;
+  color: #0F172A;
+  font-weight: 700;
   transition: all 0.2s ease;
 }
 
 .secondaryBtn:hover {
-  background: #F8FAFC;
-  color: #0F172A;
+  background: #FFFFFF;
   border-color: #94A3B8;
+  transform: translateY(-2px);
 }
 
-/* 4. Trust Strip */
+/* Trust Badges */
 .trustStrip {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
   font-size: 0.8125rem;
-  color: #64748B;
-  font-weight: 500;
-  margin-bottom: 2.5rem;
+  color: #475569;
+  font-weight: 600;
+  margin-bottom: 2rem;
   flex-wrap: wrap;
 }
 
@@ -129,81 +142,7 @@
 }
 
 .divider {
-  color: #CBD5E1;
-}
-
-/* 5. Master Showcase Frame */
-.showcaseCanvas {
-  background: #FAFAFA;
-  border: 1px solid #E2E8F0;
-  border-radius: 20px;
-  padding: 1.5rem;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.05);
-  position: relative;
-  text-align: left;
-}
-
-.canvasHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #E2E8F0;
-  margin-bottom: 1.25rem;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.canvasHeaderTitle {
-  font-size: 0.8125rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: #0F172A;
-  display: block;
-}
-
-.canvasHeaderSub {
-  font-size: 0.6875rem;
-  color: #64748B;
-  font-weight: 600;
-}
-
-.liveStatusBadge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  padding: 4px 10px;
-  border-radius: 9999px;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  color: #059669;
-}
-
-.liveStatusDot {
-  width: 6px;
-  height: 6px;
-  background: #10B981;
-  border-radius: 50%;
-  animation: pulseDot 2s infinite;
-}
-
-/* Image Container with Absolute Overlay Pills */
-.imageContainer {
-  position: relative;
-  width: 100%;
-  border-radius: 14px;
-  overflow: hidden;
-  border: 1px solid #E2E8F0;
-  background: #FFFFFF;
-}
-
-.heroMasterImage {
-  width: 100%;
-  height: auto;
-  display: block;
-  object-fit: cover;
+  color: #94A3B8;
 }
 
 /* Perspective Overlay Pills */
@@ -211,22 +150,30 @@
 .povPillCenter,
 .povPillRight {
   position: absolute;
-  bottom: 16px;
+  bottom: 110px;
   background: rgba(15, 23, 42, 0.88);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
   color: #FFFFFF;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
-  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 12px;
+  padding: 8px 14px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  gap: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   z-index: 5;
+  transition: transform 0.2s ease;
+}
+
+.povPillLeft:hover,
+.povPillCenter:hover,
+.povPillRight:hover {
+  transform: translateY(-2px);
+  background: #0F172A;
 }
 
 .povPillLeft {
-  left: 20px;
+  left: 28px;
 }
 
 .povPillCenter {
@@ -235,7 +182,7 @@
 }
 
 .povPillRight {
-  right: 20px;
+  right: 28px;
 }
 
 .povPillIcon {
@@ -249,35 +196,43 @@
   font-size: 0.75rem;
   font-weight: 800;
   color: #FFFFFF;
+  letter-spacing: 0.02em;
 }
 
 .povPillDesc {
   display: block;
   font-size: 0.65rem;
-  color: #94A3B8;
+  color: #CBD5E1;
   font-weight: 500;
 }
 
-/* 6. Bottom Feature Highlights Spec Ribbon (from Aston Martin UI) */
+/* Bottom Feature Highlights Spec Ribbon (Aston Martin Configurator Style) */
 .specRibbon {
+  position: relative;
+  z-index: 5;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 12px;
-  margin-top: 1.5rem;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 16px;
+  padding: 12px 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+  margin-top: auto;
 }
 
 .specCard {
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
-  border-radius: 12px;
-  padding: 12px 14px;
+  border-radius: 10px;
+  padding: 10px 12px;
   text-align: left;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
   transition: transform 0.15s ease;
 }
 
 .specCard:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   border-color: #CBD5E1;
 }
 
@@ -285,7 +240,7 @@
   font-size: 0.6875rem;
   font-weight: 600;
   color: #64748B;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .specValue {
@@ -293,6 +248,7 @@
   font-weight: 800;
   color: #0F172A;
   letter-spacing: -0.02em;
+  line-height: 1.1;
   margin-bottom: 2px;
 }
 
@@ -304,6 +260,11 @@
 
 /* Responsive Adjustments */
 @media (max-width: 1024px) {
+  .showcaseCanvas {
+    min-height: 840px;
+    padding: 2rem 1.25rem 1.25rem;
+  }
+
   .povPillLeft,
   .povPillCenter,
   .povPillRight {
@@ -311,32 +272,35 @@
     bottom: auto;
     left: auto;
     right: auto;
-    transform: none;
-    margin: 8px 12px;
-  }
-
-  .imageContainer {
-    display: flex;
-    flex-direction: column;
-    padding-bottom: 8px;
+    transform: none !important;
+    margin: 6px auto;
+    width: 100%;
+    max-width: 380px;
   }
 
   .specRibbon {
     grid-template-columns: repeat(2, 1fr);
+    margin-top: 1rem;
   }
 }
 
 @media (max-width: 640px) {
   .heroSection {
-    padding: 2rem 0.75rem 3rem;
+    padding: 1rem 0.5rem 2.5rem;
+  }
+
+  .showcaseCanvas {
+    padding: 1.5rem 0.875rem 1rem;
+    min-height: auto;
+    border-radius: 18px;
   }
 
   .mainTitle {
-    font-size: 2.1rem;
+    font-size: 2rem;
   }
 
   .mainSubtitle {
-    font-size: 0.95rem;
+    font-size: 0.9375rem;
   }
 
   .ctaGroup {
@@ -363,9 +327,7 @@
 
   .specRibbon {
     grid-template-columns: 1fr;
-  }
-
-  .showcaseCanvas {
-    padding: 1rem;
+    gap: 8px;
+    padding: 10px;
   }
 }
