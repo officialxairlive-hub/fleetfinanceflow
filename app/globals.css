@@ -25,8 +25,8 @@
   --color-text-muted:     #94A3B8;
 
   /* Typography — Font stacks */
-  --font-heading: var(--font-manrope), 'Manrope', system-ui, -apple-system, sans-serif;
-  --font-body:    var(--font-inter),   'Inter',   system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-heading-var), 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-body:    var(--font-inter),        'Inter',             system-ui, -apple-system, sans-serif;
 
   /* Type Scale — fluid, modern proportions */
   --text-xs:   0.6875rem;   /* 11px  */
@@ -157,20 +157,21 @@ button {
 ul, ol { list-style: none; }
 
 /* --- Heading Defaults --- */
+/* Plus Jakarta Sans is geometric — needs less negative tracking than editorial fonts */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
-  font-weight: 800;
+  font-weight: 700;
   line-height: var(--leading-tight);
-  letter-spacing: var(--tracking-tight);
+  letter-spacing: -0.02em;
   color: var(--color-text);
 }
 
-h1 { font-size: var(--text-6xl); }
-h2 { font-size: var(--text-5xl); font-weight: 800; letter-spacing: var(--tracking-snug); }
-h3 { font-size: var(--text-2xl); font-weight: 700; letter-spacing: var(--tracking-snug); }
-h4 { font-size: var(--text-xl);  font-weight: 700; }
-h5 { font-size: var(--text-lg);  font-weight: 600; letter-spacing: var(--tracking-normal); }
-h6 { font-size: var(--text-base);font-weight: 600; letter-spacing: var(--tracking-normal); }
+h1 { font-size: var(--text-6xl); font-weight: 800; letter-spacing: -0.025em; }
+h2 { font-size: var(--text-5xl); font-weight: 700; letter-spacing: -0.02em;  line-height: 1.15; }
+h3 { font-size: var(--text-2xl); font-weight: 700; letter-spacing: -0.015em; }
+h4 { font-size: var(--text-xl);  font-weight: 600; letter-spacing: -0.01em;  }
+h5 { font-size: var(--text-lg);  font-weight: 600; letter-spacing: 0;        }
+h6 { font-size: var(--text-base);font-weight: 600; letter-spacing: 0;        }
 
 p {
   font-family: var(--font-body);
@@ -320,10 +321,34 @@ p {
 }
 
 @media (max-width: 640px) {
+  :root {
+    /* Tighten the type scale on mobile — no oversized text */
+    --text-base: 0.875rem;    /* 14px  */
+    --text-md:   0.9375rem;   /* 15px  */
+    --text-lg:   1.0625rem;   /* 17px  */
+    --text-xl:   1.25rem;     /* 20px  */
+    --text-2xl:  1.5rem;      /* 24px  */
+  }
+
   .container, .container-narrow { padding: 0 var(--space-4); }
   .section { padding: var(--space-16) 0; }
-  h1 { font-size: clamp(2rem, 9vw, 3rem); }
-  h2 { font-size: clamp(1.75rem, 7vw, 2.5rem); }
-  h3 { font-size: clamp(1.25rem, 5vw, 1.625rem); }
-  .btn-lg { padding: 13px 22px; font-size: var(--text-sm); }
+
+  /* Headings scale down on mobile */
+  h1 { font-size: clamp(1.875rem, 8vw, 2.5rem);  }
+  h2 { font-size: clamp(1.625rem, 6.5vw, 2rem);  }
+  h3 { font-size: clamp(1.25rem,  5vw, 1.5rem);  }
+
+  /* Buttons — tighter on mobile */
+  .btn {
+    font-size: 0.8125rem;
+    padding: 10px 18px;
+  }
+  .btn-lg {
+    font-size: 0.875rem;
+    padding: 12px 22px;
+    border-radius: var(--radius-md);
+  }
+
+  .section-title { font-size: clamp(1.625rem, 6.5vw, 2rem); }
 }
+

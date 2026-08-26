@@ -1,17 +1,26 @@
 /* ─── Navbar Base ─────────────────────────────────────── */
 .navbar {
   position: fixed;
-  top: 16px;
+  top: 14px;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 3rem);
+  width: calc(100% - 2.5rem);
   max-width: 1200px;
-  height: 60px;
+  height: 52px;
   display: flex;
   align-items: center;
   z-index: 1000;
   border-radius: 9999px;
   transition: background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
+}
+
+/* Slightly smaller on mobile */
+@media (max-width: 640px) {
+  .navbar {
+    top: 10px;
+    height: 46px;
+    width: calc(100% - 1.5rem);
+  }
 }
 
 /* Over the hero image: dark-tinted glass pill — belongs on the photo */
@@ -251,8 +260,8 @@
 
 .mobileSignIn {
   text-align: center;
-  padding: 12px;
-  font-size: 0.9375rem;
+  padding: 10px;
+  font-size: 0.875rem;
   font-weight: 600;
   color: #475569;
   text-decoration: none;
@@ -269,8 +278,8 @@
 
 .mobileSignUp {
   text-align: center;
-  padding: 13px;
-  font-size: 0.9375rem;
+  padding: 11px;
+  font-size: 0.875rem;
   font-weight: 700;
   color: #FFFFFF;
   text-decoration: none;

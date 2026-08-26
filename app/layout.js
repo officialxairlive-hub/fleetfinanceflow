@@ -1,18 +1,21 @@
-import { Inter, Manrope } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
+// Body font — Inter: clean, neutral, industry standard for SaaS
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
   display: "swap",
-  fallback: ["system-ui", "-apple-system", "sans-serif"],
 });
 
-const manrope = Manrope({
-  variable: "--font-manrope",
+// Heading font — Plus Jakarta Sans: geometric, modern, startup-y
+// Used by Notion, Coda, and many top SaaS products
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-heading-var",
   subsets: ["latin"],
+  weight: ["600", "700", "800"],
   display: "swap",
-  fallback: ["system-ui", "-apple-system", "sans-serif"],
 });
 
 export const metadata = {
@@ -38,7 +41,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${manrope.variable}`}>
+      <body className={`${inter.variable} ${plusJakarta.variable}`}>
         {children}
       </body>
     </html>
