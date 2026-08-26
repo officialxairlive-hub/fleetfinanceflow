@@ -1,0 +1,2 @@
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS supplies_pct numeric NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS supplies_amount numeric NOT NULL DEFAULT 0;
+ALTER TABLE public.estimates ADD COLUMN IF NOT EXISTS supplies_pct numeric NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS supplies_amount numeric NOT NULL DEFAULT 0;

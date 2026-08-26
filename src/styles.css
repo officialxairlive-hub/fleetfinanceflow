@@ -1,0 +1,127 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.75rem;
+
+  /* Fleet Finance Flow Dark Theme (Default) */
+  --background: #0D1117;
+  --foreground: #FFFFFF;
+
+  --card: #161B22;
+  --card-foreground: #FFFFFF;
+
+  --popover: #161B22;
+  --popover-foreground: #FFFFFF;
+
+  --primary: #2563FF;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #21262D;
+  --secondary-foreground: #FFFFFF;
+
+  --muted: #21262D;
+  --muted-foreground: #8B949E;
+
+  --accent: #2563FF;
+  --accent-foreground: #FFFFFF;
+
+  --destructive: #F85149;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #30363D;
+  --input: #30363D;
+  --ring: #2563FF;
+
+  --success: #2EA043;
+  --success-foreground: #FFFFFF;
+
+  --warning: #D29922;
+  --warning-foreground: #FFFFFF;
+
+  --info: #2563FF;
+  --info-foreground: #FFFFFF;
+
+  --chart-1: #2563FF;
+  --chart-2: #8B949E;
+  --chart-3: #58A6FF;
+  --chart-4: #3FB950;
+  --chart-5: #FFFFFF;
+
+  --sidebar: #0D1117;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #2563FF;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #21262D;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #30363D;
+  --sidebar-ring: #2563FF;
+}
+
+.dark {
+  /* No overrides needed, default is dark */
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+}

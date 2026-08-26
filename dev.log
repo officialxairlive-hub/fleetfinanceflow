@@ -1,0 +1,881 @@
+$ vite dev
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+  VITE v8.1.5  ready in 5785 ms
+
+  ➜  Local:   http://localhost:8080/
+  ➜  Network: http://192.168.1.13:8080/
+12:26:54 AM [vite] (ssr) connected.
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:6:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:19:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:37:38 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:6:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:19:28 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:32:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:60:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:93:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:113:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts:44:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts:139:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:6:26 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:19:24 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:32:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:57:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:87:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:6:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:19:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:39:37 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:55:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:6:26 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:20:24 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:33:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:58:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:88:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:6:29 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:19:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:32:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:52:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:77:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:42:24 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:63:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:30416:43
+12:26:55 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:104:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:55:29 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:70:39 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:88:35 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:101:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:201:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:300:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:408:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:417:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:430:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:451:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:468:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:496:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:552:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:625:35 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:14:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:27:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:40:28 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:53:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:122:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:236:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:245:41 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:48:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:112:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:30416:43
+12:26:56 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:140:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:42:24 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:63:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:104:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:14:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:27:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:40:28 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:53:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:122:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:236:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:245:41 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:55:29 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:70:39 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:88:35 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:101:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:201:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:300:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:408:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:417:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:430:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:451:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:468:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:496:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:552:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:625:35 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:6:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:19:28 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:32:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:60:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:93:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:113:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:6:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:19:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:37:38 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:6:26 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:20:24 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:33:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:58:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:88:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:48:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:112:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:140:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:6:29 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:19:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:32:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:52:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:77:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:6:26 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:19:24 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:32:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:57:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:87:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts:44:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts:139:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:6:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:19:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:39:37 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:30416:43
+12:26:59 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:55:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:30416:43
+TanStack Start server functions are not protected by the CSRF middleware.
+
+Server functions are same-origin RPC endpoints and should be protected from cross-site requests.
+
+Add the CSRF middleware in src/start.ts:
+
+  const csrfMiddleware = createCsrfMiddleware({
+    filter: (ctx) => ctx.handlerType === 'serverFn',
+  })
+
+  export const startInstance = createStart(() => ({
+    requestMiddleware: [csrfMiddleware],
+  }))
+
+If you intentionally handle CSRF another way, disable this warning:
+
+  tanstackStart({
+    serverFns: {
+      disableCsrfMiddlewareWarning: true,
+    },
+  })
+12:31:03 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts?tss-serverfn-split:44:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts?tss-serverfn-split:30416:43
+12:31:03 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts?tss-serverfn-split:139:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts?tss-serverfn-split:6:26 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts?tss-serverfn-split:20:24 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts?tss-serverfn-split:33:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts?tss-serverfn-split:58:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts?tss-serverfn-split:88:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/units.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts?tss-serverfn-split:6:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts?tss-serverfn-split:19:28 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts?tss-serverfn-split:32:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts?tss-serverfn-split:60:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts?tss-serverfn-split:93:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts?tss-serverfn-split:113:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts?tss-serverfn-split:6:29 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts?tss-serverfn-split:19:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts?tss-serverfn-split:32:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts?tss-serverfn-split:52:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts?tss-serverfn-split:77:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/services.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts?tss-serverfn-split:6:26 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts?tss-serverfn-split:19:24 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts?tss-serverfn-split:32:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts?tss-serverfn-split:57:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts?tss-serverfn-split:87:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts?tss-serverfn-split:42:24 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts?tss-serverfn-split:63:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts?tss-serverfn-split:30416:43
+12:31:14 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts?tss-serverfn-split:104:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts?tss-serverfn-split:30416:43
+12:31:29 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts?tss-serverfn-split:14:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts?tss-serverfn-split:30416:43
+12:31:29 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts?tss-serverfn-split:27:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts?tss-serverfn-split:30416:43
+12:31:29 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts?tss-serverfn-split:40:28 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts?tss-serverfn-split:30416:43
+12:31:29 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts?tss-serverfn-split:53:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts?tss-serverfn-split:30416:43
+12:31:29 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts?tss-serverfn-split:122:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts?tss-serverfn-split:30416:43
+12:31:29 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts?tss-serverfn-split:236:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts?tss-serverfn-split:30416:43
+12:31:29 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts?tss-serverfn-split:245:41 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts?tss-serverfn-split:30416:43
+12:31:32 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts?tss-serverfn-split:6:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts?tss-serverfn-split:30416:43
+12:31:32 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts?tss-serverfn-split:19:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts?tss-serverfn-split:30416:43
+12:31:32 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts?tss-serverfn-split:39:37 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts?tss-serverfn-split:30416:43
+12:31:32 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts?tss-serverfn-split:55:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts?tss-serverfn-split:30416:43
+12:31:35 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts?tss-serverfn-split:6:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts?tss-serverfn-split:30416:43
+12:31:35 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts?tss-serverfn-split:19:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts?tss-serverfn-split:30416:43
+12:31:35 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts?tss-serverfn-split:37:38 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts?tss-serverfn-split:30416:43
+12:31:39 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:55:29 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:31:39 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:70:39 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:31:39 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:88:35 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:31:39 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:101:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:31:39 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:201:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:31:39 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:300:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:31:39 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:408:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:31:39 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:417:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:31:39 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:430:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:31:39 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:451:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:31:39 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:468:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:31:39 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:496:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:31:39 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:552:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:31:39 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:625:35 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:35:51 AM [vite] (client) hmr update /src/styles.css?direct, /src/components/invoices/invoice-builder.tsx
+12:35:51 AM [vite] (client) hmr update /src/styles.css?direct, /src/components/layout/dashboard-shell.tsx
+12:35:51 AM [vite] (client) hmr update /src/styles.css?direct, /src/components/invoices/send-invoice-dialog.tsx
+12:35:52 AM [vite] (client) page reload src/integrations/supabase/auth-attacher.ts
+12:35:52 AM [vite] (ssr) page reload src/integrations/supabase/auth-attacher.ts
+12:35:52 AM [vite] (ssr) program reload
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/route.tsx, /src/routes/_authenticated/estimates.$id.tsx, /src/routes/_authenticated/invoices.$id.tsx, /src/routes/_authenticated/settings.tsx, /src/routes/_authenticated/invoices.new.tsx, /src/routes/_authenticated/estimates.new.tsx, /src/routes/_authenticated/invoices.new.tsx?tsr-split=component, /src/routes/_authenticated/invoices.$id.tsx?tsr-split=component, /src/routes/_authenticated/units.$id.tsx and 30 more
+12:35:52 AM [vite] (ssr) page reload src/integrations/supabase/auth-middleware.ts
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct
+12:35:52 AM [vite] (client) page reload src/integrations/supabase/client.ts
+12:35:52 AM [vite] (ssr) page reload src/integrations/supabase/client.ts
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/auth.tsx?tsr-split=component
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/invoices.index.tsx, /src/routes/_authenticated/dashboard.tsx?tsr-split=component, /src/routes/_authenticated/invoices.new.tsx?tsr-split=component, /src/components/invoices/invoice-builder.tsx, /src/routes/_authenticated/estimates.index.tsx?tsr-split=component, /src/routes/_authenticated/reports.tsx?tsr-split=component, /src/routes/_authenticated/parts.tsx?tsr-split=component, /src/routes/_authenticated/services.tsx?tsr-split=component and 4 more
+12:35:52 AM [vite] (ssr) page reload src/lib/billing/calc.ts
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/portal.complaints.tsx, /src/routes/_authenticated/complaints.tsx, /src/routes/_authenticated/complaints.tsx?tsr-split=component
+12:35:52 AM [vite] (ssr) page reload src/lib/complaints.functions.ts
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/fleets.$customerId.tsx, /src/routes/_authenticated/customers.$id.tsx, /src/routes/_authenticated/fleets.index.tsx, /src/routes/_authenticated/portal.complaints.tsx, /src/routes/_authenticated/customers.tsx, /src/routes/_authenticated/customers.tsx?tsr-split=component, /src/routes/_authenticated/units.tsx, /src/routes/_authenticated/units.tsx?tsr-split=component, /src/routes/_authenticated/invoices.new.tsx and 4 more
+12:35:52 AM [vite] (ssr) page reload src/lib/customers.functions.ts
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/reports.tsx, /src/routes/_authenticated/reports.tsx?tsr-split=component, /src/routes/_authenticated/dashboard.tsx, /src/routes/_authenticated/dashboard.tsx?tsr-split=component
+12:35:52 AM [vite] (ssr) page reload src/lib/dashboard.functions.ts
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/invoices.index.tsx, /src/routes/_authenticated/dashboard.tsx?tsr-split=component, /src/routes/_authenticated/invoices.new.tsx?tsr-split=component, /src/components/invoices/invoice-builder.tsx, /src/routes/_authenticated/estimates.index.tsx?tsr-split=component, /src/routes/_authenticated/reports.tsx?tsr-split=component, /src/routes/_authenticated/parts.tsx?tsr-split=component, /src/routes/_authenticated/services.tsx?tsr-split=component and 4 more
+12:35:52 AM [vite] (ssr) page reload src/lib/invoices.utils.ts
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/estimates.$id.tsx, /src/routes/_authenticated/units.$id.tsx, /src/routes/_authenticated/estimates.index.tsx, /src/routes/_authenticated/estimates.index.tsx?tsr-split=component, /src/routes/_authenticated/units.$id.tsx?tsr-split=component
+12:35:52 AM [vite] (ssr) page reload src/lib/estimates.functions.ts
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/invoices.$id.tsx, /src/routes/_authenticated/fleets.$customerId.tsx, /src/routes/_authenticated/customers.$id.tsx, /src/routes/_authenticated/fleets.index.tsx, /src/routes/_authenticated/units.$id.tsx, /src/routes/_authenticated/invoices.index.tsx, /src/routes/_authenticated/invoices.new.tsx?tsr-split=component, /src/routes/_authenticated/fleets.index.tsx?tsr-split=component, /src/routes/_authenticated/units.$id.tsx?tsr-split=component and 2 more
+12:35:52 AM [vite] (ssr) page reload src/lib/invoices.functions.ts
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/portal.units.tsx, /src/routes/_authenticated/portal.invoices.tsx, /src/routes/_authenticated/portal.index.tsx
+12:35:52 AM [vite] (ssr) page reload src/lib/portal.functions.ts
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/reminders.tsx, /src/routes/_authenticated/reminders.tsx?tsr-split=component
+12:35:52 AM [vite] (ssr) page reload src/lib/reminders.functions.ts
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/parts.tsx, /src/routes/_authenticated/parts.tsx?tsr-split=component, /src/routes/_authenticated/invoices.new.tsx, /src/routes/_authenticated/estimates.new.tsx, /src/routes/_authenticated/invoices.new.tsx?tsr-split=component
+12:35:52 AM [vite] (ssr) page reload src/lib/parts.functions.ts
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/estimates.$id.tsx, /src/routes/_authenticated/invoices.$id.tsx, /src/routes/_authenticated/settings.tsx, /src/routes/_authenticated/invoices.new.tsx, /src/routes/_authenticated/estimates.new.tsx, /src/routes/_authenticated/invoices.new.tsx?tsr-split=component, /src/routes/_authenticated/invoices.$id.tsx?tsr-split=component
+12:35:52 AM [vite] (ssr) page reload src/lib/settings.functions.ts
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/__root.tsx
+12:35:52 AM [vite] (ssr) page reload src/routes/__root.tsx
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/customers.$id.tsx
+12:35:52 AM [vite] (ssr) page reload src/routes/_authenticated/customers.$id.tsx
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/customers.tsx, /src/routes/_authenticated/customers.tsx?tsr-split=component
+12:35:52 AM [vite] (ssr) page reload src/routes/_authenticated/customers.tsx
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/complaints.tsx, /src/routes/_authenticated/complaints.tsx?tsr-split=component
+12:35:52 AM [vite] (ssr) page reload src/routes/_authenticated/complaints.tsx
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/dashboard.tsx, /src/routes/_authenticated/dashboard.tsx?tsr-split=component
+12:35:52 AM [vite] (ssr) page reload src/routes/_authenticated/dashboard.tsx
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/fleets.index.tsx, /src/routes/_authenticated/fleets.index.tsx?tsr-split=component
+12:35:52 AM [vite] (ssr) page reload src/routes/_authenticated/fleets.index.tsx
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/estimates.new.tsx
+12:35:52 AM [vite] (ssr) page reload src/routes/_authenticated/estimates.new.tsx
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/estimates.$id.tsx
+12:35:52 AM [vite] (ssr) page reload src/routes/_authenticated/estimates.$id.tsx
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/fleets.$customerId.tsx
+12:35:52 AM [vite] (ssr) page reload src/routes/_authenticated/fleets.$customerId.tsx
+12:35:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/estimates.index.tsx, /src/routes/_authenticated/estimates.index.tsx?tsr-split=component
+12:35:52 AM [vite] (ssr) page reload src/routes/_authenticated/estimates.index.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/portal.complaints.tsx
+12:35:53 AM [vite] (ssr) page reload src/routes/_authenticated/portal.complaints.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/invoices.$id.tsx, /src/routes/_authenticated/invoices.$id.tsx?tsr-split=component
+12:35:53 AM [vite] (ssr) page reload src/routes/_authenticated/invoices.$id.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/invoices.index.tsx
+12:35:53 AM [vite] (ssr) page reload src/routes/_authenticated/invoices.index.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/parts.tsx, /src/routes/_authenticated/parts.tsx?tsr-split=component
+12:35:53 AM [vite] (ssr) page reload src/routes/_authenticated/parts.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/invoices.new.tsx, /src/routes/_authenticated/invoices.new.tsx?tsr-split=component
+12:35:53 AM [vite] (ssr) page reload src/routes/_authenticated/invoices.new.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/reminders.tsx, /src/routes/_authenticated/reminders.tsx?tsr-split=component
+12:35:53 AM [vite] (ssr) page reload src/routes/_authenticated/reminders.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/services.tsx, /src/routes/_authenticated/services.tsx?tsr-split=component
+12:35:53 AM [vite] (ssr) page reload src/routes/_authenticated/services.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/portal.invoices.tsx
+12:35:53 AM [vite] (ssr) page reload src/routes/_authenticated/portal.invoices.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/portal.units.tsx
+12:35:53 AM [vite] (ssr) page reload src/routes/_authenticated/portal.units.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/reports.tsx, /src/routes/_authenticated/reports.tsx?tsr-split=component
+12:35:53 AM [vite] (ssr) page reload src/routes/_authenticated/reports.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/portal.tsx
+12:35:53 AM [vite] (ssr) page reload src/routes/_authenticated/portal.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/portal.index.tsx
+12:35:53 AM [vite] (ssr) page reload src/routes/_authenticated/portal.index.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/onboarding.tsx
+12:35:53 AM [vite] (ssr) page reload src/routes/onboarding.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/units.tsx, /src/routes/_authenticated/units.tsx?tsr-split=component
+12:35:53 AM [vite] (ssr) page reload src/routes/_authenticated/units.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/units.$id.tsx, /src/routes/_authenticated/units.$id.tsx?tsr-split=component
+12:35:53 AM [vite] (ssr) page reload src/routes/_authenticated/units.$id.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/index.tsx, /src/routes/index.tsx?tsr-split=component
+12:35:53 AM [vite] (ssr) page reload src/routes/index.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/_authenticated/settings.tsx
+12:35:53 AM [vite] (ssr) page reload src/routes/_authenticated/settings.tsx
+12:35:53 AM [vite] (client) hmr update /src/styles.css?direct, /src/routes/auth.tsx, /src/routes/auth.tsx?tsr-split=component
+12:35:53 AM [vite] (ssr) page reload src/routes/auth.tsx
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:6:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:24:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:42:38 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/complaints.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:6:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:19:28 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:32:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:60:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:93:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:113:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/customers.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts:44:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts:141:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/dashboard.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:6:26 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:19:24 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:28:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:53:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:83:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/parts.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:6:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:23:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:43:37 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:56:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/reminders.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:40:24 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:61:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:102:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:57:29 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:74:39 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:92:35 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:107:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:209:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:311:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:419:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:428:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:441:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:462:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:479:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:508:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:566:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:641:35 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:19:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:37:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:50:28 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:63:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:134:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:250:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:36:07 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:259:41 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/estimates.functions.ts:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:58:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:124:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:152:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/portal.functions.ts:30416:43
+TanStack Start server functions are not protected by the CSRF middleware.
+
+Server functions are same-origin RPC endpoints and should be protected from cross-site requests.
+
+Add the CSRF middleware in src/start.ts:
+
+  const csrfMiddleware = createCsrfMiddleware({
+    filter: (ctx) => ctx.handlerType === 'serverFn',
+  })
+
+  export const startInstance = createStart(() => ({
+    requestMiddleware: [csrfMiddleware],
+  }))
+
+If you intentionally handle CSRF another way, disable this warning:
+
+  tanstackStart({
+    serverFns: {
+      disableCsrfMiddlewareWarning: true,
+    },
+  })
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts?tss-serverfn-split:40:24 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts?tss-serverfn-split:61:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts?tss-serverfn-split:102:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/settings.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:57:29 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:74:39 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:92:35 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:107:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:209:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:311:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:419:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:428:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:441:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:462:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:479:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:508:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:566:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:36:08 AM [vite] (ssr) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:641:35 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:ssr
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts?tss-serverfn-split:30416:43
+12:36:39 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:57:29 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:39 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:74:39 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:39 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:92:35 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:39 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:107:27 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:39 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:209:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:39 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:311:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:39 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:419:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:39 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:428:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:39 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:441:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:39 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:462:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:39 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:479:30 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:39 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:508:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:39 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:566:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+12:36:39 AM [vite] (client) warning: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:641:35 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+  Plugin: tanstack-start-core::server-fn:client
+  File: /Users/apple/Documents/Fleet Finance Flow/src/lib/invoices.functions.ts:30416:43
+error: script "dev" was terminated by signal SIGTERM (Polite quit request)
