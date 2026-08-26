@@ -54,8 +54,8 @@
   margin: 0 auto;
   width: 100%;
   padding: 0 var(--space-6);
-  padding-top: calc(56px + 4.5rem);
-  padding-bottom: 3rem;
+  padding-top: calc(66px + 5.5rem);
+  padding-bottom: 3.5rem;
   flex: 1;
 }
 
@@ -236,6 +236,11 @@
    RESPONSIVE
    ────────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
+  .inner {
+    padding-top: calc(66px + 4.5rem);
+    padding-bottom: 2.5rem;
+  }
+
   .ribbon {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -247,7 +252,7 @@
 
 @media (max-width: 640px) {
   .inner {
-    padding-top: calc(44px + 2.5rem);
+    padding-top: calc(54px + 3.75rem);
     padding-bottom: 1.5rem;
     padding-left: 1rem;
     padding-right: 1rem;
