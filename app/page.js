@@ -2,12 +2,7 @@ import ScrollProgress from "./components/ScrollProgress";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import TrustBar from "./components/TrustBar";
-import ProblemSolution from "./components/ProblemSolution";
-import Integrations from "./components/Integrations";
 import InteractiveShowcase from "./components/InteractiveShowcase";
-import ComparisonTable from "./components/ComparisonTable";
-import Features from "./components/Features";
-import ROICalculator from "./components/ROICalculator";
 import Testimonials from "./components/Testimonials";
 import FAQ from "./components/FAQ";
 import CTABanner from "./components/CTABanner";
@@ -20,12 +15,7 @@ export default function Home() {
       <Navbar />
       <Hero />
       <TrustBar />
-      <ProblemSolution />
-      <Integrations />
       <InteractiveShowcase />
-      <ComparisonTable />
-      <Features />
-      <ROICalculator />
       <Testimonials />
       <FAQ />
       <CTABanner />

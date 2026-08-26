@@ -8,49 +8,29 @@ import styles from './FAQ.module.css';
 
 const faqs = [
   {
-    q: 'What is Fleet Finance Flow?',
-    a: 'Fleet Finance Flow is heavy-duty shop management software that helps repair shops manage jobs, technicians, time tracking, estimates, invoices, payments, parts, fleet customers, and reporting — all in one platform.'
+    q: 'How long does it take to get our shop up and running?',
+    a: 'Most shops are live within 1 to 2 hours. Our team provides free 1-on-1 white-glove onboarding to import your existing fleet units, VINs, parts inventory, and customer accounts.'
   },
   {
-    q: 'Who is Fleet Finance Flow built for?',
-    a: 'Heavy-duty truck, trailer, diesel, and fleet repair shops. Whether you run a single bay or a multi-location operation, Fleet Finance Flow scales with your business.'
+    q: 'Does Fleet Finance Flow sync with QuickBooks?',
+    a: 'Yes. We provide seamless 2-way live sync with QuickBooks Online and Desktop. Invoices, parts expenses, customer accounts, and payments post automatically without double data entry.'
   },
   {
-    q: 'How is Fleet Finance Flow different from other shop software?',
-    a: 'Most shop software focuses on invoicing. Fleet Finance Flow is built around profit visibility — tracking labor, parts, and margins at the job level so you know what you actually keep.'
+    q: 'Can technicians easily use it from tablets or phones in the bay?',
+    a: 'Yes. The bay technician view was built specifically for mechanics wearing gloves. Two taps to clock into a work order, request parts, and snap inspection photos from any iPad, Android tablet, or smartphone.'
   },
   {
-    q: 'Can technicians use it from their phones?',
-    a: 'Yes. Technicians can clock in, switch jobs, add notes, and upload photos from any phone, tablet, or desktop. No app download required for basic features.'
+    q: 'Are there long-term contracts or per-user lock-ins?',
+    a: 'No. Straightforward month-to-month pricing with no long-term contracts and no hidden setup fees. You can cancel or change your plan at any time.'
   },
   {
-    q: 'Does it support estimates and invoices?',
-    a: 'Absolutely. Create professional estimates, send digital approvals, and convert approved work into invoices — with online payment links and in-person card support.'
-  },
-  {
-    q: 'Does it connect with QuickBooks?',
-    a: 'Yes. Fleet Finance Flow syncs invoices, customers, payments, and key accounting data with QuickBooks to eliminate double entry.'
-  },
-  {
-    q: 'Can I see profit per job?',
-    a: 'Yes. You can see labor cost, billed labor, parts margins, discounts, and overall profitability on every repair order — while the job is still open.'
-  },
-  {
-    q: 'Is Fleet Finance Flow cloud-based?',
-    a: 'Yes. It runs in the browser and on mobile. Your data is accessible from anywhere — the shop floor, the office, or the road.'
-  },
-  {
-    q: 'How long does it take to get started?',
-    a: 'Most shops are up and running in under an hour. We help with setup, data import, and team onboarding at no extra cost.'
-  },
-  {
-    q: 'Are there long-term contracts or per-user fees?',
-    a: 'No long-term contracts. No per-user fees. Straightforward pricing that grows with your shop.'
+    q: 'Can I track real profit per repair order before closing?',
+    a: 'Yes. Fleet Finance Flow calculates exact technician labor costs, billed flat-rate hours, parts markups, and overall gross margin in real time while the truck is still on the shop floor.'
   }
 ];
 
 export default function FAQ() {
-  const [openIndex, setOpenIndex] = useState(null);
+  const [openIndex, setOpenIndex] = useState(0);
 
   const toggleItem = (index) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -60,44 +40,43 @@ export default function FAQ() {
     <section id="faq" className="section">
       <div className="container">
         <div className="section-header">
-          <span className="section-label">FAQ</span>
-          <h2 className="section-title">Frequently asked questions</h2>
-          <p className="section-subtitle">Everything shops want to know before getting started.</p>
+          <span className="section-label">COMMON QUESTIONS</span>
+          <h2 className="section-title">Everything You Need to Know</h2>
+          <p className="section-subtitle">
+            Straightforward answers for shop owners and fleet managers.
+          </p>
         </div>
 
-        <div className={styles.accordion}>
+        <div className={styles.faqList}>
           {faqs.map((faq, index) => {
             const isOpen = openIndex === index;
-            
             return (
-              <div 
-                key={index} 
-                className={`${styles.item} ${isOpen ? styles.itemOpen : ''}`}
-              >
+              <div key={index} className={`${styles.faqItem} ${isOpen ? styles.open : ''}`}>
                 <button 
-                  className={styles.questionBtn} 
+                  className={styles.questionButton} 
                   onClick={() => toggleItem(index)}
                   aria-expanded={isOpen}
                 >
-                  <span className={styles.question}>{faq.q}</span>
-                  <motion.div
+                  <span className={styles.questionText}>{faq.q}</span>
+                  <motion.div 
                     animate={{ rotate: isOpen ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
+                    className={styles.iconWrapper}
                   >
-                    <ChevronDown size={20} className={styles.icon} />
+                    <ChevronDown size={18} />
                   </motion.div>
                 </button>
-                
+
                 <AnimatePresence>
                   {isOpen && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: 'easeInOut' }}
-                      className={styles.answerContainer}
+                      transition={{ duration: 0.2 }}
+                      className={styles.answerWrapper}
                     >
-                      <div className={styles.answer}>
+                      <div className={styles.answerText}>
                         {faq.a}
                       </div>
                     </motion.div>

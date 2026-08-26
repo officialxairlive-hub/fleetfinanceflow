@@ -3,186 +3,149 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { LayoutDashboard, Clock, PackageCheck, Receipt, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Building2, Wrench, Smartphone, Check, ArrowRight, ShieldCheck } from 'lucide-react';
 import styles from './InteractiveShowcase.module.css';
 
-const tabs = [
+const perspectives = [
   {
-    id: 'workflow',
-    label: 'Live Job Board',
-    icon: LayoutDashboard,
-    badge: '100% Real-Time Visibility',
-    title: 'Replace the Whiteboard with a Live Command Center',
-    subtitle: 'See every active repair order, assigned tech, parts status, and clocked labor minutes from a single screen.',
-    points: [
-      'Search instantly by customer, VIN, fleet unit, or technician',
-      'Filter by bottlenecks: "Waiting on Parts", "Needs Approval", or "Ready to Invoice"',
-      'Prevent idle bay time with automated status handoffs'
-    ],
-    statNumber: '3.5 Hrs',
-    statLabel: 'Saved per service manager weekly',
+    id: 'owner',
+    role: '1. Shop Owner (Office)',
+    icon: Building2,
+    badge: 'Live Profit & Dispatch',
+    headline: 'Real-Time Bay Profitability & Automatic QuickBooks Sync',
+    bullet1: 'Track live gross profit and labor efficiency by bay while jobs are open',
+    bullet2: 'See exact tech floor time vs. billed flat-rate hours with zero leakage',
+    bullet3: '1-click convert approved work orders to final invoices without double entry',
+    statNumber: '68.4%',
+    statLabel: 'Average gross margin locked',
     image: '/images/dashboard-light.jpg'
   },
   {
-    id: 'clockin',
-    label: 'Tech Time Clock',
-    icon: Clock,
-    badge: 'Zero Lost Hours',
-    title: 'Two-Tap Floor Time Tracking directly from Bay Tablets',
-    subtitle: 'Technicians clock in, switch repair jobs, and attach work notes without walking back to the front desk.',
-    points: [
-      'Every labor minute automatically attaches to the repair order',
-      'No rebuilding job times at the end of the week',
-      'Compare actual technician hours vs. billed flat-rate labor'
-    ],
-    statNumber: '+28%',
-    statLabel: 'Billed labor accuracy improvement',
+    id: 'mechanic',
+    role: '2. Lead Mechanic (Bay)',
+    icon: Wrench,
+    badge: 'Floor Time & Parts',
+    headline: '2-Tap Bay Tablet Time Tracking & Direct Parts Requests',
+    bullet1: 'Clock into repair orders right at the truck bumper without walking to front desk',
+    bullet2: 'Request parts from inventory with automated matrix markup rules applied',
+    bullet3: 'Attach digital DOT & CVSE inspection photos directly to the work order',
+    statNumber: '96.2%',
+    statLabel: 'Billed labor recovery rate',
     image: '/images/bay-tablet.jpg'
   },
   {
-    id: 'parts',
-    label: 'Parts & Margins',
-    icon: PackageCheck,
-    badge: 'Profit Margin Shield',
-    title: 'Catch Parts Cost Leaks Before Invoicing',
-    subtitle: 'Track supplier cost changes, parts markup rules, and job-level margins while the truck is still in the bay.',
-    points: [
-      'Scan supplier invoices directly into repair orders',
-      'Set automated markup rules for fleet accounts and retail',
-      'Get margin alerts if a job falls below target profitability'
-    ],
-    statNumber: '14.2%',
-    statLabel: 'Average gross profit margin increase',
-    image: '/images/office-setup.jpg'
-  },
-  {
-    id: 'invoicing',
-    label: 'Instant Payments',
-    icon: Receipt,
-    badge: 'Faster Cash Flow',
-    title: 'Digital Estimates to Instant Payment Links',
-    subtitle: 'Send digital estimates for customer smartphone approval. Convert approved jobs into invoices with 1-click.',
-    points: [
-      'Text/email customer estimate approval links',
-      'Accept credit cards online, in-person, or via text-to-pay',
-      'Automated 2-way sync with QuickBooks Online & Desktop'
-    ],
-    statNumber: '4x',
-    statLabel: 'Faster customer approval turnaround',
-    image: '/images/dashboard-light.jpg'
-  },
-  {
-    id: 'ai',
-    label: 'AI Assistant',
-    icon: Sparkles,
-    badge: 'Next-Gen Intelligence',
-    title: 'AI Repair Summary & Estimate Generator',
-    subtitle: 'Speed up administrative work with built-in shop AI that drafts estimate descriptions and summarizes tech notes.',
-    points: [
-      'Turn raw technician bay notes into professional customer summaries',
-      'AI estimate suggestions based on repair history',
-      'Instant answers to daily shop performance questions'
-    ],
-    statNumber: '75%',
-    statLabel: 'Reduction in administrative typing time',
+    id: 'customer',
+    role: '3. Fleet Customer (Mobile)',
+    icon: Smartphone,
+    badge: 'SMS Sign-Off & Pay',
+    headline: 'Instant Mobile Estimate Approvals & Transparent Invoicing',
+    bullet1: 'Send clean SMS links with transparent labor and parts breakdowns',
+    bullet2: 'Customer reviews inspection photos and signs with their finger in 2 minutes',
+    bullet3: 'Accept credit card, debit, EFT or ACH payments with zero phone tag',
+    statNumber: '< 3 Min',
+    statLabel: 'Average digital sign-off turnaround',
     image: '/images/office-setup.jpg'
   }
 ];
 
 export default function InteractiveShowcase() {
-  const [activeTab, setActiveTab] = useState(tabs[0].id);
-  const current = tabs.find((t) => t.id === activeTab);
+  const [activeTab, setActiveTab] = useState(perspectives[0].id);
+  const current = perspectives.find(p => p.id === activeTab) || perspectives[0];
 
   return (
-    <section className={`section ${styles.showcaseSection}`}>
+    <section className={`section ${styles.showcaseSection}`} id="features">
       <div className="container">
+        
         <div className="section-header">
-          <div className="section-label">INTERACTIVE PLATFORM DEMO</div>
-          <h2 className="section-title">Experience the modern shop workflow.</h2>
+          <span className="section-label">LIVE PRODUCT PREVIEW</span>
+          <h2 className="section-title">One Connected System. Zero Wasted Steps.</h2>
           <p className="section-subtitle">
-            Click through the core modules below to see how Fleet Finance Flow connects every corner of your shop.
+            Switch between the three views to see how Fleet Finance Flow connects the office, the garage floor, and your fleet customers.
           </p>
         </div>
 
-        {/* Tab Navigation */}
-        <div className={styles.tabList}>
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
+        {/* 3 Perspective Switcher Tabs */}
+        <div className={styles.tabBar}>
+          {perspectives.map((p) => {
+            const Icon = p.icon;
+            const isActive = activeTab === p.id;
             return (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`${styles.tabBtn} ${isActive ? styles.activeTabBtn : ''}`}
+                key={p.id}
+                onClick={() => setActiveTab(p.id)}
+                className={`${styles.tabBtn} ${isActive ? styles.tabBtnActive : ''}`}
               >
-                {isActive && (
-                  <motion.div
-                    layoutId="activeTabPill"
-                    className={styles.activePill}
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                )}
-                <span className={styles.tabContent}>
-                  <Icon size={18} className={styles.tabIcon} />
-                  {tab.label}
-                </span>
+                <Icon size={16} />
+                <span>{p.role}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Tab Content Display */}
-        <div className={styles.displayCard}>
+        {/* Active Perspective Showcase Card */}
+        <div className={styles.contentCard}>
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 15 }}
+              key={current.id}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.35, ease: 'easeOut' }}
-              className={styles.gridContainer}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25 }}
+              className={styles.grid}
             >
-              {/* Left Column: Text & Features */}
-              <div className={styles.infoCol}>
-                <span className={styles.badge}>{current.badge}</span>
-                <h3 className={styles.displayTitle}>{current.title}</h3>
-                <p className={styles.displaySubtitle}>{current.subtitle}</p>
-
+              {/* Left Details */}
+              <div className={styles.detailsCol}>
+                <span className={styles.viewBadge}>{current.badge}</span>
+                <h3 className={styles.viewHeadline}>{current.headline}</h3>
+                
                 <ul className={styles.pointsList}>
-                  {current.points.map((point, idx) => (
-                    <li key={idx} className={styles.pointItem}>
-                      <CheckCircle2 size={18} className={styles.checkIcon} />
-                      <span>{point}</span>
-                    </li>
-                  ))}
+                  <li className={styles.pointItem}>
+                    <Check size={14} className={styles.checkIcon} />
+                    <span>{current.bullet1}</span>
+                  </li>
+                  <li className={styles.pointItem}>
+                    <Check size={14} className={styles.checkIcon} />
+                    <span>{current.bullet2}</span>
+                  </li>
+                  <li className={styles.pointItem}>
+                    <Check size={14} className={styles.checkIcon} />
+                    <span>{current.bullet3}</span>
+                  </li>
                 </ul>
 
                 <div className={styles.statBox}>
                   <div className={styles.statNumber}>{current.statNumber}</div>
                   <div className={styles.statLabel}>{current.statLabel}</div>
                 </div>
+
+                <div className={styles.ctaRow}>
+                  <a href="/signup" className="btn btn-primary">
+                    Start 14-Day Free Trial
+                    <ArrowRight size={14} />
+                  </a>
+                  <a href="/bay" className="btn btn-outline">
+                    Launch Interactive Bay
+                  </a>
+                </div>
               </div>
 
-              {/* Right Column: Visual Mockup */}
-              <div className={styles.visualCol}>
-                <div className={styles.imageFrame}>
+              {/* Right Image */}
+              <div className={styles.imageCol}>
+                <div className={styles.screenFrame}>
                   <Image
                     src={current.image}
-                    alt={current.title}
-                    width={800}
-                    height={500}
-                    className={styles.previewImage}
+                    alt={current.headline}
+                    width={640}
+                    height={400}
+                    className={styles.screenImage}
                     priority
                   />
-                  <div className={styles.glassOverlay}>
-                    <div className={styles.overlayDot} />
-                    <span className={styles.overlayText}>Live System Preview</span>
-                  </div>
                 </div>
               </div>
             </motion.div>
           </AnimatePresence>
         </div>
+
       </div>
     </section>
   );
