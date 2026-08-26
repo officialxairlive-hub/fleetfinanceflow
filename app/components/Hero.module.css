@@ -114,8 +114,8 @@
   font-size: 0.875rem; /* 14px */
   font-weight: 600;
   letter-spacing: -0.01em;
-  padding: 12px 24px;
-  border-radius: 9999px;
+  padding: 11px 22px;
+  border-radius: 10px;
   text-decoration: none;
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 4px 18px rgba(37, 99, 255, 0.40);
@@ -139,8 +139,8 @@
   font-size: 0.875rem; /* 14px */
   font-weight: 600;
   letter-spacing: -0.01em;
-  padding: 12px 24px;
-  border-radius: 9999px;
+  padding: 11px 22px;
+  border-radius: 10px;
   text-decoration: none;
   border: 1px solid rgba(255, 255, 255, 0.20);
   backdrop-filter: blur(16px);
@@ -281,7 +281,7 @@
     justify-content: center;
     padding: 12px 20px;
     font-size: 0.84375rem;
-    border-radius: 9999px;
+    border-radius: 10px;
   }
 
   .trust {
