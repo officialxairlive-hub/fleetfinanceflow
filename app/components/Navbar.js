@@ -19,26 +19,34 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    const handleScroll = () => setIsScrolled(window.scrollY > 40);
     handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Over the hero image = inverted (white logo/links)
+  // After scrolling past hero = normal (dark logo/links)
+  const overImage = !isScrolled;
 
   return (
     <>
       <nav className={`${styles.navbar} ${isScrolled ? styles.scrolled : styles.atTop}`}>
         <div className={styles.container}>
 
-          {/* Logo */}
+          {/* Logo — white when over image, dark when scrolled */}
           <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
-            <Logo size="default" showText={true} />
+            <Logo size="default" showText={true} inverted={overImage} />
           </Link>
 
           {/* Center nav links */}
           <div className={styles.navLinks}>
             {navItems.map((item) => (
-              <Link key={item.label} href={item.href} className={styles.navLink}>
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`${styles.navLink} ${overImage ? styles.navLinkLight : styles.navLinkDark}`}
+              >
                 {item.label}
               </Link>
             ))}
@@ -46,7 +54,10 @@ const Navbar = () => {
 
           {/* Desktop CTAs */}
           <div className={styles.desktopActions}>
-            <Link href="/login" className={styles.signInLink}>
+            <Link
+              href="/login"
+              className={`${styles.signInLink} ${overImage ? styles.signInLight : styles.signInDark}`}
+            >
               Sign In
             </Link>
             <Link href="/signup" className={styles.signUpBtn}>
@@ -56,7 +67,7 @@ const Navbar = () => {
 
           {/* Mobile Hamburger */}
           <button
-            className={styles.mobileToggle}
+            className={`${styles.mobileToggle} ${overImage ? styles.toggleLight : styles.toggleDark}`}
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -69,7 +80,6 @@ const Navbar = () => {
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               className={styles.mobileBackdrop}
               initial={{ opacity: 0 }}
@@ -77,7 +87,6 @@ const Navbar = () => {
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
             />
-
             <motion.div
               className={styles.mobileMenu}
               initial={{ x: '100%' }}
@@ -87,7 +96,7 @@ const Navbar = () => {
             >
               <div className={styles.mobileMenuHeader}>
                 <Link href="/" onClick={() => setMobileMenuOpen(false)}>
-                  <Logo size="small" showText={true} />
+                  <Logo size="small" showText={true} inverted={false} />
                 </Link>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
@@ -112,18 +121,10 @@ const Navbar = () => {
               </div>
 
               <div className={styles.mobileActions}>
-                <Link
-                  href="/login"
-                  className={styles.mobileSignIn}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
+                <Link href="/login" className={styles.mobileSignIn} onClick={() => setMobileMenuOpen(false)}>
                   Sign In
                 </Link>
-                <Link
-                  href="/signup"
-                  className={styles.mobileSignUp}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
+                <Link href="/signup" className={styles.mobileSignUp} onClick={() => setMobileMenuOpen(false)}>
                   Get Started →
                 </Link>
               </div>
