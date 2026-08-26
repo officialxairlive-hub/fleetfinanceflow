@@ -1,310 +1,303 @@
-.heroSection {
+/* ──────────────────────────────────────────────────────
+   HERO SECTION
+   Full-bleed background image, top-left text block,
+   bottom-anchored telemetry ribbon
+   ────────────────────────────────────────────────────── */
+
+.hero {
   position: relative;
-  background-color: #FFFFFF;
-  padding: 3rem 1rem 4rem;
-  overflow: hidden;
+  width: 100%;
+  /* Height: full viewport, minus the 72px navbar */
+  min-height: calc(100svh - 0px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
   font-family: var(--font-heading, "Manrope", sans-serif);
+  overflow: hidden;
 }
 
-.container {
-  max-width: 1320px;
+/* ── Background Image Layer ── */
+.bgWrapper {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.bgImage {
+  object-fit: cover;
+  object-position: center center;
+}
+
+/* Gradient scrim:
+   - Heavy at top-left so white text is crisp over the image
+   - Transparent in the middle so the image shows through clearly
+   - Darkens again at the very bottom for ribbon contrast
+*/
+.scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      110deg,
+      rgba(10, 15, 30, 0.78) 0%,
+      rgba(10, 15, 30, 0.50) 38%,
+      rgba(10, 15, 30, 0.10) 65%,
+      rgba(10, 15, 30, 0.0)  80%
+    ),
+    linear-gradient(
+      to top,
+      rgba(10, 15, 30, 0.60) 0%,
+      transparent 30%
+    );
+}
+
+/* ── Inner Container ── */
+.inner {
+  position: relative;
+  z-index: 2;
+  max-width: 1280px;
   margin: 0 auto;
+  width: 100%;
+  padding: 0 2rem;
+  /* Push text block down from top of section */
+  padding-top: calc(72px + 7rem);
+  padding-bottom: 4rem;
+  flex: 1;
 }
 
-/* 1. Clean Top Header & CTAs */
-.heroIntro {
-  text-align: center;
-  max-width: 880px;
-  margin: 0 auto 3rem;
+/* ── Text Block (left-aligned) ── */
+.textBlock {
+  max-width: 640px;
 }
 
-.mainTitle {
-  font-size: clamp(2.4rem, 5vw, 4rem);
+.eyebrow {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0 0 1rem;
+}
+
+.headline {
+  font-size: clamp(2.4rem, 5.5vw, 4.25rem);
   font-weight: 800;
   letter-spacing: -0.035em;
-  color: #0F172A;
-  line-height: 1.12;
-  margin: 0 auto 1.25rem;
+  line-height: 1.1;
+  color: #FFFFFF;
+  margin: 0 0 1.5rem;
 }
 
-.mainSubtitle {
-  font-size: clamp(1rem, 2vw, 1.1875rem);
-  color: #475569;
-  line-height: 1.6;
-  max-width: 780px;
-  margin: 0 auto 2rem;
+.subline {
+  font-size: clamp(1rem, 1.8vw, 1.125rem);
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.78);
   font-weight: 400;
+  max-width: 520px;
+  margin: 0 0 2.25rem;
 }
 
-.mainSubtitle strong {
-  color: #0F172A;
-  font-weight: 700;
-}
-
-/* CTAs */
-.ctaGroup {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
-  flex-wrap: wrap;
-}
-
-.primaryBtn {
-  box-shadow: 0 4px 20px rgba(37, 99, 255, 0.35);
-  transition: all 0.2s ease;
-}
-
-.primaryBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(37, 99, 255, 0.45);
-}
-
-.secondaryBtn {
-  background: #FFFFFF;
-  border: 1px solid #CBD5E1;
-  color: #0F172A;
-  font-weight: 700;
-  transition: all 0.2s ease;
-}
-
-.secondaryBtn:hover {
-  background: #F8FAFC;
-  border-color: #94A3B8;
-  transform: translateY(-2px);
-}
-
-/* Trust Badges */
-.trustStrip {
+/* ── CTA Buttons ── */
+.ctas {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #2563FF;
+  color: #FFFFFF;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  padding: 14px 26px;
+  border-radius: 10px;
+  text-decoration: none;
+  box-shadow: 0 4px 20px rgba(37, 99, 255, 0.45);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btnPrimary:hover {
+  background: #1D4ED8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(37, 99, 255, 0.55);
+}
+
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #FFFFFF;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  padding: 14px 26px;
+  border-radius: 10px;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btnGhost:hover {
+  background: rgba(255, 255, 255, 0.20);
+  border-color: rgba(255, 255, 255, 0.45);
+  transform: translateY(-2px);
+}
+
+/* ── Trust Strip ── */
+.trust {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 0.8125rem;
-  color: #64748B;
+  color: rgba(255, 255, 255, 0.60);
   font-weight: 500;
   flex-wrap: wrap;
 }
 
 .checkIcon {
-  color: #10B981;
-  display: inline-block;
+  color: #4ADE80;
   vertical-align: -2px;
+  display: inline-block;
 }
 
-.divider {
-  color: #CBD5E1;
+.dot {
+  color: rgba(255, 255, 255, 0.30);
 }
 
-/* 2. Pristine 3-POV Visual Showcase Frame */
-.showcaseCanvas {
-  background: #FAFAFA;
-  border: 1px solid #E2E8F0;
-  border-radius: 24px;
-  padding: 1.5rem;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.06);
+/* ──────────────────────────────────────────────────────
+   BOTTOM TELEMETRY RIBBON (Aston Martin configurator style)
+   Glassmorphic bar anchored to the very bottom of the hero
+   ────────────────────────────────────────────────────── */
+.ribbon {
   position: relative;
-  text-align: left;
-}
-
-.imageWrapper {
-  position: relative;
-  width: 100%;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid #E2E8F0;
-  background: #FFFFFF;
-}
-
-.heroMasterImage {
-  width: 100%;
-  height: auto;
-  display: block;
-  object-fit: cover;
-}
-
-/* Perspective Overlay Indicators */
-.povIndicatorLeft,
-.povIndicatorCenter,
-.povIndicatorRight {
-  position: absolute;
-  bottom: 20px;
-  background: rgba(15, 23, 42, 0.88);
-  backdrop-filter: blur(12px);
-  color: #FFFFFF;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  padding: 8px 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
-  z-index: 5;
-  transition: transform 0.2s ease;
-}
-
-.povIndicatorLeft:hover,
-.povIndicatorCenter:hover,
-.povIndicatorRight:hover {
-  transform: translateY(-2px);
-  background: #0F172A;
-}
-
-.povIndicatorLeft {
-  left: 24px;
-}
-
-.povIndicatorCenter {
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.povIndicatorRight {
-  right: 24px;
-}
-
-.povIconWrap {
-  color: #38BDF8;
-  display: flex;
-  align-items: center;
-}
-
-.povRoleTitle {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: #FFFFFF;
-}
-
-.povSubTitle {
-  display: block;
-  font-size: 0.65rem;
-  color: #94A3B8;
-  font-weight: 500;
-}
-
-/* 3. Bottom Telemetry Spec Ribbon (Aston Martin Configurator Style) */
-.specRibbon {
+  z-index: 3;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 16px;
-  padding: 14px 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
-  margin-top: 1.25rem;
+  background: rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 0;
+  /* No border-radius — it hugs the full width at the bottom edge */
 }
 
-.specCard {
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
-  border-radius: 10px;
-  padding: 10px 14px;
-  text-align: left;
-  transition: transform 0.15s ease;
+.ribbonCard {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 1.25rem 1.5rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  transition: background 0.2s ease;
 }
 
-.specCard:hover {
-  transform: translateY(-1px);
-  border-color: #CBD5E1;
-  background: #FFFFFF;
+.ribbonCard:last-child {
+  border-right: none;
 }
 
-.specLabel {
+.ribbonCard:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ribbonLabel {
   font-size: 0.6875rem;
   font-weight: 600;
-  color: #64748B;
-  margin-bottom: 3px;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.specValue {
-  font-size: 1.25rem;
+.ribbonValue {
+  font-size: 1.5rem;
   font-weight: 800;
-  color: #0F172A;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-  margin-bottom: 2px;
+  color: #FFFFFF;
+  letter-spacing: -0.03em;
+  line-height: 1;
 }
 
-.specFoot {
+.ribbonSub {
   font-size: 0.625rem;
-  color: #94A3B8;
+  color: rgba(255, 255, 255, 0.40);
   font-weight: 500;
 }
 
-/* Responsive Adjustments */
+/* ──────────────────────────────────────────────────────
+   RESPONSIVE
+   ────────────────────────────────────────────────────── */
+
+/* Tablet ≤1024px: ribbon collapses to 2-3 columns */
 @media (max-width: 1024px) {
-  .povIndicatorLeft,
-  .povIndicatorCenter,
-  .povIndicatorRight {
-    position: relative;
-    bottom: auto;
-    left: auto;
-    right: auto;
-    transform: none !important;
-    margin: 8px 12px;
-    width: calc(100% - 24px);
-    max-width: 360px;
+  .ribbon {
+    grid-template-columns: repeat(3, 1fr);
   }
 
-  .imageWrapper {
-    display: flex;
-    flex-direction: column;
-    padding-bottom: 8px;
-  }
-
-  .specRibbon {
-    grid-template-columns: repeat(2, 1fr);
+  .ribbonCard:nth-child(3) {
+    border-right: none;
   }
 }
 
+/* Mobile ≤640px */
 @media (max-width: 640px) {
-  .heroSection {
-    padding: 2rem 0.75rem 3rem;
+  .inner {
+    padding-top: calc(72px + 3.5rem);
+    padding-bottom: 2rem;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
   }
 
-  .heroIntro {
-    margin-bottom: 2rem;
+  .headline {
+    font-size: 2.2rem;
   }
 
-  .mainTitle {
-    font-size: 2.1rem;
+  .subline {
+    font-size: 0.9375rem;
   }
 
-  .mainSubtitle {
-    font-size: 0.95rem;
-  }
-
-  .ctaGroup {
+  .ctas {
     flex-direction: column;
-    width: 100%;
-    max-width: 320px;
-    margin-left: auto;
-    margin-right: auto;
+    align-items: stretch;
   }
 
-  .ctaGroup a {
-    width: 100%;
+  .btnPrimary,
+  .btnGhost {
     justify-content: center;
+    padding: 14px 20px;
   }
 
-  .trustStrip {
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .divider {
-    display: none;
-  }
-
-  .specRibbon {
-    grid-template-columns: 1fr;
+  .trust {
+    font-size: 0.75rem;
     gap: 8px;
   }
 
-  .showcaseCanvas {
-    padding: 1rem;
-    border-radius: 18px;
+  .dot {
+    display: none;
+  }
+
+  .ribbon {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ribbonCard {
+    padding: 1rem 1rem;
+  }
+
+  .ribbonCard:nth-child(2n) {
+    border-right: none;
+  }
+
+  .ribbonCard:nth-child(3) {
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .ribbonValue {
+    font-size: 1.25rem;
   }
 }

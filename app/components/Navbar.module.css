@@ -1,78 +1,167 @@
+/* ─── Navbar Base ─────────────────────────────────────── */
 .navbar {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: var(--navbar-height, 72px);
+  height: 72px;
   display: flex;
   align-items: center;
   z-index: 1000;
-  transition: all 0.3s ease;
-  background-color: transparent;
-  border-bottom: 1px solid transparent;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.scrolled {
-  background-color: rgba(255, 255, 255, 0.9);
+/* Transparent glassmorphic state at top of page (sitting over hero image) */
+.atTop {
+  background: rgba(255, 255, 255, 0.10);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--color-border, #21262D);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
 }
 
+/* Solid glassmorphic state after scrolling */
+.scrolled {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* ─── Inner Container ─────────────────────────────────── */
 .container {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  max-width: var(--max-width, 1200px);
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 2rem;
 }
 
+/* ─── Desktop Nav Links ───────────────────────────────── */
 .navLinks {
   display: none;
+  align-items: center;
+  gap: 2rem;
 }
 
 @media (min-width: 768px) {
   .navLinks {
     display: flex;
-    align-items: center;
-    gap: 2.5rem;
   }
 }
 
 .navLink {
-  color: var(--color-text);
-  font-family: var(--font-body, Inter, sans-serif);
   font-size: 0.9375rem;
   font-weight: 500;
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
-.navLink:hover {
-  color: var(--color-primary);
+/* White links over the image */
+.atTop .navLink {
+  color: rgba(255, 255, 255, 0.9);
 }
 
+.atTop .navLink:hover {
+  color: #FFFFFF;
+}
+
+/* Dark links once scrolled */
+.scrolled .navLink {
+  color: #475569;
+}
+
+.scrolled .navLink:hover {
+  color: #0F172A;
+}
+
+/* ─── Desktop CTA Actions ─────────────────────────────── */
 .desktopActions {
   display: none;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 @media (min-width: 768px) {
   .desktopActions {
-    display: block;
+    display: flex;
   }
 }
 
+.signInLink {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.atTop .signInLink {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.atTop .signInLink:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.scrolled .signInLink {
+  color: #475569;
+}
+
+.scrolled .signInLink:hover {
+  color: #0F172A;
+  background: #F1F5F9;
+}
+
+.signUpBtn {
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 9px 20px;
+  background: #2563FF;
+  color: #FFFFFF;
+  border-radius: 9px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 12px rgba(37, 99, 255, 0.35);
+}
+
+.signUpBtn:hover {
+  background: #1D4ED8;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(37, 99, 255, 0.45);
+}
+
+/* ─── Mobile Toggle ───────────────────────────────────── */
 .mobileToggle {
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: none;
-  color: var(--color-text);
   cursor: pointer;
-  padding: 0.5rem;
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.atTop .mobileToggle {
+  color: #FFFFFF;
+}
+
+.scrolled .mobileToggle {
+  color: #0F172A;
+}
+
+.atTop .mobileToggle:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.scrolled .mobileToggle:hover {
+  background: #F1F5F9;
 }
 
 @media (min-width: 768px) {
@@ -81,28 +170,118 @@
   }
 }
 
+/* ─── Mobile Backdrop ─────────────────────────────────── */
+.mobileBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 998;
+}
+
+/* ─── Mobile Slide Panel ──────────────────────────────── */
 .mobileMenu {
   position: fixed;
-  top: var(--navbar-height, 72px);
+  top: 0;
   right: 0;
   bottom: 0;
-  width: 100%;
-  max-width: 300px;
-  background-color: var(--color-white);
-  border-left: 1px solid var(--color-border);
-  padding: 2rem 1.5rem;
+  width: 300px;
+  background: #FFFFFF;
+  border-left: 1px solid #E2E8F0;
+  z-index: 999;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  z-index: 999;
+  padding: 0;
+  box-shadow: -20px 0 50px rgba(0, 0, 0, 0.12);
+}
+
+.mobileMenuHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.mobileCloseBtn {
+  background: #F1F5F9;
+  border: none;
+  color: #475569;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.mobileCloseBtn:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.mobileLinks {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.5rem;
+  gap: 2px;
+  flex: 1;
 }
 
 .mobileLink {
-  color: var(--color-text);
-  font-family: var(--font-body, Inter, sans-serif);
-  font-size: 1.125rem;
-  font-weight: 500;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: #334155;
   text-decoration: none;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--color-border, #21262D);
+  padding: 12px 10px;
+  border-radius: 10px;
+  transition: all 0.15s ease;
+  display: block;
+}
+
+.mobileLink:hover {
+  color: #0F172A;
+  background: #F8FAFC;
+}
+
+.mobileActions {
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid #F1F5F9;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobileSignIn {
+  text-align: center;
+  padding: 12px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #475569;
+  text-decoration: none;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+.mobileSignIn:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+.mobileSignUp {
+  text-align: center;
+  padding: 13px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  text-decoration: none;
+  background: #2563FF;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(37, 99, 255, 0.35);
+  transition: all 0.15s ease;
+}
+
+.mobileSignUp:hover {
+  background: #1D4ED8;
 }
