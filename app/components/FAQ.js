@@ -1,4 +1,3 @@
-// FAQ.js
 'use client';
 
 import { useState } from 'react';
@@ -37,8 +36,9 @@ export default function FAQ() {
   };
 
   return (
-    <section id="faq" className="section">
+    <section id="faq" className={`section ${styles.faqSection}`}>
       <div className="container">
+        
         <div className="section-header">
           <span className="section-label">COMMON QUESTIONS</span>
           <h2 className="section-title">Everything You Need to Know</h2>
@@ -47,37 +47,41 @@ export default function FAQ() {
           </p>
         </div>
 
-        <div className={styles.faqList}>
+        <div className={styles.faqContainer}>
           {faqs.map((faq, index) => {
             const isOpen = openIndex === index;
             return (
-              <div key={index} className={`${styles.faqItem} ${isOpen ? styles.open : ''}`}>
+              <div 
+                key={index} 
+                className={`${styles.faqCard} ${isOpen ? styles.faqCardOpen : ''}`}
+              >
                 <button 
-                  className={styles.questionButton} 
+                  type="button"
+                  className={styles.questionBtn} 
                   onClick={() => toggleItem(index)}
                   aria-expanded={isOpen}
                 >
                   <span className={styles.questionText}>{faq.q}</span>
-                  <motion.div 
-                    animate={{ rotate: isOpen ? 180 : 0 }}
-                    transition={{ duration: 0.2 }}
-                    className={styles.iconWrapper}
-                  >
-                    <ChevronDown size={18} />
-                  </motion.div>
+                  <div className={`${styles.iconWrap} ${isOpen ? styles.iconWrapOpen : ''}`}>
+                    <ChevronDown 
+                      size={18} 
+                      className={`${styles.chevron} ${isOpen ? styles.chevronRotated : ''}`} 
+                    />
+                  </div>
                 </button>
 
-                <AnimatePresence>
+                <AnimatePresence initial={false}>
                   {isOpen && (
                     <motion.div
+                      key="content"
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className={styles.answerWrapper}
+                      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                      className={styles.answerWrap}
                     >
-                      <div className={styles.answerText}>
-                        {faq.a}
+                      <div className={styles.answerInner}>
+                        <p className={styles.answerText}>{faq.a}</p>
                       </div>
                     </motion.div>
                   )}
@@ -86,6 +90,7 @@ export default function FAQ() {
             );
           })}
         </div>
+
       </div>
     </section>
   );

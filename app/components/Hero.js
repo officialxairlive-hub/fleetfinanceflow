@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import styles from './Hero.module.css';
-import { ArrowRight, PlayCircle, Check, Star } from 'lucide-react';
+import { ArrowRight, PlayCircle, Check } from 'lucide-react';
 
 export default function Hero() {
   return (
@@ -30,25 +30,11 @@ export default function Hero() {
 
         {/* Headline + Subtitle + CTAs */}
         <div className={styles.textBlock}>
-          <motion.div
-            className={styles.ratingBadge}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className={styles.stars}>
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} size={14} className={styles.starIcon} fill="currentColor" />
-              ))}
-            </div>
-            <span>Excellent 4.9/5 Rating</span>
-          </motion.div>
-
           <motion.p
             className={styles.eyebrow}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.05 }}
+            transition={{ duration: 0.5 }}
           >
             Heavy-Duty Shop Management Software
           </motion.p>

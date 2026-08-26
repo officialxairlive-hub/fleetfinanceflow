@@ -64,30 +64,6 @@
   max-width: 580px;
 }
 
-.ratingBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 4px 12px;
-  border-radius: 99px;
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-white);
-  margin-bottom: 24px;
-}
-
-.stars {
-  display: flex;
-  gap: 2px;
-}
-
-.starIcon {
-  color: #FACC15; /* yellow-400 */
-}
-
 .eyebrow {
   display: inline-block;
   font-family: var(--font-body);

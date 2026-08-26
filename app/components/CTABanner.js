@@ -1,60 +1,69 @@
-// CTABanner.js
 'use client';
 
-import { Check } from 'lucide-react';
+import React from 'react';
+import Link from 'next/link';
+import { ArrowRight, PlayCircle, CheckCircle2 } from 'lucide-react';
 import styles from './CTABanner.module.css';
-
-const MARQUEE_TEXT = "30-Day Free Trial ✦ No long-term contracts ✦ No per-user fees ✦ No pressure ✦ Jobs & tech time ✦ Parts & invoices ✦ Profit in one system ✦ ";
 
 export default function CTABanner() {
   return (
-    <section className={styles.wrapper}>
-      <div className={styles.marqueeContainer}>
-        <div className={styles.marquee}>
-          <span>{MARQUEE_TEXT}</span>
-          <span>{MARQUEE_TEXT}</span>
-          <span>{MARQUEE_TEXT}</span>
-          <span>{MARQUEE_TEXT}</span>
-        </div>
-      </div>
-
-      <div className={styles.banner}>
-        <div className="container">
+    <section className={styles.section}>
+      <div className="container">
+        
+        <div className={styles.ctaCard}>
+          {/* Ambient radial glow effect */}
+          <div className={styles.glowBg} />
+          
           <div className={styles.content}>
-            <div className={styles.glow}></div>
-            <h2 className={styles.headline}>Ready to see where your shop is losing money?</h2>
+            <span className={styles.pillLabel}>
+              START PROTECTING YOUR SHOP MARGINS
+            </span>
+
+            <h2 className={styles.headline}>
+              Ready to see where your shop is losing money?
+            </h2>
+
             <p className={styles.subtitle}>
-              Start your 30-day free trial — jobs, tech time, parts, invoices, and profit in one system.
+              Start your 14-day free trial — track live bay hours, stop unbilled parts leakage, 
+              and sync invoices directly with QuickBooks in real time.
             </p>
-            <button className="btn btn-primary btn-lg">Sign Up Now</button>
-            
-            <div className={styles.features}>
-              <div className={styles.featureItem}>
-                <Check className={styles.icon} size={16} />
-                <span>30-Day Free Trial</span>
+
+            <div className={styles.btnGroup}>
+              <Link href="/signup" className={styles.primaryBtn}>
+                <span>Start 14-Day Free Trial</span>
+                <ArrowRight size={18} />
+              </Link>
+              
+              <Link href="/bay" className={styles.secondaryBtn}>
+                <PlayCircle size={18} />
+                <span>Launch Interactive Bay</span>
+              </Link>
+            </div>
+
+            <div className={styles.trustStrip}>
+              <div className={styles.trustItem}>
+                <CheckCircle2 size={15} className={styles.checkIcon} />
+                <span>14-day free trial</span>
               </div>
               <span className={styles.dot}>·</span>
-              <div className={styles.featureItem}>
-                <Check className={styles.icon} size={16} />
+              <div className={styles.trustItem}>
+                <CheckCircle2 size={15} className={styles.checkIcon} />
+                <span>No credit card required</span>
+              </div>
+              <span className={styles.dot}>·</span>
+              <div className={styles.trustItem}>
+                <CheckCircle2 size={15} className={styles.checkIcon} />
                 <span>No contracts</span>
               </div>
               <span className={styles.dot}>·</span>
-              <div className={styles.featureItem}>
-                <Check className={styles.icon} size={16} />
-                <span>No per-user fees</span>
+              <div className={styles.trustItem}>
+                <CheckCircle2 size={15} className={styles.checkIcon} />
+                <span>Free 1-on-1 shop data import</span>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className={styles.marqueeContainer}>
-        <div className={styles.marquee} style={{ animationDirection: 'reverse' }}>
-          <span>{MARQUEE_TEXT}</span>
-          <span>{MARQUEE_TEXT}</span>
-          <span>{MARQUEE_TEXT}</span>
-          <span>{MARQUEE_TEXT}</span>
-        </div>
       </div>
     </section>
   );

@@ -1,57 +1,30 @@
 /* CTABanner.module.css */
-.wrapper {
-  position: relative;
-  overflow: hidden;
-  margin: var(--space-4xl) 0;
-}
-
-.marqueeContainer {
-  background-color: var(--color-surface);
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
-  padding: var(--space-sm) 0;
-  display: flex;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.marquee {
-  display: inline-flex;
-  animation: scroll 40s linear infinite;
-}
-
-.marquee span {
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding-right: 1rem;
-}
-
-@keyframes scroll {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-.banner {
-  position: relative;
-  padding: var(--space-5xl) 0;
+.section {
+  padding: 4rem 0 6rem;
   background-color: var(--color-bg);
+  position: relative;
 }
 
-.glow {
+.ctaCard {
+  position: relative;
+  background: linear-gradient(145deg, #090D16 0%, #111827 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 28px;
+  padding: 4.5rem 2rem;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+  text-align: center;
+}
+
+/* Ambient blue lighting in the background */
+.glowBg {
   position: absolute;
-  top: 50%;
+  top: -30%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: 60%;
-  height: 60%;
-  background: radial-gradient(circle, rgba(37, 99, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+  transform: translateX(-50%);
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(37, 99, 255, 0.25) 0%, rgba(37, 99, 255, 0) 70%);
   z-index: 0;
   pointer-events: none;
 }
@@ -59,52 +32,157 @@
 .content {
   position: relative;
   z-index: 1;
+  max-width: 720px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
-  max-width: 800px;
-  margin: 0 auto;
+}
+
+.pillLabel {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.6875rem; /* 11px */
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #60A5FA;
+  background: rgba(37, 99, 255, 0.15);
+  border: 1px solid rgba(37, 99, 255, 0.3);
+  padding: 5px 14px;
+  border-radius: 9999px;
+  margin-bottom: 1.5rem;
 }
 
 .headline {
   font-family: var(--font-heading);
-  font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: var(--space-md);
-  line-height: 1.2;
+  font-size: clamp(2rem, 3.6vw, 2.75rem);
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1.18;
+  letter-spacing: -0.025em;
+  margin: 0 0 1.25rem;
 }
 
 .subtitle {
   font-family: var(--font-body);
-  font-size: var(--text-lg);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-2xl);
-  max-width: 600px;
+  font-size: clamp(0.9375rem, 1.5vw, 1.0625rem);
+  color: #94A3B8;
+  line-height: 1.6;
+  max-width: 580px;
+  margin: 0 0 2.25rem;
 }
 
-.features {
+.btnGroup {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-md);
-  margin-top: var(--space-xl);
+  gap: 1rem;
   flex-wrap: wrap;
+  margin-bottom: 2.25rem;
 }
 
-.featureItem {
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--color-primary);
+  color: #FFFFFF;
+  font-family: var(--font-heading);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  padding: 0.875rem 1.75rem;
+  border-radius: 9999px;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 18px rgba(37, 99, 255, 0.35);
+}
+
+.primaryBtn:hover {
+  background: #1D4ED8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(37, 99, 255, 0.45);
+}
+
+.secondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: #F1F5F9;
+  font-family: var(--font-heading);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  padding: 0.875rem 1.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(8px);
+}
+
+.secondaryBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  color: #FFFFFF;
+}
+
+.trustStrip {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
+  justify-content: center;
+  gap: 0.875rem;
+  flex-wrap: wrap;
+  color: #94A3B8;
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
 }
 
-.icon {
-  color: var(--color-primary);
+.trustItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.checkIcon {
+  color: #34D399;
+  flex-shrink: 0;
 }
 
 .dot {
-  color: var(--color-border);
+  color: rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 3rem 0 4.5rem;
+  }
+
+  .ctaCard {
+    padding: 3rem 1.25rem;
+    border-radius: 20px;
+  }
+
+  .btnGroup {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+  }
+
+  .primaryBtn,
+  .secondaryBtn {
+    width: 100%;
+  }
+
+  .trustStrip {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .dot {
+    display: none;
+  }
 }
