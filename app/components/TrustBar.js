@@ -2,50 +2,29 @@
 
 import React from 'react';
 import styles from './TrustBar.module.css';
-import { ShieldCheck, RefreshCw, CreditCard, DollarSign, CheckCircle2 } from 'lucide-react';
 
-const trustItems = [
-  {
-    icon: ShieldCheck,
-    title: 'Class 6-8 Commercial Standard',
-    desc: 'CAD & USD with provincial/state tax matrices'
-  },
-  {
-    icon: RefreshCw,
-    title: '2-Way QuickBooks Live Sync',
-    desc: 'Automatic ledger, invoice & payment posting'
-  },
-  {
-    icon: CreditCard,
-    title: 'Stripe Commercial Payments',
-    desc: 'Instant online card & ACH payment links'
-  },
-  {
-    icon: CheckCircle2,
-    title: 'Month-to-Month · No Contracts',
-    desc: 'Free 1-on-1 shop data import & setup'
-  }
+const integrations = [
+  { name: 'QuickBooks', color: '#2CA01C' },
+  { name: 'Stripe', color: '#635BFF' },
+  { name: 'CARFAX', color: '#00629A' },
+  { name: 'Nexpart', color: '#D2232A' },
+  { name: 'MOTOR', color: '#E1261C' },
 ];
 
 export default function TrustBar() {
   return (
     <section className={styles.section}>
       <div className={`container ${styles.container}`}>
-        <div className={styles.trustGrid}>
-          {trustItems.map((item, idx) => {
-            const Icon = item.icon;
-            return (
-              <div key={idx} className={styles.trustItem}>
-                <div className={styles.iconWrap}>
-                  <Icon size={16} />
-                </div>
-                <div className={styles.textWrap}>
-                  <strong className={styles.itemTitle}>{item.title}</strong>
-                  <span className={styles.itemDesc}>{item.desc}</span>
-                </div>
-              </div>
-            );
-          })}
+        <p className={styles.label}>SEAMLESSLY CONNECTS WITH THE TOOLS YOU ALREADY USE</p>
+        
+        <div className={styles.logoGrid}>
+          {integrations.map((item, idx) => (
+            <div key={idx} className={styles.logoItem}>
+              <span className={styles.logoText} style={{ '--brand-color': item.color }}>
+                {item.name}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     </section>

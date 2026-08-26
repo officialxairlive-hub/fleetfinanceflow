@@ -1,6 +1,21 @@
 .problemSolution {
-  background-color: var(--color-bg);
+  background-color: var(--color-bg-alt); /* slightly off-white */
   position: relative;
+  overflow: hidden;
+}
+
+/* Subtle background glow effect */
+.problemSolution::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1000px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(37, 99, 255, 0.05) 0%, transparent 70%);
+  z-index: 0;
+  pointer-events: none;
 }
 
 .grid {
@@ -8,42 +23,48 @@
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-6);
   margin-bottom: var(--space-12);
+  position: relative;
+  z-index: 1;
 }
 
 .leakCard {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: 20px;
   padding: var(--space-6);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  transition: all var(--transition-base);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.02);
 }
 
 .leakCard:hover {
-  background: #FFFFFF;
-  border-color: var(--color-border-strong);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(37, 99, 255, 0.15);
+  box-shadow: 0 12px 32px rgba(37, 99, 255, 0.08);
+  transform: translateY(-4px);
 }
 
 .cardTop {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-2);
 }
 
 .iconCircle {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--color-primary-light);
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(37, 99, 255, 0.1) 0%, rgba(37, 99, 255, 0.02) 100%);
   color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid rgba(37, 99, 255, 0.1);
 }
 
 .metricBadge {
@@ -53,19 +74,20 @@
   color: #059669;
   background: rgba(16, 185, 129, 0.10);
   border: 1px solid rgba(16, 185, 129, 0.25);
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: 9999px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
 }
 
 .problemBox {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .boxTagRed {
   font-family: var(--font-heading);
-  font-size: 0.65625rem; /* 10.5px */
+  font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   color: #DC2626;
@@ -74,37 +96,43 @@
 
 .problemTitle {
   font-family: var(--font-heading);
-  font-size: 1.0625rem; /* 17px */
+  font-size: 1.125rem;
   font-weight: 700;
   letter-spacing: -0.015em;
   color: #0F172A;
-  line-height: 1.35;
+  line-height: 1.4;
   margin: 0;
 }
 
 .plainExplanation {
   font-family: var(--font-body);
-  font-size: 0.8125rem; /* 13px */
+  font-size: 0.875rem;
   color: #64748B;
   line-height: 1.5;
   margin: 0;
 }
 
 .solutionBox {
-  background: #FFFFFF;
-  border: 1px solid var(--color-border);
-  border-left: 3px solid #10B981;
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
+  background: linear-gradient(to right, rgba(16, 185, 129, 0.05), transparent);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  border-left: 4px solid #10B981;
+  border-radius: 12px;
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   margin-top: auto;
+  transition: all 0.3s ease;
+}
+
+.leakCard:hover .solutionBox {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: linear-gradient(to right, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.02));
 }
 
 .boxTagGreen {
   font-family: var(--font-heading);
-  font-size: 0.65625rem; /* 10.5px */
+  font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   color: #059669;
@@ -113,24 +141,27 @@
 
 .solutionText {
   font-family: var(--font-body);
-  font-size: 0.8125rem; /* 13px */
+  font-size: 0.875rem;
   color: #0F172A;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.5;
   margin: 0;
 }
 
 /* Bottom Takeaway Bar */
 .bottomTakeaway {
-  background: #0F172A;
-  border-radius: var(--radius-xl);
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
   padding: var(--space-6) var(--space-8);
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--space-6);
   flex-wrap: wrap;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
 }
 
 .takeawayLeft {
@@ -148,16 +179,16 @@
 
 .takeawayTitle {
   font-family: var(--font-heading);
-  font-size: 1.125rem; /* 18px */
+  font-size: 1.125rem;
   font-weight: 700;
   letter-spacing: -0.015em;
   color: #FFFFFF;
-  margin: 0 0 4px;
+  margin: 0 0 6px;
 }
 
 .takeawaySub {
   font-family: var(--font-body);
-  font-size: 0.8125rem; /* 13px */
+  font-size: 0.875rem;
   color: #94A3B8;
   margin: 0;
 }

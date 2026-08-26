@@ -1,86 +1,89 @@
 .section {
-  padding: var(--space-4) 0;
-  background-color: var(--color-surface);
-  border-top: 1px solid var(--color-border);
+  padding: 3rem 0;
+  background-color: var(--color-white);
   border-bottom: 1px solid var(--color-border);
 }
 
 .container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.label {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  text-align: center;
+  margin: 0;
+}
+
+.logoGrid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 3rem;
   width: 100%;
 }
 
-.trustGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-4);
-  align-items: center;
-}
-
-.trustItem {
+.logoItem {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: #FFFFFF;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xs);
-}
-
-.iconWrap {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  display: flex;
-  align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  align-items: center;
+  filter: grayscale(100%) opacity(0.6);
+  transition: all 0.3s ease;
+  cursor: default;
 }
 
-.textWrap {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
+.logoItem:hover {
+  filter: grayscale(0%) opacity(1);
 }
 
-.itemTitle {
+.logoText {
   font-family: var(--font-heading);
-  font-size: 0.75rem; /* 12px */
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--brand-color, var(--color-text-primary));
+}
+
+/* Specific styling overrides for certain names to make them look more like logos */
+.logoItem:nth-child(2) .logoText {
+  /* Stripe */
   font-weight: 700;
-  color: var(--color-text);
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+.logoItem:nth-child(3) .logoText {
+  /* CARFAX */
+  font-style: italic;
+  font-weight: 900;
+}
+.logoItem:nth-child(4) .logoText {
+  /* Nexpart */
+  font-weight: 600;
+  text-transform: lowercase;
+}
+.logoItem:nth-child(5) .logoText {
+  /* MOTOR */
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
 }
 
-.itemDesc {
-  font-family: var(--font-body);
-  font-size: 0.6875rem; /* 11px */
-  color: var(--color-text-secondary);
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-@media (max-width: 1024px) {
-  .trustGrid {
-    grid-template-columns: repeat(2, 1fr);
+@media (min-width: 768px) {
+  .section {
+    padding: 4rem 0;
   }
-}
-
-@media (max-width: 640px) {
-  .trustGrid {
-    grid-template-columns: 1fr;
-    gap: 8px;
+  
+  .logoGrid {
+    gap: 5rem;
   }
-
-  .itemTitle,
-  .itemDesc {
-    white-space: normal;
+  
+  .logoText {
+    font-size: 1.75rem;
   }
 }
