@@ -1,446 +1,588 @@
-.hero {
+.heroWrapper {
   position: relative;
-  min-height: calc(100vh - 72px);
+  background-color: #FFFFFF;
+  padding: 1.5rem 1.5rem 4rem;
+  max-width: 1440px;
+  margin: 0 auto;
+  font-family: var(--font-heading, "Manrope", sans-serif);
+  color: #0F172A;
+}
+
+/* 1. Top Bar Navigation */
+.topBar {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  padding-top: 3.5rem;
-  padding-bottom: 4rem;
-  overflow: hidden;
-  background: #FFFFFF;
-}
-
-/* Ambient Radial Mesh Lighting */
-.ambientGlowPrimary {
-  position: absolute;
-  top: -150px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 900px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(37, 99, 255, 0.12) 0%, rgba(59, 130, 246, 0.05) 50%, rgba(255, 255, 255, 0) 70%);
-  z-index: 0;
-  pointer-events: none;
-}
-
-.ambientGlowSecondary {
-  position: absolute;
-  top: 150px;
-  right: 5%;
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.06) 0%, rgba(255, 255, 255, 0) 70%);
-  z-index: 0;
-  pointer-events: none;
-}
-
-.content {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  width: 100%;
-}
-
-/* Announcement Pill */
-.announcementWrapper {
-  margin-bottom: 1.5rem;
-}
-
-.announcementPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  padding: 0.75rem 1.25rem;
   background: #F8FAFC;
-  border: 1px solid rgba(37, 99, 255, 0.25);
-  border-radius: 9999px;
-  padding: 6px 14px 6px 8px;
-  font-size: 0.8125rem;
-  color: var(--color-text);
-  text-decoration: none;
-  box-shadow: 0 2px 10px rgba(37, 99, 255, 0.06);
-  transition: all 0.2s ease;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.announcementPill:hover {
-  border-color: var(--color-primary);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(37, 99, 255, 0.14);
-}
-
-.announcementTag {
-  background: var(--color-primary);
-  color: #FFFFFF;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 9999px;
+.topBarLeft {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  letter-spacing: 0.03em;
+  flex-direction: column;
 }
 
-.announcementText {
+.brandTitle {
+  font-size: 0.875rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #0F172A;
+}
+
+.brandSub {
+  font-size: 0.6875rem;
+  color: #64748B;
   font-weight: 600;
 }
 
-.announcementArrow {
-  color: var(--color-primary);
-  transition: transform 0.2s ease;
-}
-
-.announcementPill:hover .announcementArrow {
-  transform: translateX(3px);
-}
-
-/* Title & Subtitle */
-.title {
-  font-family: var(--font-heading, "Manrope", sans-serif);
-  font-size: clamp(2.4rem, 5.5vw, 4.25rem);
-  font-weight: 800;
-  color: #0F172A;
-  letter-spacing: -0.035em;
-  line-height: 1.1;
-  margin-bottom: 1.25rem;
-}
-
-.gradientText {
-  background: linear-gradient(135deg, #2563FF 0%, #0284C7 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.subtitle {
-  font-size: clamp(1rem, 2vw, 1.1875rem);
-  color: #475569;
-  max-width: 660px;
-  margin: 0 auto 2rem;
-  line-height: 1.6;
-}
-
-/* CTAs */
-.ctas {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
-
-.primaryCta {
-  box-shadow: 0 4px 20px rgba(37, 99, 255, 0.35);
-  transition: all 0.2s ease;
-}
-
-.primaryCta:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(37, 99, 255, 0.45);
-}
-
-.secondaryCta {
-  background: #FFFFFF;
-  border: 1px solid #CBD5E1;
-  color: #334155;
-  transition: all 0.2s ease;
-}
-
-.secondaryCta:hover {
-  background: #F8FAFC;
-  border-color: #94A3B8;
-  color: #0F172A;
-}
-
-/* Trust Badges below CTA */
-.trustBadges {
+/* Model Switcher Pills (from inspiration) */
+.modelSwitcher {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  font-size: 0.78125rem;
-  color: #64748B;
-  font-weight: 500;
-  margin-bottom: 2.25rem;
-  flex-wrap: wrap;
-}
-
-.trustCheck {
-  color: #10B981;
-  display: inline-block;
-  vertical-align: -2px;
-}
-
-.dotDivider {
-  color: #CBD5E1;
-}
-
-/* Social Proof Stat Pills */
-.stats {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-bottom: 3rem;
-  flex-wrap: wrap;
-}
-
-.statPill {
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 9999px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.modelBtn {
+  background: transparent;
+  border: none;
   padding: 6px 14px;
-  font-size: 0.8125rem;
-  color: #1E293B;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748B;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
   white-space: nowrap;
-  display: flex;
+}
+
+.modelBtn:hover {
+  color: #0F172A;
+}
+
+.modelBtnActive {
+  background: #0F172A;
+  color: #FFFFFF;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+}
+
+.btnDirectTrial {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: all 0.2s ease;
+  background: #2563FF;
+  color: #FFFFFF;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.15s ease;
 }
 
-.statPill:hover {
+.btnDirectTrial:hover {
+  background: #1D4ED8;
   transform: translateY(-1px);
-  border-color: rgba(37, 99, 255, 0.4);
-  box-shadow: 0 4px 12px rgba(37, 99, 255, 0.1);
 }
 
-.statIcon {
-  color: var(--color-primary);
-  flex-shrink: 0;
-}
-
-/* Preview Tabs */
-.previewTabs {
-  display: inline-flex;
-  align-items: center;
-  background: #F1F5F9;
-  padding: 4px;
-  border-radius: 12px;
+/* 2. Main Studio Canvas Frame */
+.studioCanvas {
+  position: relative;
+  background: #FAFAFA;
   border: 1px solid #E2E8F0;
-  margin-bottom: 1rem;
-  position: relative;
-  max-width: 100%;
-  overflow-x: auto;
+  border-radius: 24px;
+  padding: 2.5rem 2rem 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
 }
 
-.previewTabBtn {
+/* Giant Futuristic Watermark Lettering (from Lamborghini inspiration) */
+.ambientWatermark {
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(4rem, 11vw, 10rem);
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: rgba(15, 23, 42, 0.035);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+  user-select: none;
+}
+
+/* Top Left Vehicle Info */
+.vehicleHeader {
   position: relative;
+  z-index: 2;
+  text-align: left;
+  margin-bottom: 1rem;
+}
+
+.vehicleTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vehicleName {
+  font-size: clamp(1.8rem, 3.5vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #0F172A;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.tagLiveConfig {
+  background: rgba(37, 99, 255, 0.08);
+  border: 1px solid rgba(37, 99, 255, 0.25);
+  color: #2563FF;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  letter-spacing: 0.05em;
+}
+
+.vehicleSub {
+  font-size: 0.875rem;
+  color: #64748B;
+  margin: 4px 0 0;
+  font-weight: 500;
+}
+
+/* Floating Luxury Feature Card (Top Right) */
+.floatingLuxuryCard {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  width: 280px;
+  background: #0F172A;
+  color: #FFFFFF;
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+  z-index: 10;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.25);
+  text-align: left;
+}
+
+.luxuryCardHeader {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  border: none;
-  background: transparent;
-  color: #64748B;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  z-index: 1;
-  transition: color 0.15s ease;
-  white-space: nowrap;
-}
-
-.previewTabBtn:hover {
-  color: #0F172A;
-}
-
-.previewTabActive {
-  color: #2563FF;
-}
-
-.tabGlider {
-  position: absolute;
-  inset: 0;
-  background: #FFFFFF;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  z-index: -1;
-}
-
-/* Hero Visual Showcase Frame */
-.heroVisualContainer {
-  position: relative;
-  width: 100%;
-  max-width: 1080px;
-  margin: 0 auto;
-}
-
-.heroImageCard {
-  position: relative;
-  border-radius: 18px;
-  overflow: hidden;
-  border: 1px solid #E2E8F0;
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.02);
-  background: #F8FAFC;
-}
-
-.cardGlowEffect {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(37, 99, 255, 0.4), transparent);
-}
-
-.imageWrapper {
-  width: 100%;
-  height: auto;
-}
-
-.heroMainImg {
-  width: 100%;
-  height: auto;
-  display: block;
-  object-fit: cover;
-}
-
-/* Floating Real-Time Status Badges */
-.floatingBadge {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
-  border-radius: 12px;
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-align: left;
-  z-index: 10;
-}
-
-.badgeLabel {
-  display: block;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #64748B;
-  margin-bottom: 2px;
+  color: #94A3B8;
+  margin-bottom: 6px;
 }
 
-.badgeValue {
-  display: block;
-  font-size: 0.8125rem;
-  color: #0F172A;
-  font-weight: 700;
-  white-space: nowrap;
+.luxuryIcon {
+  color: #38BDF8;
 }
 
-.badgeTopLeft {
-  top: 24px;
-  left: 24px;
+.luxuryCardText {
+  font-size: 0.78125rem;
+  line-height: 1.45;
+  color: #CBD5E1;
+  margin: 0 0 10px;
 }
 
-.badgeTopRight {
-  top: 24px;
-  right: 24px;
+.luxuryLiveRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #38BDF8;
 }
 
-.badgeBottomLeft {
-  bottom: 30px;
-  left: 24px;
-}
-
-.pulseDot {
-  width: 10px;
-  height: 10px;
+.pulseLiveDot {
+  width: 8px;
+  height: 8px;
   background: #10B981;
   border-radius: 50%;
   box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-  animation: pulseAnimation 2s infinite;
-  flex-shrink: 0;
+  animation: pulseDot 2s infinite;
 }
 
-@keyframes pulseAnimation {
-  0% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-  }
+@keyframes pulseDot {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-.badgeCheckIcon,
-.badgeMarginIcon {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+/* Left Side Mode Selector Menu (from Aston Martin inspiration) */
+.leftModeMenu {
+  position: absolute;
+  top: 130px;
+  left: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10;
+}
+
+.modeMenuBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.modeMenuBtn:hover {
+  border-color: #0F172A;
+  color: #0F172A;
+  transform: translateX(2px);
+}
+
+.modeMenuActive {
+  background: #0F172A;
+  border-color: #0F172A;
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+/* Center Vehicle Showcase Image */
+.vehicleDisplayContainer {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1050px;
+  margin: 1rem auto 1.5rem;
+}
+
+.imageContainer {
+  position: relative;
+  width: 100%;
+}
+
+.truckStudioImage {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.08));
+}
+
+/* Hotspot Nodes */
+.hotspotAnchor {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 15;
+}
+
+.hotspotNode {
+  position: relative;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
 }
 
-.badgeCheckIcon {
-  background: rgba(16, 185, 129, 0.12);
+.nodeCore {
+  width: 10px;
+  height: 10px;
+  background: #2563FF;
+  border: 2px solid #FFFFFF;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(37, 99, 255, 0.4);
+  z-index: 2;
+  transition: transform 0.15s ease;
 }
 
-.badgeMarginIcon {
-  background: rgba(37, 99, 255, 0.1);
-}
-
-.imageFade {
+.nodeRing {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 80px;
-  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.9));
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(37, 99, 255, 0.25);
+  animation: ringPulse 2.2s infinite;
+}
+
+@keyframes ringPulse {
+  0% { transform: scale(0.6); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.hotspotActive .nodeCore {
+  transform: scale(1.3);
+  background: #0F172A;
+}
+
+/* Tooltip Callouts on Hotspots */
+.hotspotTooltip {
+  position: absolute;
+  top: -95px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0F172A;
+  color: #FFFFFF;
+  border-radius: 12px;
+  padding: 10px 14px;
+  width: 240px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   pointer-events: none;
+  text-align: left;
 }
 
-/* Responsive adjustments */
-@media (max-width: 900px) {
-  .floatingBadge {
+.tooltipHeader {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #38BDF8;
+  margin-bottom: 2px;
+}
+
+.tooltipDesc {
+  font-size: 0.6875rem;
+  color: #E2E8F0;
+  line-height: 1.35;
+  margin-bottom: 4px;
+}
+
+.tooltipMetric {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #10B981;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Bottom Callout Box for Mobile/Quick Glance */
+.activeCalloutCard {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 12px 18px;
+  max-width: 600px;
+  margin: 0 auto 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.calloutTag {
+  font-size: 0.625rem;
+  font-weight: 800;
+  color: #64748B;
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+
+.calloutTitle {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0 0 2px;
+}
+
+.calloutDesc {
+  font-size: 0.8125rem;
+  color: #475569;
+  margin: 0 0 6px;
+}
+
+.calloutMetricBadge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #2563FF;
+  background: rgba(37, 99, 255, 0.08);
+  padding: 3px 10px;
+  border-radius: 9999px;
+}
+
+/* 3. Bottom Feature Highlights Telemetry Spec Ribbon */
+.specRibbon {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 18px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.specRibbonHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #F1F5F9;
+  padding-bottom: 8px;
+}
+
+.specRibbonTitle {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #0F172A;
+}
+
+.specRibbonSub {
+  font-size: 0.6875rem;
+  color: #10B981;
+  font-weight: 700;
+}
+
+.specGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.specCard {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.specCard:hover {
+  border-color: #CBD5E1;
+  background: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.specLabel {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #64748B;
+  margin-bottom: 4px;
+}
+
+.specValue {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.02em;
+  margin-bottom: 2px;
+}
+
+.specFooter {
+  font-size: 0.625rem;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+/* 4. Bottom Action Banner */
+.bottomActionBanner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #0F172A;
+  color: #FFFFFF;
+  border-radius: 18px;
+  padding: 1.75rem 2rem;
+  margin-top: 2rem;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+  flex-wrap: wrap;
+  gap: 18px;
+  text-align: left;
+}
+
+.bottomBannerHeadline {
+  font-size: clamp(1.15rem, 2vw, 1.4rem);
+  font-weight: 800;
+  color: #FFFFFF;
+  margin: 0 0 4px;
+}
+
+.bottomBannerSub {
+  font-size: 0.875rem;
+  color: #94A3B8;
+  margin: 0;
+}
+
+.bottomBannerCtas {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Responsive Styles */
+@media (max-width: 1024px) {
+  .floatingLuxuryCard {
     position: relative;
-    top: auto !important;
-    left: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    margin: 8px auto;
-    width: calc(100% - 24px);
-    max-width: 360px;
+    top: auto;
+    right: auto;
+    width: 100%;
+    margin-bottom: 1rem;
   }
-  .heroImageCard {
-    padding-bottom: 12px;
+
+  .leftModeMenu {
+    position: relative;
+    top: auto;
+    left: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
   }
 }
 
-@media (max-width: 640px) {
-  .hero {
-    padding-top: 2rem;
-    padding-bottom: 2.5rem;
+@media (max-width: 768px) {
+  .heroWrapper {
+    padding: 1rem 0.75rem 2rem;
   }
-  .title {
-    font-size: 2.15rem;
+
+  .studioCanvas {
+    padding: 1.25rem 0.875rem;
+    border-radius: 16px;
   }
-  .subtitle {
-    font-size: 0.95rem;
-  }
-  .ctas {
+
+  .topBar {
     flex-direction: column;
-    width: 100%;
-    max-width: 320px;
+    align-items: stretch;
+    text-align: center;
   }
-  .ctas a {
-    width: 100%;
-    justify-content: center;
+
+  .modelSwitcher {
+    overflow-x: auto;
+    justify-content: flex-start;
   }
-  .trustBadges {
+
+  .specGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .bottomActionBanner {
     flex-direction: column;
-    gap: 6px;
+    text-align: center;
   }
-  .dotDivider {
-    display: none;
+
+  .bottomBannerCtas {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .bottomBannerCtas a {
+    width: 100%;
   }
 }
