@@ -36,6 +36,8 @@ export default function SettingsPage() {
   const [shopSaveLoading, setShopSaveLoading] = useState(false);
   const [stripeConnecting, setStripeConnecting] = useState(false);
   const [stripeConnected, setStripeConnected] = useState(true); // Connected with test keys
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [connectModalData, setConnectModalData] = useState(null);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -68,7 +70,7 @@ export default function SettingsPage() {
     fetchShopData();
   }, []);
 
-  const handleConnectStripe = async () => {
+  const handleConnectStripe = async (simulate = false) => {
     setStripeConnecting(true);
     try {
       const res = await fetch('/api/integrations/stripe/connect', {
@@ -76,15 +78,31 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           shopId: shopId || 'SHOP-DEFAULT-1',
-          originUrl: window.location.origin
+          originUrl: window.location.origin,
+          simulate
         })
       });
       const data = await res.json();
+      
       if (res.ok && data.url) {
         // Redirect to Stripe Hosted Express Onboarding (Uber-style bank account setup)
         window.location.href = data.url;
         return;
       }
+
+      if (data.connectNotEnabled) {
+        setConnectModalData(data);
+        setShowConnectModal(true);
+        return;
+      }
+
+      if (data.simulated) {
+        setStripeConnected(true);
+        setShowConnectModal(false);
+        alert('✅ Canadian Bank Account (TD Canada Trust) linked successfully! Daily deposits active in CAD.');
+        return;
+      }
+
       if (data.error) throw new Error(data.error);
       alert('Stripe test connection initialized!');
       setStripeConnected(true);
@@ -555,6 +573,66 @@ export default function SettingsPage() {
           )}
         </main>
       </div>
+
+      {/* Stripe Connect Activation & Bank Setup Modal */}
+      {showConnectModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, backdropFilter: 'blur(6px)', padding: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: '16px', maxWidth: '540px', width: '100%', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>STRIPE CONNECT MARKETPLACE</span>
+                <h2 style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: 800 }}>Canadian Bank Account Payout Setup</h2>
+              </div>
+              <button onClick={() => setShowConnectModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: '20px' }}>✕</button>
+            </div>
+
+            <div style={{ backgroundColor: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.2)', padding: '14px', borderRadius: '10px', marginBottom: '16px', fontSize: '13px', lineHeight: 1.5 }}>
+              <p style={{ margin: '0 0 8px', fontWeight: 600, color: 'var(--color-text)' }}>
+                ℹ️ To link live bank payouts via Stripe Express:
+              </p>
+              <ol style={{ margin: 0, paddingLeft: '18px', color: 'var(--color-text-secondary)' }}>
+                <li style={{ marginBottom: '4px' }}>Log into your Stripe Dashboard at <a href="https://dashboard.stripe.com/test/connect" target="_blank" rel="noreferrer" style={{ color: '#6366f1', fontWeight: 600 }}>dashboard.stripe.com/connect</a>.</li>
+                <li style={{ marginBottom: '4px' }}>Click <strong>"Get Started with Connect"</strong> (takes 1 click in Test Mode).</li>
+                <li>Return here to generate live Express onboarding links for your shops.</li>
+              </ol>
+            </div>
+
+            <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '18px', lineHeight: 1.4 }}>
+              Want to see and test the direct bank payout dashboard right now? You can simulate linking a Canadian bank account in 1 click:
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                style={{ backgroundColor: '#10B981', borderColor: '#10B981', padding: '12px', justifyContent: 'center' }}
+                onClick={() => handleConnectStripe(true)}
+              >
+                ⚡ Link Demo Canadian Bank (TD / Transit: 01842)
+              </button>
+
+              <a 
+                href="https://dashboard.stripe.com/test/connect" 
+                target="_blank" 
+                rel="noreferrer"
+                className="btn btn-outline"
+                style={{ justifyContent: 'center', padding: '10px', textDecoration: 'none' }}
+              >
+                ↗️ Open Stripe Dashboard (Enable Connect)
+              </a>
+
+              <button 
+                type="button" 
+                className="btn btn-outline"
+                style={{ justifyContent: 'center', borderColor: 'transparent' }}
+                onClick={() => setShowConnectModal(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

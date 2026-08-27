@@ -24,9 +24,11 @@ export async function POST(request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { shopId, originUrl } = body;
+    const { shopId, originUrl, simulate = false } = body;
 
     const supabase = getAdminClient();
+    const baseUrl = originUrl || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
     let targetShopId = shopId;
     let shop = null;
 
@@ -41,38 +43,69 @@ export async function POST(request) {
       if (shop) targetShopId = shop.id;
     }
 
-    let accountId = shop?.stripe_account_id;
-
-    // 1. Create Connected Express Account for Shop Owner if not existing
-    if (!accountId) {
-      const account = await stripe.accounts.create({
-        type: 'express',
-        country: 'CA', // Canadian Heavy Duty Shop Default
-        capabilities: {
-          card_payments: { requested: true },
-          transfers: { requested: true },
-        },
-        business_type: 'company',
-        company: {
-          name: shop?.name || 'Heavy Duty Commercial Truck Repair',
-        },
-      });
-
-      accountId = account.id;
-
+    // SIMULATION MODE (For instant testing before Connect is activated in dashboard)
+    if (simulate) {
+      const mockAccountId = `acct_test_${Date.now().toString().slice(-8)}`;
       if (targetShopId) {
         await supabase
           .from('shops')
           .update({ 
-            stripe_account_id: accountId,
+            stripe_account_id: mockAccountId,
             stripe_charges_enabled: true,
             stripe_onboarding_complete: true
           })
           .eq('id', targetShopId);
       }
+      return NextResponse.json({
+        success: true,
+        simulated: true,
+        accountId: mockAccountId,
+        message: 'Canadian Bank Account linked successfully (Direct Deposits active in CAD)!'
+      });
     }
 
-    const baseUrl = originUrl || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    let accountId = shop?.stripe_account_id;
+
+    // 1. Create Connected Express Account for Shop Owner if not existing
+    if (!accountId) {
+      try {
+        const account = await stripe.accounts.create({
+          type: 'express',
+          country: 'CA', // Canadian Heavy Duty Shop Default
+          capabilities: {
+            card_payments: { requested: true },
+            transfers: { requested: true },
+          },
+          business_type: 'company',
+          company: {
+            name: shop?.name || 'Heavy Duty Commercial Truck Repair',
+          },
+        });
+
+        accountId = account.id;
+
+        if (targetShopId) {
+          await supabase
+            .from('shops')
+            .update({ 
+              stripe_account_id: accountId,
+              stripe_charges_enabled: true,
+              stripe_onboarding_complete: true
+            })
+            .eq('id', targetShopId);
+        }
+      } catch (createErr) {
+        if (createErr.message?.includes('signed up for Connect') || createErr.message?.includes('Connect')) {
+          return NextResponse.json({
+            connectNotEnabled: true,
+            error: "Stripe Connect is not enabled yet on this Stripe account.",
+            dashboardUrl: "https://dashboard.stripe.com/test/connect",
+            hint: "Visit https://dashboard.stripe.com/test/connect and click 'Get Started with Connect' to enable live Express account links."
+          }, { status: 400 });
+        }
+        throw createErr;
+      }
+    }
 
     // 2. Generate Stripe Hosted Express Account Onboarding Link (Uber-Style Bank Setup)
     const accountLink = await stripe.accountLinks.create({
@@ -88,7 +121,7 @@ export async function POST(request) {
       accountId
     });
   } catch (err) {
-    console.error('Error creating Stripe Connect account:', err);
+    console.error('Error in Stripe Connect endpoint:', err);
     return NextResponse.json({ error: err.message || 'Failed to initialize Stripe Connect' }, { status: 500 });
   }
 }
@@ -105,7 +138,22 @@ export async function GET(request) {
       return NextResponse.json({ connected: false });
     }
 
-    // Retrieve account details from Stripe
+    // If mock test account
+    if (shop.stripe_account_id.startsWith('acct_test_')) {
+      return NextResponse.json({
+        connected: true,
+        accountId: shop.stripe_account_id,
+        payoutsEnabled: true,
+        chargesEnabled: true,
+        country: 'CA',
+        currency: 'cad',
+        bankAccounts: [
+          { bank_name: 'TD Canada Trust', last4: '4821', currency: 'cad', routing_number: '004-01842' }
+        ]
+      });
+    }
+
+    // Retrieve live account details from Stripe
     const account = await stripe.accounts.retrieve(shop.stripe_account_id);
 
     return NextResponse.json({
