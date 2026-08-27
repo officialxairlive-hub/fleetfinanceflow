@@ -403,28 +403,28 @@ export default function SettingsPage() {
                 </div>
                 <div className={styles.integrationCard}>
                   <div className={styles.integrationHeader}>
-                    <div className={styles.integrationLogo} style={{ backgroundColor: '#6366f1' }}>S</div>
+                    <div className={styles.integrationLogo} style={{ backgroundColor: '#2563FF' }}>🏦</div>
                     <div>
-                      <h3>Stripe Direct Bank Payouts</h3>
+                      <h3>Direct Bank Payouts</h3>
                       <p className={styles.integrationStatus} style={{ color: stripeConnected ? '#10B981' : 'var(--color-text-secondary)' }}>
-                        {stripeConnected ? '● Direct Deposit Active (CAD)' : 'Not Connected'}
+                        {stripeConnected ? '● Direct Deposit Active (CAD $)' : 'Bank Account Not Connected'}
                       </p>
                     </div>
                   </div>
                   <p className={styles.integrationDesc}>
-                    Connect your Canadian business bank account (TD, RBC, BMO, Scotiabank) for automatic 2-day direct deposits from customer repair orders.
+                    Connect your Canadian business bank account (TD, RBC, BMO, CIBC, Scotiabank) for automatic 2-day direct deposits from customer repair invoices.
                   </p>
                   <p className={styles.syncTime}>
-                    Auto-split: <strong>99% to Shop Bank</strong> • <strong>1% Platform Fee</strong>
+                    Payout Schedule: <strong>Automatic 2-Day Rolling (CAD)</strong> • <span style={{ color: '#2563FF', fontWeight: 600 }}>Secured by Stripe Banking</span>
                   </p>
                   <button 
                     type="button"
                     className="btn btn-primary" 
-                    style={{ width: '100%', marginTop: 'auto', backgroundColor: '#6366f1', borderColor: '#6366f1' }}
+                    style={{ width: '100%', marginTop: 'auto', backgroundColor: '#2563FF', borderColor: '#2563FF' }}
                     onClick={() => handleConnectStripe(false)}
                     disabled={stripeConnecting}
                   >
-                    {stripeConnecting ? 'Opening Stripe Express...' : '🏦 Setup / Update Canadian Bank Account'}
+                    {stripeConnecting ? 'Opening Secure Banking...' : '🏦 Setup / Manage Canadian Bank Account'}
                   </button>
                 </div>
               </div>
