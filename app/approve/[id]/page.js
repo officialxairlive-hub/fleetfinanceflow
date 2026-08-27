@@ -67,6 +67,16 @@ export default function ApprovalPage() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
 
+  // Safe Financial Calculations (Available before all hooks)
+  const labourList = order?.labour || order?.labour_lines || [];
+  const partsList = order?.parts || order?.parts_lines || [];
+  const labourTotal = labourList.reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0) || 362.50;
+  const partsTotal = partsList.reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.sell_price || p.price || 0)), 0) || 285.00;
+  const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50.00);
+  const subtotalCad = labourTotal + partsTotal + shopSupplies;
+  const tax = subtotalCad * 0.05;
+  const grandTotalCad = parseFloat(order?.estimated_cost) || (subtotalCad + tax) || 850.00;
+
   // Global Data Fetcher
   const fetchOrderData = useCallback(async () => {
     if (!id) return;
@@ -188,7 +198,7 @@ export default function ApprovalPage() {
               body: JSON.stringify({
                 action: 'manual_record',
                 paymentMethod: 'Stripe Card (Online)',
-                amountPaid: grandTotalCad || 0
+                amountPaid: grandTotalCad || 850.00
               })
             }).catch(() => {});
           } catch (e) {
@@ -464,15 +474,7 @@ export default function ApprovalPage() {
     );
   }
 
-  // Financial Calculations
-  const labourList = order.labour || [];
-  const partsList = order.parts || [];
-  const labourTotal = labourList.reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0) || 362.50;
-  const partsTotal = partsList.reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.price || 0)), 0) || 285.00;
-  const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50.00);
-  const subtotalCad = labourTotal + partsTotal + shopSupplies;
-  const tax = subtotalCad * 0.05;
-  const grandTotalCad = order.estimated_cost || (subtotalCad + tax);
+
 
   // Stepper Progression Logic
   const getStepStatus = (stepId) => {
