@@ -92,14 +92,12 @@ export default function CreateWorkOrderPage() {
       const newCustId = `CUST-${Date.now().toString().slice(-4)}`;
       const payload = {
         id: newCustId,
-        company: customerForm.company,
-        company_name: customerForm.company,
-        contact: customerForm.contact || 'Fleet Manager',
-        contact_name: customerForm.contact || 'Fleet Manager',
-        phone: customerForm.phone,
-        email: customerForm.email,
-        address: customerForm.address,
-        payment_terms: customerForm.paymentTerms,
+        company: customerForm.company.trim(),
+        contact: customerForm.contact.trim() || 'Fleet Manager',
+        phone: customerForm.phone.trim(),
+        email: customerForm.email.trim(),
+        address: customerForm.address.trim(),
+        payment_terms: customerForm.paymentTerms || 'Net 30',
         balance: 0,
         status: 'active'
       };

@@ -211,7 +211,7 @@ export default function TechBayPage() {
       const newCust = {
         id: newCustId,
         company: quickCustForm.company.trim(),
-        contact_name: quickCustForm.contactName.trim() || 'Fleet Contact',
+        contact: quickCustForm.contactName.trim() || 'Fleet Contact',
         phone: quickCustForm.phone.trim() || '(403) 555-0199',
         email: quickCustForm.email.trim() || 'dispatch@fleet.com',
         status: 'active',
