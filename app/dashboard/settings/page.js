@@ -70,7 +70,8 @@ export default function SettingsPage() {
     fetchShopData();
   }, []);
 
-  const handleConnectStripe = async (simulate = false) => {
+  const handleConnectStripe = async (isSimulate = false) => {
+    const shouldSimulate = isSimulate === true;
     setStripeConnecting(true);
     try {
       const res = await fetch('/api/integrations/stripe/connect', {
@@ -79,7 +80,7 @@ export default function SettingsPage() {
         body: JSON.stringify({
           shopId: shopId || 'SHOP-DEFAULT-1',
           originUrl: window.location.origin,
-          simulate
+          simulate: shouldSimulate
         })
       });
       const data = await res.json();
@@ -420,7 +421,7 @@ export default function SettingsPage() {
                     type="button"
                     className="btn btn-primary" 
                     style={{ width: '100%', marginTop: 'auto', backgroundColor: '#6366f1', borderColor: '#6366f1' }}
-                    onClick={handleConnectStripe}
+                    onClick={() => handleConnectStripe(false)}
                     disabled={stripeConnecting}
                   >
                     {stripeConnecting ? 'Opening Stripe Express...' : '🏦 Setup / Update Canadian Bank Account'}
