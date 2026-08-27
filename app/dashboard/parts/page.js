@@ -193,17 +193,19 @@ export default function PartsPage() {
       const cost = parseFloat(partForm.cost) || 0;
       const sell = parseFloat(partForm.sellPrice) || (cost * 1.3);
       const markup = cost > 0 ? ((sell - cost) / cost) * 100 : 30;
+      const partNumber = partForm.partNumber?.trim() || `PART-${Date.now().toString().slice(-6)}`;
+      const binLocation = partForm.binLocation?.trim() || '-';
 
       if (isEditModalOpen && selectedPart) {
         // Update part
         const { error } = await supabase
           .from('parts')
           .update({
-            part_number: partForm.partNumber,
+            part_number: partNumber,
             category: partForm.category,
             description: partForm.description,
             supplier: partForm.supplier,
-            bin_location: partForm.binLocation,
+            bin_location: binLocation,
             cost: cost,
             sell: sell,
             markup: markup,
@@ -222,11 +224,11 @@ export default function PartsPage() {
           .from('parts')
           .insert([{
             id: newId,
-            part_number: partForm.partNumber,
+            part_number: partNumber,
             category: partForm.category,
             description: partForm.description,
             supplier: partForm.supplier,
-            bin_location: partForm.binLocation,
+            bin_location: binLocation,
             cost: cost,
             sell: sell,
             markup: markup,
@@ -237,7 +239,7 @@ export default function PartsPage() {
           }]);
 
         if (error) throw error;
-        alert(`Part ${partForm.partNumber} added to inventory!`);
+        alert(`Part ${partNumber} added to inventory!`);
       }
 
       setIsAddModalOpen(false);
@@ -851,14 +853,13 @@ export default function PartsPage() {
               <div className={styles.modalBody}>
                 <div className={styles.formGrid}>
                   <div className={styles.formGroup}>
-                    <label className={styles.label}>Part Number / SKU</label>
+                    <label className={styles.label}>Part Number / SKU <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(Optional)</span></label>
                     <input
                       type="text"
                       className={styles.input}
                       value={partForm.partNumber}
                       onChange={(e) => setPartForm({ ...partForm, partNumber: e.target.value })}
-                      required
-                      placeholder="e.g. ABP-N42A-4707QP"
+                      placeholder="Auto-generated if blank (e.g. ABP-N42A-4707QP)"
                     />
                   </div>
                   <div className={styles.formGroup}>
@@ -893,13 +894,13 @@ export default function PartsPage() {
                     />
                   </div>
                   <div className={styles.formGroup}>
-                    <label className={styles.label}>Bin / Shelf Location</label>
+                    <label className={styles.label}>Bin / Shelf Location <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(Optional)</span></label>
                     <input
                       type="text"
                       className={styles.input}
                       value={partForm.binLocation}
                       onChange={(e) => setPartForm({ ...partForm, binLocation: e.target.value })}
-                      placeholder="e.g. A-12-3"
+                      placeholder="e.g. A-12-3 (Optional)"
                     />
                   </div>
                   <div className={styles.formGroup}>
