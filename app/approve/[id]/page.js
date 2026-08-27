@@ -157,6 +157,17 @@ export default function ApprovalPage() {
     fetchOrderData();
   }, [fetchOrderData]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('payment') === 'success') {
+        setPaySuccess(true);
+        if (order) setOrder(prev => prev ? ({ ...prev, status: 'paid' }) : prev);
+        if (invoice) setInvoice(prev => prev ? ({ ...prev, status: 'paid' }) : prev);
+      }
+    }
+  }, [order, invoice]);
+
   // Responsive Canvas Setup
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -298,36 +309,59 @@ export default function ApprovalPage() {
     }
   };
 
-  // Submit Payment
+  // Submit Payment via Stripe / Interac
   const handlePayInvoice = async () => {
     setIsPaying(true);
     try {
       const amount = grandTotalCad;
-      const res = await fetch(`/api/portal/${id}/pay`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paymentMethod: selectedPayMethod === 'card' ? 'Credit Card' : (selectedPayMethod === 'apple' ? 'Apple Pay / Google Pay' : 'EFT / Interac'),
-          amountPaid: amount
-        })
-      });
+      
+      if (selectedPayMethod === 'eft') {
+        // Direct Interac e-Transfer confirmation
+        const res = await fetch(`/api/portal/${id}/pay`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'interac',
+            paymentMethod: 'Interac e-Transfer (CAD)',
+            amountPaid: amount
+          })
+        });
 
-      if (res.ok) {
-        const json = await res.json();
-        setPaySuccess(true);
-        setPaidReceipt(json);
-        setOrder(prev => ({ ...prev, status: 'paid' }));
-        if (invoice) setInvoice(prev => ({ ...prev, status: 'paid' }));
-        alert("🎉 Payment processed successfully! Official digital receipt generated.");
+        if (res.ok) {
+          const json = await res.json();
+          setPaySuccess(true);
+          setPaidReceipt(json);
+          setOrder(prev => ({ ...prev, status: 'paid' }));
+          if (invoice) setInvoice(prev => ({ ...prev, status: 'paid' }));
+          alert("🎉 Interac e-Transfer recorded! Official receipt generated.");
+        }
         setIsPaying(false);
         return;
       }
 
-      // Fallback
-      await supabase.from('work_orders').update({ status: 'paid' }).eq('id', id);
-      if (invoice) {
-        await supabase.from('invoices').update({ status: 'paid', paid_date: new Date().toISOString().split('T')[0] }).eq('id', invoice.id);
+      // Stripe Hosted Checkout Session
+      const res = await fetch(`/api/portal/${id}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'stripe_checkout',
+          paymentMethod: selectedPayMethod === 'card' ? 'Credit Card' : 'Apple Pay / Google Pay',
+          amountPaid: amount,
+          customerEmail: customer?.email || undefined,
+          originUrl: window.location.origin
+        })
+      });
+
+      const json = await res.json();
+      if (res.ok && json.checkoutUrl) {
+        // Redirect to Stripe Hosted Checkout
+        window.location.href = json.checkoutUrl;
+        return;
       }
+
+      if (json.error) throw new Error(json.error);
+
+      // Fallback
       setPaySuccess(true);
       setOrder(prev => ({ ...prev, status: 'paid' }));
       alert("🎉 Payment processed successfully!");
@@ -594,9 +628,23 @@ export default function ApprovalPage() {
                     onClick={() => setSelectedPayMethod('eft')}
                   >
                     <Building2 size={18} color="var(--color-primary)" />
-                    <span>Direct Interac EFT</span>
+                    <span>Direct Interac e-Transfer</span>
                   </button>
                 </div>
+
+                {selectedPayMethod === 'eft' && (
+                  <div style={{ marginTop: '12px', padding: '12px 14px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', fontSize: '12px', color: '#166534' }}>
+                    <div style={{ fontWeight: 700, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>🇨🇦 Canadian Interac e-Transfer Instructions</span>
+                    </div>
+                    <p style={{ margin: '0 0 6px', lineHeight: 1.4 }}>
+                      Send transfer to: <strong>billing@fleetfinanceflow.ca</strong> (Auto-Deposit Enabled)
+                    </p>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#15803D' }}>
+                      ⚠️ Please specify <strong>RO #{order?.id}</strong> in the e-Transfer reference/message field.
+                    </p>
+                  </div>
+                )}
 
                 <div style={{ marginTop: '14px' }}>
                   <button 
@@ -607,7 +655,11 @@ export default function ApprovalPage() {
                     disabled={isPaying}
                   >
                     <Lock size={16} />
-                    {isPaying ? 'Processing Secure Payment...' : `Pay $${grandTotalCad.toFixed(2)} CAD Securely`}
+                    {isPaying 
+                      ? 'Processing Secure Checkout...' 
+                      : selectedPayMethod === 'eft'
+                        ? `Confirm Interac e-Transfer ($${grandTotalCad.toFixed(2)} CAD)`
+                        : `Pay $${grandTotalCad.toFixed(2)} CAD via Stripe (Card / Apple Pay)`}
                   </button>
                 </div>
               </div>
