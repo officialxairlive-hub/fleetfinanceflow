@@ -1,4 +1,5 @@
 import "./globals.css";
+import { ToastProvider } from "./context/ToastContext";
 
 export const metadata = {
   title: "Fleet Finance Flow — Commercial Shop Intelligence & Profit Visibility",
@@ -32,7 +33,9 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );
