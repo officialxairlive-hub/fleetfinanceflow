@@ -68,6 +68,33 @@ export default function SettingsPage() {
     fetchShopData();
   }, []);
 
+  const handleConnectStripe = async () => {
+    setStripeConnecting(true);
+    try {
+      const res = await fetch('/api/integrations/stripe/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shopId: shopId || 'SHOP-DEFAULT-1',
+          originUrl: window.location.origin
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        // Redirect to Stripe Hosted Express Onboarding (Uber-style bank account setup)
+        window.location.href = data.url;
+        return;
+      }
+      if (data.error) throw new Error(data.error);
+      alert('Stripe test connection initialized!');
+      setStripeConnected(true);
+    } catch (err) {
+      alert(`Stripe Connection Notice: ${err.message}`);
+    } finally {
+      setStripeConnecting(false);
+    }
+  };
+
   const handleSaveShopInfo = async (e) => {
     e.preventDefault();
     if (!shopId || !shopName.trim()) return;
@@ -359,24 +386,26 @@ export default function SettingsPage() {
                   <div className={styles.integrationHeader}>
                     <div className={styles.integrationLogo} style={{ backgroundColor: '#6366f1' }}>S</div>
                     <div>
-                      <h3>Stripe Connect & Payments</h3>
+                      <h3>Stripe Direct Bank Payouts</h3>
                       <p className={styles.integrationStatus} style={{ color: stripeConnected ? '#10B981' : 'var(--color-text-secondary)' }}>
-                        {stripeConnected ? '● Active (Test Mode)' : 'Not Connected'}
+                        {stripeConnected ? '● Direct Deposit Active (CAD)' : 'Not Connected'}
                       </p>
                     </div>
                   </div>
                   <p className={styles.integrationDesc}>
-                    Accept Card, Apple Pay, & Google Pay on digital repair orders. Automatic 1% platform fee split.
+                    Connect your Canadian business bank account (TD, RBC, BMO, Scotiabank) for automatic 2-day direct deposits from customer repair orders.
                   </p>
-                  <p className={styles.syncTime}>Mode: <strong>CAD Currency ($)</strong> • Test Keys Configured</p>
+                  <p className={styles.syncTime}>
+                    Auto-split: <strong>99% to Shop Bank</strong> • <strong>1% Platform Fee</strong>
+                  </p>
                   <button 
-                    className={stripeConnected ? "btn btn-outline" : "btn btn-primary"} 
-                    style={{ width: '100%', marginTop: 'auto' }}
-                    onClick={() => {
-                      alert("✅ Stripe Test Keys configured! Customers can pay invoices via Stripe Checkout or Canadian Interac e-Transfer.");
-                    }}
+                    type="button"
+                    className="btn btn-primary" 
+                    style={{ width: '100%', marginTop: 'auto', backgroundColor: '#6366f1', borderColor: '#6366f1' }}
+                    onClick={handleConnectStripe}
+                    disabled={stripeConnecting}
                   >
-                    {stripeConnected ? '✓ Stripe Connected (Ready)' : 'Connect Stripe Account'}
+                    {stripeConnecting ? 'Opening Stripe Express...' : '🏦 Setup / Update Canadian Bank Account'}
                   </button>
                 </div>
               </div>

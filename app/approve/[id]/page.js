@@ -158,15 +158,48 @@ export default function ApprovalPage() {
   }, [fetchOrderData]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && id) {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('payment') === 'success') {
         setPaySuccess(true);
         if (order) setOrder(prev => prev ? ({ ...prev, status: 'paid' }) : prev);
         if (invoice) setInvoice(prev => prev ? ({ ...prev, status: 'paid' }) : prev);
+
+        // Sync payment to Supabase database so owner dashboard updates to PAID immediately
+        async function syncPaymentToDatabase() {
+          try {
+            const today = new Date().toISOString().split('T')[0];
+            
+            // 1. Direct Supabase update
+            await supabase
+              .from('work_orders')
+              .update({ status: 'paid', payment_status: 'paid' })
+              .eq('id', id);
+
+            await supabase
+              .from('invoices')
+              .update({ status: 'paid', paid_date: today, payment_method: 'Stripe Card (Online)' })
+              .eq('work_order_id', id);
+
+            // 2. Call server-side payment record API
+            await fetch(`/api/portal/${id}/pay`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'manual_record',
+                paymentMethod: 'Stripe Card (Online)',
+                amountPaid: grandTotalCad || 0
+              })
+            }).catch(() => {});
+          } catch (e) {
+            console.error('Error syncing payment to Supabase:', e);
+          }
+        }
+
+        syncPaymentToDatabase();
       }
     }
-  }, [order, invoice]);
+  }, [id, grandTotalCad]);
 
   // Responsive Canvas Setup
   const resizeCanvas = useCallback(() => {
