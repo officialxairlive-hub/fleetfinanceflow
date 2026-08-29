@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '../lib/supabaseClient';
-import { workOrders, technicians as demoTechs, partsInventory, invoices as demoInvoices } from '../lib/demoData';
 import {
   Wrench,
   Clock,
@@ -44,105 +43,55 @@ export default function DashboardPage() {
           supabase.from('parts').select('*').order('part_number', { ascending: true })
         ]);
 
-        // 1. Process Live Work Orders
-        let loadedJobs = [];
-        if (woRes.data && woRes.data.length > 0) {
-          loadedJobs = woRes.data.map(wo => {
-            let partsStatus = 'Parts Ready';
-            let partsVariant = 'success';
-            if (wo.status === 'waiting_parts') {
-              partsStatus = 'Pending Parts';
-              partsVariant = 'warning';
-            }
+        // 1. Process Live Work Orders from Supabase
+        const loadedJobs = (woRes.data || []).map(wo => {
+          let partsStatus = 'Parts Ready';
+          let partsVariant = 'success';
+          if (wo.status === 'waiting_parts') {
+            partsStatus = 'Pending Parts';
+            partsVariant = 'warning';
+          }
 
-            let marginStatus = 'good';
-            if ((wo.margin || 65) < 60) marginStatus = 'warn';
+          let marginStatus = 'good';
+          if ((wo.margin || 65) < 60) marginStatus = 'warn';
 
-            const hours = Math.floor((wo.timer || 0) / 3600);
-            const mins = Math.floor(((wo.timer || 0) % 3600) / 60);
+          const hours = Math.floor((wo.timer || 0) / 3600);
+          const mins = Math.floor(((wo.timer || 0) % 3600) / 60);
 
-            return {
-              ...wo,
-              unit: wo.unit_display || 'Commercial Fleet Unit',
-              customer: wo.customer_name || 'Fleet Customer',
-              issue: wo.complaint || 'Heavy Duty Mechanical Service',
-              tech: wo.tech_name || 'Assigned Mechanic',
-              timer: `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m`,
-              partsStatus,
-              partsVariant,
-              margin: `${wo.margin || 65}%`,
-              marginStatus,
-              billedLabor: `$${(parseFloat(wo.estimated_cost) || 850.00).toFixed(2)} CAD`,
-              clockedLabor: `${(hours + mins / 60).toFixed(2)} hrs`
-            };
-          });
-        } else {
-          // Fallback to rich Canadian Heavy-Duty Demo Data
-          loadedJobs = workOrders.map(wo => {
-            let partsStatus = 'Parts Ready';
-            let partsVariant = 'success';
-            if (wo.status === 'waiting_parts') {
-              partsStatus = 'Pending Parts';
-              partsVariant = 'warning';
-            }
-
-            const hours = Math.floor((wo.timer || 0) / 3600);
-            const mins = Math.floor(((wo.timer || 0) % 3600) / 60);
-
-            return {
-              ...wo,
-              unit: wo.unitDisplay,
-              customer: wo.customer,
-              issue: wo.complaint,
-              tech: wo.techName || 'Lead Tech',
-              timer: `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m`,
-              partsStatus,
-              partsVariant,
-              margin: `${wo.margin || 68}%`,
-              marginStatus: (wo.margin || 68) >= 60 ? 'good' : 'warn',
-              billedLabor: `$${(wo.estimatedCost || 1250.00).toFixed(2)} CAD`,
-              clockedLabor: `${(hours + mins / 60).toFixed(2)} hrs`
-            };
-          });
-        }
+          return {
+            ...wo,
+            unit: wo.unit_display || 'Commercial Fleet Unit',
+            customer: wo.customer_name || 'Fleet Customer',
+            issue: wo.complaint || 'Heavy Duty Mechanical Service',
+            tech: wo.tech_name || 'Unassigned',
+            timer: `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m`,
+            partsStatus,
+            partsVariant,
+            margin: `${wo.margin || 65}%`,
+            marginStatus,
+            billedLabor: `$${(parseFloat(wo.estimated_cost) || 0).toFixed(2)} CAD`,
+            clockedLabor: `${(hours + mins / 60).toFixed(2)} hrs`
+          };
+        });
         setJobs(loadedJobs);
 
-        // 2. Process Live Technicians
-        let loadedTechs = [];
-        if (techRes.data && techRes.data.length > 0) {
-          loadedTechs = techRes.data.map(t => ({
-            ...t,
-            activeJob: t.active_job || 'In Bay',
-            status: t.status || 'Active',
-            timer: `${Math.floor(t.hours_today || 6)}h 30m`,
-            avatar: t.avatar || (t.name || 'TC').slice(0, 2).toUpperCase()
-          }));
-        } else {
-          loadedTechs = demoTechs.map(t => ({
-            ...t,
-            activeJob: t.activeJob || 'In Bay',
-            status: t.status === 'active' ? 'Active' : t.status === 'paused' ? 'Paused' : 'Done',
-            timer: `${Math.floor(t.hoursToday || 6)}h 15m`,
-            avatar: t.avatar || t.name.slice(0, 2).toUpperCase()
-          }));
-        }
+        // 2. Process Live Technicians from Supabase
+        const loadedTechs = (techRes.data || []).map(t => ({
+          ...t,
+          activeJob: t.active_job || 'Available',
+          status: t.status || 'Active',
+          timer: `${Math.floor(t.hours_today || 0)}h 00m`,
+          avatar: t.avatar || (t.name || 'TC').slice(0, 2).toUpperCase()
+        }));
         setTechnicians(loadedTechs);
 
-        // 3. Process Live Invoices
-        if (invRes.data && invRes.data.length > 0) {
-          setInvoices(invRes.data);
-        } else {
-          setInvoices(demoInvoices);
-        }
+        // 3. Process Live Invoices from Supabase
+        setInvoices(invRes.data || []);
 
-        // 4. Process Live Parts
-        if (partRes.data && partRes.data.length > 0) {
-          setParts(partRes.data);
-        } else {
-          setParts(partsInventory);
-        }
+        // 4. Process Live Parts from Supabase
+        setParts(partRes.data || []);
       } catch (err) {
-        console.warn("Using fallback demo dataset for dashboard:", err.message);
+        console.error("Error fetching live dashboard data:", err);
       } finally {
         setIsLoading(false);
       }
@@ -155,35 +104,25 @@ export default function DashboardPage() {
     ? jobs
     : jobs.filter((j) => j.status === filter || (filter === 'in_progress' && (j.status === 'repairing' || j.status === 'diagnosing')));
 
+  // Live Metric Aggregations
   const activeJobsCount = jobs.filter(j => !['invoiced', 'paid'].includes(j.status)).length;
-  const totalBilled = jobs.reduce((sum, j) => sum + (parseFloat(j.estimated_cost || j.estimatedCost) || 0), 0) || 8420.00;
-  const totalClocked = jobs.reduce((sum, j) => sum + ((j.timer_seconds || j.timer || 0) / 3600), 0) || 28.5;
-  const activeTechsCount = technicians.filter(t => t.status === 'Active').length || 4;
+  const totalBilled = jobs.reduce((sum, j) => sum + (parseFloat(j.estimated_cost) || 0), 0);
+  const totalClocked = jobs.reduce((sum, j) => sum + ((j.timer || 0) / 3600), 0);
+  const activeTechsCount = technicians.filter(t => (t.status || '').toLowerCase() === 'active').length;
 
-  // Dynamic Real Activity Items derived from active jobs
-  const liveActivities = [
-    {
-      id: 1,
-      type: 'approval',
-      title: 'Digital Customer Approval',
-      desc: `${jobs[0]?.customer || 'Interstate Haulers'} authorized ${jobs[0]?.unit || 'Freightliner #2019'} ($${parseFloat(jobs[0]?.estimatedCost || jobs[0]?.estimated_cost || 1250).toFixed(2)} CAD).`,
-      link: `/dashboard/jobs/${jobs[0]?.id || 'WO-8821'}`
-    },
-    {
-      id: 2,
-      type: 'parts',
-      title: 'Parts Markup Shield Active',
-      desc: `OEM parts for ${jobs[1]?.unit || 'Kenworth #1850'} logged with target 35% parts margin.`,
-      link: '/dashboard/parts'
-    },
-    {
-      id: 3,
-      type: 'payment',
-      title: 'Stripe & Interac Payment Cleared',
-      desc: `Invoice clearance logged for ${jobs[3]?.id || 'WO-8815'} (${jobs[3]?.customer || 'Heavy Haul Services'}).`,
-      link: '/dashboard/invoices'
-    }
-  ];
+  // Live Sections Filtered Data
+  const activeBayJobs = jobs.filter(j => ['repairing', 'diagnosing', 'waiting_parts', 'new'].includes(j.status));
+  const pendingEstimates = jobs.filter(j => !j.authorized || j.status === 'estimate' || j.status === 'new');
+  const lowStockParts = parts.filter(p => (p.qty_on_hand || p.qtyOnHand || 0) <= (p.min_stock || p.minStock || 5));
+  const unbilledInvoices = invoices.filter(inv => inv.status !== 'paid');
+
+  // Dynamic Live Activity derived from real data
+  const liveActivities = jobs.slice(0, 3).map((job, idx) => ({
+    id: idx,
+    title: job.authorized ? 'Customer Authorized' : `Status: ${(job.status || 'Active').replace('_', ' ').toUpperCase()}`,
+    desc: `${job.customer || 'Fleet Customer'} · ${job.unit || 'Unit'} (${job.billedLabor || '$0.00 CAD'}).`,
+    link: `/dashboard/jobs/${job.id}`
+  }));
 
   return (
     <div className={styles.dashboardContainer}>
@@ -197,12 +136,14 @@ export default function DashboardPage() {
         </div>
         <div className={styles.bannerBadge}>
           <span className={styles.liveDot} />
-          <span>Live Floor Sync Active</span>
+          <span>Live Floor Sync Active (Supabase)</span>
         </div>
       </div>
 
       {isLoading ? (
-        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>Loading dashboard data...</div>
+        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+          Loading live shop data from Supabase...
+        </div>
       ) : (
         <>
           {/* 1. KPI Metric Cards */}
@@ -216,7 +157,7 @@ export default function DashboardPage() {
               </div>
               <div className={styles.kpiValue}>{activeJobsCount} <span className={styles.kpiUnit}>Jobs</span></div>
               <div className={styles.kpiMeta}>
-                <span className={styles.greenText}>Active</span> in Shop Bays & Roadside
+                <span className={styles.greenText}>{activeJobsCount > 0 ? 'Active' : 'Idle'}</span> in Shop Bays & Roadside
               </div>
             </div>
 
@@ -227,9 +168,9 @@ export default function DashboardPage() {
                   <Clock size={18} />
                 </div>
               </div>
-              <div className={styles.kpiValue}>{(totalClocked || 28.5).toFixed(1)} <span className={styles.kpiUnit}>hrs today</span></div>
+              <div className={styles.kpiValue}>{totalClocked.toFixed(1)} <span className={styles.kpiUnit}>hrs today</span></div>
               <div className={styles.kpiMeta}>
-                <span className={styles.greenText}>+12.4%</span> vs. yesterday · {technicians.length} Techs Active
+                <span className={styles.greenText}>{activeTechsCount}</span> Techs Active on Floor
               </div>
             </div>
 
@@ -253,9 +194,9 @@ export default function DashboardPage() {
                   <TrendingUp size={18} />
                 </div>
               </div>
-              <div className={styles.kpiValue}>66.8%</div>
+              <div className={styles.kpiValue}>{jobs.length > 0 ? `${Math.round(jobs.reduce((s, j) => s + parseFloat(j.margin || 65), 0) / jobs.length)}%` : '--'}</div>
               <div className={styles.kpiMeta}>
-                <span className={styles.greenText}>Above Target (&gt;60%)</span>
+                <span className={styles.greenText}>{jobs.length > 0 ? 'Target: >60%' : 'No active jobs'}</span>
               </div>
             </div>
           </div>
@@ -285,20 +226,26 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <div className={styles.windowBody}>
-                  {jobs.slice(0, 2).map((j, i) => (
-                    <div key={i} className={styles.windowRow}>
-                      <div>
-                        <div className={styles.windowRowMain}>{j.unit}</div>
-                        <div className={styles.windowRowSub}>{j.issue?.slice(0, 32)}...</div>
-                      </div>
-                      <span className={`${styles.windowPill} ${j.status === 'waiting_parts' ? styles.badgeOrange : styles.badgeBlue}`}>
-                        {j.status === 'waiting_parts' ? 'Parts' : 'In Bay'}
-                      </span>
+                  {jobs.length === 0 ? (
+                    <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.74rem' }}>
+                      No active work orders
                     </div>
-                  ))}
+                  ) : (
+                    jobs.slice(0, 2).map((j, i) => (
+                      <div key={i} className={styles.windowRow}>
+                        <div>
+                          <div className={styles.windowRowMain}>{j.unit}</div>
+                          <div className={styles.windowRowSub}>{j.issue?.slice(0, 32)}...</div>
+                        </div>
+                        <span className={`${styles.windowPill} ${j.status === 'waiting_parts' ? styles.badgeOrange : styles.badgeBlue}`}>
+                          {j.status === 'waiting_parts' ? 'Parts' : 'In Bay'}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
                 <div className={styles.windowFooter}>
-                  <span>Open Work Orders</span>
+                  <span>Open Work Orders ({jobs.length})</span>
                   <ChevronRight size={13} />
                 </div>
               </Link>
@@ -311,18 +258,27 @@ export default function DashboardPage() {
                     Dispatch & Bays
                   </span>
                   <span className={`${styles.windowBadge} ${styles.badgeGreen}`}>
-                    5/6 Occupied
+                    {activeBayJobs.length}/6 Bays Active
                   </span>
                 </div>
                 <div className={styles.windowBody}>
-                  <div className={styles.windowRow}>
-                    <span className={styles.windowRowMain}>Bay 1: Freightliner #2019</span>
-                    <span className={`${styles.windowPill} ${styles.badgeGreen}`}>In Bay</span>
-                  </div>
-                  <div className={styles.windowRow}>
-                    <span className={styles.windowRowMain}>Bay 2: Kenworth #1850</span>
-                    <span className={`${styles.windowPill} ${styles.badgeBlue}`}>Active</span>
-                  </div>
+                  {activeBayJobs.length === 0 ? (
+                    <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.74rem' }}>
+                      All bays available · No active dispatches
+                    </div>
+                  ) : (
+                    activeBayJobs.slice(0, 2).map((b, i) => (
+                      <div key={i} className={styles.windowRow}>
+                        <div>
+                          <div className={styles.windowRowMain}>Bay {i + 1}: {b.unit}</div>
+                          <div className={styles.windowRowSub}>Tech: {b.tech || 'Unassigned'}</div>
+                        </div>
+                        <span className={`${styles.windowPill} ${styles.badgeGreen}`}>
+                          {b.status === 'repairing' ? 'In Bay' : 'Active'}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
                 <div className={styles.windowFooter}>
                   <span>Open Dispatch Board</span>
@@ -342,18 +298,24 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <div className={styles.windowBody}>
-                  {technicians.slice(0, 2).map((t, i) => (
-                    <div key={i} className={styles.windowRow}>
-                      <div>
-                        <div className={styles.windowRowMain}>{t.name} ({t.avatar})</div>
-                        <div className={styles.windowRowSub}>Clocked: {t.timer}</div>
-                      </div>
-                      <span className={`${styles.windowPill} ${styles.badgeGreen}`}>Active</span>
+                  {technicians.length === 0 ? (
+                    <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.74rem' }}>
+                      No technicians clocked in
                     </div>
-                  ))}
+                  ) : (
+                    technicians.slice(0, 2).map((t, i) => (
+                      <div key={i} className={styles.windowRow}>
+                        <div>
+                          <div className={styles.windowRowMain}>{t.name} ({t.avatar})</div>
+                          <div className={styles.windowRowSub}>Job: {t.activeJob}</div>
+                        </div>
+                        <span className={`${styles.windowPill} ${styles.badgeGreen}`}>{t.status}</span>
+                      </div>
+                    ))
+                  )}
                 </div>
                 <div className={styles.windowFooter}>
-                  <span>View Floor Clocks</span>
+                  <span>View Floor Clocks ({technicians.length})</span>
                   <ChevronRight size={13} />
                 </div>
               </Link>
@@ -366,24 +328,25 @@ export default function DashboardPage() {
                     Estimates & Approvals
                   </span>
                   <span className={`${styles.windowBadge} ${styles.badgePurple}`}>
-                    2 Pending
+                    {pendingEstimates.length} Pending
                   </span>
                 </div>
                 <div className={styles.windowBody}>
-                  <div className={styles.windowRow}>
-                    <div>
-                      <div className={styles.windowRowMain}>EST-8821 · Interstate</div>
-                      <div className={styles.windowRowSub}>Front Brake Overhaul</div>
+                  {pendingEstimates.length === 0 ? (
+                    <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.74rem' }}>
+                      No pending estimates
                     </div>
-                    <span className={`${styles.windowPill} ${styles.badgePurple}`}>$1,250 CAD</span>
-                  </div>
-                  <div className={styles.windowRow}>
-                    <div>
-                      <div className={styles.windowRowMain}>EST-8825 · Midwest</div>
-                      <div className={styles.windowRowSub}>EGR Valve Diagnostic</div>
-                    </div>
-                    <span className={`${styles.windowPill} ${styles.badgePurple}`}>$980 CAD</span>
-                  </div>
+                  ) : (
+                    pendingEstimates.slice(0, 2).map((est, i) => (
+                      <div key={i} className={styles.windowRow}>
+                        <div>
+                          <div className={styles.windowRowMain}>{est.id} · {est.customer}</div>
+                          <div className={styles.windowRowSub}>{est.unit}</div>
+                        </div>
+                        <span className={`${styles.windowPill} ${styles.badgePurple}`}>{est.billedLabor}</span>
+                      </div>
+                    ))
+                  )}
                 </div>
                 <div className={styles.windowFooter}>
                   <span>View Estimates & Approvals</span>
@@ -391,7 +354,7 @@ export default function DashboardPage() {
                 </div>
               </Link>
 
-              {/* Window 5: Invoices & Collections */}
+              {/* Window 5: Invoices & Payments */}
               <Link href="/dashboard/invoices" className={styles.windowCard}>
                 <div className={styles.windowTitleBar}>
                   <span className={styles.windowTitle}>
@@ -399,27 +362,30 @@ export default function DashboardPage() {
                     Invoices & Payments
                   </span>
                   <span className={`${styles.windowBadge} ${styles.badgeBlue}`}>
-                    $8,940 WIP
+                    {unbilledInvoices.length} Unpaid
                   </span>
                 </div>
                 <div className={styles.windowBody}>
-                  <div className={styles.windowRow}>
-                    <div>
-                      <div className={styles.windowRowMain}>INV-8815 · Heavy Haul</div>
-                      <div className={styles.windowRowSub}>Air Compressor Assembly</div>
+                  {invoices.length === 0 ? (
+                    <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.74rem' }}>
+                      No invoices recorded
                     </div>
-                    <span className={`${styles.windowPill} ${styles.badgeGreen}`}>Paid (Stripe)</span>
-                  </div>
-                  <div className={styles.windowRow}>
-                    <div>
-                      <div className={styles.windowRowMain}>INV-8830 · Pacific Express</div>
-                      <div className={styles.windowRowSub}>Clutch Teardown & Seal</div>
-                    </div>
-                    <span className={`${styles.windowPill} ${styles.badgeBlue}`}>$1,650 CAD</span>
-                  </div>
+                  ) : (
+                    invoices.slice(0, 2).map((inv, i) => (
+                      <div key={i} className={styles.windowRow}>
+                        <div>
+                          <div className={styles.windowRowMain}>{inv.id} · {inv.customer_id || 'Fleet'}</div>
+                          <div className={styles.windowRowSub}>Issue: {inv.issue_date || 'Today'}</div>
+                        </div>
+                        <span className={`${styles.windowPill} ${inv.status === 'paid' ? styles.badgeGreen : styles.badgeBlue}`}>
+                          ${(parseFloat(inv.total) || 0).toFixed(2)} CAD
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
                 <div className={styles.windowFooter}>
-                  <span>Open Invoices & Collections</span>
+                  <span>Open Invoices & Collections ({invoices.length})</span>
                   <ChevronRight size={13} />
                 </div>
               </Link>
@@ -431,28 +397,31 @@ export default function DashboardPage() {
                     <Package size={14} color="#059669" />
                     Parts & Inventory
                   </span>
-                  <span className={`${styles.windowBadge} ${styles.badgeGreen}`}>
-                    34.2% Margin
+                  <span className={`${styles.windowBadge} ${lowStockParts.length > 0 ? styles.badgeOrange : styles.badgeGreen}`}>
+                    {lowStockParts.length > 0 ? `${lowStockParts.length} Low Stock` : `${parts.length} In Stock`}
                   </span>
                 </div>
                 <div className={styles.windowBody}>
-                  <div className={styles.windowRow}>
-                    <div>
-                      <div className={styles.windowRowMain}>BRK-R4020 Brake Rotor</div>
-                      <div className={styles.windowRowSub}>Qty: 8 · In Stock</div>
+                  {parts.length === 0 ? (
+                    <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.74rem' }}>
+                      No inventory parts recorded
                     </div>
-                    <span className={`${styles.windowPill} ${styles.badgeGreen}`}>✓ OK</span>
-                  </div>
-                  <div className={styles.windowRow}>
-                    <div>
-                      <div className={styles.windowRowMain}>AIR-DY100 Desiccant</div>
-                      <div className={styles.windowRowSub}>Qty: 2 · Low Stock</div>
-                    </div>
-                    <span className={`${styles.windowPill} ${styles.badgeOrange}`}>⚠️ Low</span>
-                  </div>
+                  ) : (
+                    parts.slice(0, 2).map((p, i) => (
+                      <div key={i} className={styles.windowRow}>
+                        <div>
+                          <div className={styles.windowRowMain}>{p.part_number || p.partNumber}</div>
+                          <div className={styles.windowRowSub}>{p.description?.slice(0, 24)}...</div>
+                        </div>
+                        <span className={`${styles.windowPill} ${(p.qty_on_hand || p.qtyOnHand || 0) <= (p.min_stock || p.minStock || 5) ? styles.badgeOrange : styles.badgeGreen}`}>
+                          Qty: {p.qty_on_hand || p.qtyOnHand || 0}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
                 <div className={styles.windowFooter}>
-                  <span>Parts & Inventory</span>
+                  <span>Parts & Inventory ({parts.length})</span>
                   <ChevronRight size={13} />
                 </div>
               </Link>
@@ -498,7 +467,9 @@ export default function DashboardPage() {
               {/* Job Cards List */}
               <div className={styles.jobCardsList}>
                 {filteredJobs.length === 0 ? (
-                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>No jobs found in this category.</div>
+                  <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)', background: 'var(--color-surface)', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
+                    No work orders found in this category.
+                  </div>
                 ) : (
                   filteredJobs.map((job) => (
                     <div key={job.id} className={styles.jobCard}>
@@ -563,12 +534,14 @@ export default function DashboardPage() {
               <div className={styles.feedCard}>
                 <div className={styles.feedHeader}>
                   <h3 className={styles.feedTitle}>Technician Floor Clocks</h3>
-                  <span className={styles.feedSubtitle}>{technicians.filter(t => t.status === 'Active').length} Clocked In</span>
+                  <span className={styles.feedSubtitle}>{activeTechsCount} Clocked In</span>
                 </div>
 
                 <div className={styles.techList}>
                   {technicians.length === 0 ? (
-                    <div style={{ padding: '1rem', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>No technicians found.</div>
+                    <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+                      No technicians registered
+                    </div>
                   ) : (
                     technicians.map((t, idx) => (
                       <div key={idx} className={styles.techItem}>
@@ -576,7 +549,7 @@ export default function DashboardPage() {
                         <div className={styles.techInfo}>
                           <div className={styles.techNameRow}>
                             <span className={styles.techName}>{t.name}</span>
-                            <span className={`${styles.techStatus} ${t.status === 'Active' ? styles.statusActive : t.status === 'Paused' ? styles.statusPaused : styles.statusDone}`}>
+                            <span className={`${styles.techStatus} ${(t.status || '').toLowerCase() === 'active' ? styles.statusActive : (t.status || '').toLowerCase() === 'paused' ? styles.statusPaused : styles.statusDone}`}>
                               {t.status}
                             </span>
                           </div>
@@ -592,40 +565,36 @@ export default function DashboardPage() {
               {/* Real-Time Live Shop Activity & Margin Guard */}
               <div className={styles.feedCard}>
                 <div className={styles.feedHeader}>
-                  <h3 className={styles.feedTitle}>Live Activity & Profit Stream</h3>
+                  <h3 className={styles.feedTitle}>Live Shop Activity</h3>
                   <Link href="/dashboard/reports" style={{ color: 'var(--color-primary)', display: 'flex', alignItems: 'center' }} title="View Detailed Reports">
                     <ArrowUpRight size={16} className={styles.feedIcon} />
                   </Link>
                 </div>
 
                 <div className={styles.alertList}>
-                  {liveActivities.map((act) => (
-                    <Link
-                      key={act.id}
-                      href={act.link}
-                      className={styles.alertItem}
-                      style={{ textDecoration: 'none', color: 'inherit', display: 'flex', cursor: 'pointer', transition: 'background 0.15s ease' }}
-                    >
-                      <CheckCircle2 size={16} className={styles.checkAlertIcon} />
-                      <div>
-                        <div className={styles.alertTitle} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span>{act.title}</span>
-                          <span style={{ fontSize: '0.65rem', color: 'var(--color-primary)', fontWeight: 600 }}>View ↗</span>
+                  {liveActivities.length === 0 ? (
+                    <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
+                      No recent shop activity
+                    </div>
+                  ) : (
+                    liveActivities.map((act) => (
+                      <Link
+                        key={act.id}
+                        href={act.link}
+                        className={styles.alertItem}
+                        style={{ textDecoration: 'none', color: 'inherit', display: 'flex', cursor: 'pointer', transition: 'background 0.15s ease' }}
+                      >
+                        <CheckCircle2 size={16} className={styles.checkAlertIcon} />
+                        <div>
+                          <div className={styles.alertTitle} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span>{act.title}</span>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--color-primary)', fontWeight: 600 }}>View ↗</span>
+                          </div>
+                          <div className={styles.alertDesc}>{act.desc}</div>
                         </div>
-                        <div className={styles.alertDesc}>{act.desc}</div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-
-                {/* Profit & Core Health Bottom Strip */}
-                <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem' }}>
-                  <span style={{ color: 'var(--color-text-secondary)' }}>
-                    Parts Markup: <strong style={{ color: '#16A34A' }}>34.2% Avg ✓</strong>
-                  </span>
-                  <Link href="/dashboard/parts" style={{ color: '#2563FF', fontWeight: 700, textDecoration: 'none' }}>
-                    Core Credits: $450 CAD ↗
-                  </Link>
+                      </Link>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
