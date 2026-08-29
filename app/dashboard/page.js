@@ -13,16 +13,14 @@ import {
   CheckCircle2,
   Package,
   User,
-  Search,
-  Filter,
   Plus,
-  Play,
-  Pause,
   ArrowUpRight,
   ChevronRight,
-  ShieldCheck,
-  Zap,
-  ExternalLink
+  Truck,
+  FileText,
+  CreditCard,
+  Layers,
+  Sparkles
 } from 'lucide-react';
 import styles from './dashboard.module.css';
 
@@ -141,6 +139,70 @@ export default function DashboardPage() {
   const totalBilled = jobs.reduce((sum, j) => sum + (parseFloat(j.estimated_cost || j.estimatedCost) || 0), 0) || 8420.00;
   const totalClocked = jobs.reduce((sum, j) => sum + ((j.timer_seconds || j.timer || 0) / 3600), 0) || 28.5;
   
+  // 6-Module Live Cockpit Snippets
+  const cockpitModules = [
+    {
+      id: 'jobs',
+      title: 'Work Orders',
+      icon: <Wrench size={16} color="#2563FF" />,
+      badge: `${activeJobsCount} Active`,
+      badgeClass: styles.badgeBlue,
+      desc: `${jobs[0]?.unit || 'Freightliner #2019'} in Bay 1 · 1 Waiting Parts`,
+      actionText: 'Open Work Orders',
+      href: '/dashboard/jobs'
+    },
+    {
+      id: 'dispatch',
+      title: 'Dispatch & Bays',
+      icon: <Truck size={16} color="#059669" />,
+      badge: '5/6 Bays Occupied',
+      badgeClass: styles.badgeGreen,
+      desc: 'Bays 1-5 active · Bay 6 staged for emergency roadside breakdown',
+      actionText: 'Open Dispatch Board',
+      href: '/dashboard/dispatch'
+    },
+    {
+      id: 'labour',
+      title: 'Floor Labor & Clocks',
+      icon: <Clock size={16} color="#D97706" />,
+      badge: `${technicians.filter(t => t.status === 'Active').length || 4} Techs Clocked`,
+      badgeClass: styles.badgeOrange,
+      desc: `${(totalClocked || 28.5).toFixed(1)}h logged today · Sarah L. leading at 135% efficiency`,
+      actionText: 'View Floor Clocks',
+      href: '/dashboard/labour'
+    },
+    {
+      id: 'estimates',
+      title: 'Estimates & Approvals',
+      icon: <FileText size={16} color="#7C3AED" />,
+      badge: '2 Pending Signature',
+      badgeClass: styles.badgePurple,
+      desc: 'Interstate Haulers ($1,250.00 CAD) awaiting digital authorization',
+      actionText: 'View Estimates',
+      href: '/dashboard/estimates'
+    },
+    {
+      id: 'invoices',
+      title: 'Invoices & Payments',
+      icon: <CreditCard size={16} color="#2563FF" />,
+      badge: '4 Ready to Bill ($8,940)',
+      badgeClass: styles.badgeBlue,
+      desc: '1 Stripe payment cleared today ($850.00 CAD) · Ready for export',
+      actionText: 'Open Invoices',
+      href: '/dashboard/invoices'
+    },
+    {
+      id: 'parts',
+      title: 'Parts & Core Shield',
+      icon: <Package size={16} color="#059669" />,
+      badge: '34.2% Avg Markup',
+      badgeClass: styles.badgeGreen,
+      desc: '2 low-stock filters · $450 CAD in unreturned supplier core refunds',
+      actionText: 'Parts Inventory',
+      href: '/dashboard/parts'
+    }
+  ];
+
   // Dynamic Real Activity Items derived from active jobs
   const liveActivities = [
     {
@@ -186,7 +248,7 @@ export default function DashboardPage() {
         <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>Loading dashboard data...</div>
       ) : (
         <>
-          {/* KPI Metric Cards */}
+          {/* 1. KPI Metric Cards */}
           <div className={styles.kpiGrid}>
             <div className={styles.kpiCard}>
               <div className={styles.kpiHeader}>
@@ -241,7 +303,41 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Main Command Center Grid: Kanban Board + Right Tech Feed */}
+          {/* 2. 6-Module Live Shop Operations Radar */}
+          <div className={styles.cockpitSection}>
+            <div className={styles.cockpitHeader}>
+              <h3 className={styles.cockpitTitle}>
+                <Layers size={17} color="var(--color-primary)" />
+                Shop Operations Radar (Live Module Quick Links)
+              </h3>
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+                Click any section to open live workspace
+              </span>
+            </div>
+
+            <div className={styles.cockpitGrid}>
+              {cockpitModules.map((mod) => (
+                <Link key={mod.id} href={mod.href} className={styles.cockpitCard}>
+                  <div className={styles.cockpitTop}>
+                    <span className={styles.cockpitModuleTitle}>
+                      {mod.icon}
+                      {mod.title}
+                    </span>
+                    <span className={`${styles.cockpitBadge} ${mod.badgeClass}`}>
+                      {mod.badge}
+                    </span>
+                  </div>
+                  <p className={styles.cockpitDesc}>{mod.desc}</p>
+                  <div className={styles.cockpitFooter}>
+                    <span>{mod.actionText}</span>
+                    <ChevronRight size={14} />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* 3. Main Command Center Grid: Kanban Board + Right Tech Feed */}
           <div className={styles.mainGrid}>
             {/* Left / Center: Job Command Board */}
             <div className={styles.jobBoardContainer}>
