@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '../lib/supabaseClient';
-import { workOrders, technicians as demoTechs } from '../lib/demoData';
+import { workOrders, technicians as demoTechs, partsInventory, invoices as demoInvoices } from '../lib/demoData';
 import {
   Wrench,
   Clock,
@@ -20,7 +20,8 @@ import {
   FileText,
   CreditCard,
   Layers,
-  Sparkles
+  Sparkles,
+  ExternalLink
 } from 'lucide-react';
 import styles from './dashboard.module.css';
 
@@ -28,17 +29,22 @@ export default function DashboardPage() {
   const [filter, setFilter] = useState('all');
   const [jobs, setJobs] = useState([]);
   const [technicians, setTechnicians] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [parts, setParts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchDashboardData() {
       setIsLoading(true);
       try {
-        const [woRes, techRes] = await Promise.all([
+        const [woRes, techRes, invRes, partRes] = await Promise.all([
           supabase.from('work_orders').select('*').order('created_at', { ascending: false }),
-          supabase.from('technicians').select('*')
+          supabase.from('technicians').select('*'),
+          supabase.from('invoices').select('*').order('created_at', { ascending: false }),
+          supabase.from('parts').select('*').order('part_number', { ascending: true })
         ]);
 
+        // 1. Process Live Work Orders
         let loadedJobs = [];
         if (woRes.data && woRes.data.length > 0) {
           loadedJobs = woRes.data.map(wo => {
@@ -101,7 +107,7 @@ export default function DashboardPage() {
         }
         setJobs(loadedJobs);
 
-        // Map technicians
+        // 2. Process Live Technicians
         let loadedTechs = [];
         if (techRes.data && techRes.data.length > 0) {
           loadedTechs = techRes.data.map(t => ({
@@ -121,6 +127,20 @@ export default function DashboardPage() {
           }));
         }
         setTechnicians(loadedTechs);
+
+        // 3. Process Live Invoices
+        if (invRes.data && invRes.data.length > 0) {
+          setInvoices(invRes.data);
+        } else {
+          setInvoices(demoInvoices);
+        }
+
+        // 4. Process Live Parts
+        if (partRes.data && partRes.data.length > 0) {
+          setParts(partRes.data);
+        } else {
+          setParts(partsInventory);
+        }
       } catch (err) {
         console.warn("Using fallback demo dataset for dashboard:", err.message);
       } finally {
@@ -138,70 +158,7 @@ export default function DashboardPage() {
   const activeJobsCount = jobs.filter(j => !['invoiced', 'paid'].includes(j.status)).length;
   const totalBilled = jobs.reduce((sum, j) => sum + (parseFloat(j.estimated_cost || j.estimatedCost) || 0), 0) || 8420.00;
   const totalClocked = jobs.reduce((sum, j) => sum + ((j.timer_seconds || j.timer || 0) / 3600), 0) || 28.5;
-  
-  // 6-Module Live Cockpit Snippets
-  const cockpitModules = [
-    {
-      id: 'jobs',
-      title: 'Work Orders',
-      icon: <Wrench size={16} color="#2563FF" />,
-      badge: `${activeJobsCount} Active`,
-      badgeClass: styles.badgeBlue,
-      desc: `${jobs[0]?.unit || 'Freightliner #2019'} in Bay 1 · 1 Waiting Parts`,
-      actionText: 'Open Work Orders',
-      href: '/dashboard/jobs'
-    },
-    {
-      id: 'dispatch',
-      title: 'Dispatch & Bays',
-      icon: <Truck size={16} color="#059669" />,
-      badge: '5/6 Bays Occupied',
-      badgeClass: styles.badgeGreen,
-      desc: 'Bays 1-5 active · Bay 6 staged for emergency roadside breakdown',
-      actionText: 'Open Dispatch Board',
-      href: '/dashboard/dispatch'
-    },
-    {
-      id: 'labour',
-      title: 'Floor Labor & Clocks',
-      icon: <Clock size={16} color="#D97706" />,
-      badge: `${technicians.filter(t => t.status === 'Active').length || 4} Techs Clocked`,
-      badgeClass: styles.badgeOrange,
-      desc: `${(totalClocked || 28.5).toFixed(1)}h logged today · Sarah L. leading at 135% efficiency`,
-      actionText: 'View Floor Clocks',
-      href: '/dashboard/labour'
-    },
-    {
-      id: 'estimates',
-      title: 'Estimates & Approvals',
-      icon: <FileText size={16} color="#7C3AED" />,
-      badge: '2 Pending Signature',
-      badgeClass: styles.badgePurple,
-      desc: 'Interstate Haulers ($1,250.00 CAD) awaiting digital authorization',
-      actionText: 'View Estimates',
-      href: '/dashboard/estimates'
-    },
-    {
-      id: 'invoices',
-      title: 'Invoices & Payments',
-      icon: <CreditCard size={16} color="#2563FF" />,
-      badge: '4 Ready to Bill ($8,940)',
-      badgeClass: styles.badgeBlue,
-      desc: '1 Stripe payment cleared today ($850.00 CAD) · Ready for export',
-      actionText: 'Open Invoices',
-      href: '/dashboard/invoices'
-    },
-    {
-      id: 'parts',
-      title: 'Parts & Core Shield',
-      icon: <Package size={16} color="#059669" />,
-      badge: '34.2% Avg Markup',
-      badgeClass: styles.badgeGreen,
-      desc: '2 low-stock filters · $450 CAD in unreturned supplier core refunds',
-      actionText: 'Parts Inventory',
-      href: '/dashboard/parts'
-    }
-  ];
+  const activeTechsCount = technicians.filter(t => t.status === 'Active').length || 4;
 
   // Dynamic Real Activity Items derived from active jobs
   const liveActivities = [
@@ -303,37 +260,202 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 2. 6-Module Live Shop Operations Radar */}
+          {/* 2. 6-Module Live Shop Operations Radar (Mini Window Previews) */}
           <div className={styles.cockpitSection}>
             <div className={styles.cockpitHeader}>
               <h3 className={styles.cockpitTitle}>
                 <Layers size={17} color="var(--color-primary)" />
-                Shop Operations Radar (Live Module Quick Links)
+                Shop Operations Radar (Live Section Previews)
               </h3>
               <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
-                Click any section to open live workspace
+                Click any window to open live workspace
               </span>
             </div>
 
             <div className={styles.cockpitGrid}>
-              {cockpitModules.map((mod) => (
-                <Link key={mod.id} href={mod.href} className={styles.cockpitCard}>
-                  <div className={styles.cockpitTop}>
-                    <span className={styles.cockpitModuleTitle}>
-                      {mod.icon}
-                      {mod.title}
-                    </span>
-                    <span className={`${styles.cockpitBadge} ${mod.badgeClass}`}>
-                      {mod.badge}
-                    </span>
+              {/* Window 1: Work Orders Live Stream */}
+              <Link href="/dashboard/jobs" className={styles.windowCard}>
+                <div className={styles.windowTitleBar}>
+                  <span className={styles.windowTitle}>
+                    <Wrench size={14} color="#2563FF" />
+                    Work Orders
+                  </span>
+                  <span className={`${styles.windowBadge} ${styles.badgeBlue}`}>
+                    {activeJobsCount} Active
+                  </span>
+                </div>
+                <div className={styles.windowBody}>
+                  {jobs.slice(0, 2).map((j, i) => (
+                    <div key={i} className={styles.windowRow}>
+                      <div>
+                        <div className={styles.windowRowMain}>{j.unit}</div>
+                        <div className={styles.windowRowSub}>{j.issue?.slice(0, 32)}...</div>
+                      </div>
+                      <span className={`${styles.windowPill} ${j.status === 'waiting_parts' ? styles.badgeOrange : styles.badgeBlue}`}>
+                        {j.status === 'waiting_parts' ? 'Parts' : 'In Bay'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className={styles.windowFooter}>
+                  <span>Open Work Orders</span>
+                  <ChevronRight size={13} />
+                </div>
+              </Link>
+
+              {/* Window 2: Dispatch & Bays Live Grid */}
+              <Link href="/dashboard/dispatch" className={styles.windowCard}>
+                <div className={styles.windowTitleBar}>
+                  <span className={styles.windowTitle}>
+                    <Truck size={14} color="#059669" />
+                    Dispatch & Bays
+                  </span>
+                  <span className={`${styles.windowBadge} ${styles.badgeGreen}`}>
+                    5/6 Occupied
+                  </span>
+                </div>
+                <div className={styles.windowBody}>
+                  <div className={styles.windowRow}>
+                    <span className={styles.windowRowMain}>Bay 1: Freightliner #2019</span>
+                    <span className={`${styles.windowPill} ${styles.badgeGreen}`}>In Bay</span>
                   </div>
-                  <p className={styles.cockpitDesc}>{mod.desc}</p>
-                  <div className={styles.cockpitFooter}>
-                    <span>{mod.actionText}</span>
-                    <ChevronRight size={14} />
+                  <div className={styles.windowRow}>
+                    <span className={styles.windowRowMain}>Bay 2: Kenworth #1850</span>
+                    <span className={`${styles.windowPill} ${styles.badgeBlue}`}>Active</span>
                   </div>
-                </Link>
-              ))}
+                </div>
+                <div className={styles.windowFooter}>
+                  <span>Open Dispatch Board</span>
+                  <ChevronRight size={13} />
+                </div>
+              </Link>
+
+              {/* Window 3: Floor Labor & Tech Clocks */}
+              <Link href="/dashboard/labour" className={styles.windowCard}>
+                <div className={styles.windowTitleBar}>
+                  <span className={styles.windowTitle}>
+                    <Clock size={14} color="#D97706" />
+                    Floor Labor Clocks
+                  </span>
+                  <span className={`${styles.windowBadge} ${styles.badgeOrange}`}>
+                    {activeTechsCount} On Floor
+                  </span>
+                </div>
+                <div className={styles.windowBody}>
+                  {technicians.slice(0, 2).map((t, i) => (
+                    <div key={i} className={styles.windowRow}>
+                      <div>
+                        <div className={styles.windowRowMain}>{t.name} ({t.avatar})</div>
+                        <div className={styles.windowRowSub}>Clocked: {t.timer}</div>
+                      </div>
+                      <span className={`${styles.windowPill} ${styles.badgeGreen}`}>Active</span>
+                    </div>
+                  ))}
+                </div>
+                <div className={styles.windowFooter}>
+                  <span>View Floor Clocks</span>
+                  <ChevronRight size={13} />
+                </div>
+              </Link>
+
+              {/* Window 4: Estimates & Approvals */}
+              <Link href="/dashboard/estimates" className={styles.windowCard}>
+                <div className={styles.windowTitleBar}>
+                  <span className={styles.windowTitle}>
+                    <FileText size={14} color="#7C3AED" />
+                    Estimates & Approvals
+                  </span>
+                  <span className={`${styles.windowBadge} ${styles.badgePurple}`}>
+                    2 Pending
+                  </span>
+                </div>
+                <div className={styles.windowBody}>
+                  <div className={styles.windowRow}>
+                    <div>
+                      <div className={styles.windowRowMain}>EST-8821 · Interstate</div>
+                      <div className={styles.windowRowSub}>Front Brake Overhaul</div>
+                    </div>
+                    <span className={`${styles.windowPill} ${styles.badgePurple}`}>$1,250 CAD</span>
+                  </div>
+                  <div className={styles.windowRow}>
+                    <div>
+                      <div className={styles.windowRowMain}>EST-8825 · Midwest</div>
+                      <div className={styles.windowRowSub}>EGR Valve Diagnostic</div>
+                    </div>
+                    <span className={`${styles.windowPill} ${styles.badgePurple}`}>$980 CAD</span>
+                  </div>
+                </div>
+                <div className={styles.windowFooter}>
+                  <span>View Estimates & Approvals</span>
+                  <ChevronRight size={13} />
+                </div>
+              </Link>
+
+              {/* Window 5: Invoices & Collections */}
+              <Link href="/dashboard/invoices" className={styles.windowCard}>
+                <div className={styles.windowTitleBar}>
+                  <span className={styles.windowTitle}>
+                    <CreditCard size={14} color="#2563FF" />
+                    Invoices & Payments
+                  </span>
+                  <span className={`${styles.windowBadge} ${styles.badgeBlue}`}>
+                    $8,940 WIP
+                  </span>
+                </div>
+                <div className={styles.windowBody}>
+                  <div className={styles.windowRow}>
+                    <div>
+                      <div className={styles.windowRowMain}>INV-8815 · Heavy Haul</div>
+                      <div className={styles.windowRowSub}>Air Compressor Assembly</div>
+                    </div>
+                    <span className={`${styles.windowPill} ${styles.badgeGreen}`}>Paid (Stripe)</span>
+                  </div>
+                  <div className={styles.windowRow}>
+                    <div>
+                      <div className={styles.windowRowMain}>INV-8830 · Pacific Express</div>
+                      <div className={styles.windowRowSub}>Clutch Teardown & Seal</div>
+                    </div>
+                    <span className={`${styles.windowPill} ${styles.badgeBlue}`}>$1,650 CAD</span>
+                  </div>
+                </div>
+                <div className={styles.windowFooter}>
+                  <span>Open Invoices & Collections</span>
+                  <ChevronRight size={13} />
+                </div>
+              </Link>
+
+              {/* Window 6: Parts & Inventory Health */}
+              <Link href="/dashboard/parts" className={styles.windowCard}>
+                <div className={styles.windowTitleBar}>
+                  <span className={styles.windowTitle}>
+                    <Package size={14} color="#059669" />
+                    Parts & Inventory
+                  </span>
+                  <span className={`${styles.windowBadge} ${styles.badgeGreen}`}>
+                    34.2% Margin
+                  </span>
+                </div>
+                <div className={styles.windowBody}>
+                  <div className={styles.windowRow}>
+                    <div>
+                      <div className={styles.windowRowMain}>BRK-R4020 Brake Rotor</div>
+                      <div className={styles.windowRowSub}>Qty: 8 · In Stock</div>
+                    </div>
+                    <span className={`${styles.windowPill} ${styles.badgeGreen}`}>✓ OK</span>
+                  </div>
+                  <div className={styles.windowRow}>
+                    <div>
+                      <div className={styles.windowRowMain}>AIR-DY100 Desiccant</div>
+                      <div className={styles.windowRowSub}>Qty: 2 · Low Stock</div>
+                    </div>
+                    <span className={`${styles.windowPill} ${styles.badgeOrange}`}>⚠️ Low</span>
+                  </div>
+                </div>
+                <div className={styles.windowFooter}>
+                  <span>Parts & Inventory</span>
+                  <ChevronRight size={13} />
+                </div>
+              </Link>
             </div>
           </div>
 
