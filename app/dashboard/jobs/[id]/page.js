@@ -45,6 +45,34 @@ export default function WorkOrderDetailPage() {
     markup: '44'
   });
 
+  // Delete Work Order State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const confirmDeleteJob = async () => {
+    setIsDeleting(true);
+    try {
+      // 1. Delete associated invoices & part requests to avoid foreign key errors
+      await supabase.from('invoices').delete().eq('work_order_id', id);
+      await supabase.from('part_requests').delete().eq('work_order_id', id);
+
+      // 2. Delete work order
+      const { error: delError } = await supabase
+        .from('work_orders')
+        .delete()
+        .eq('id', id);
+
+      if (delError) throw delError;
+
+      alert(`✅ Work Order #${id} was deleted successfully.`);
+      router.push('/dashboard/jobs');
+    } catch (err) {
+      console.error('Error deleting work order:', err);
+      alert(`Error deleting work order: ${err.message}`);
+      setIsDeleting(false);
+    }
+  };
+
   useEffect(() => {
     async function fetchJob() {
       setIsLoading(true);
@@ -459,6 +487,15 @@ export default function WorkOrderDetailPage() {
               <Receipt size={18} /> Convert to Invoice
             </button>
           )}
+          <button 
+            type="button"
+            className="btn btn-outline" 
+            onClick={() => setShowDeleteModal(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#EF4444', borderColor: '#FECACA' }}
+            title="Delete this work order permanently"
+          >
+            <Trash2 size={18} /> Delete WO
+          </button>
         </div>
       </header>
 
@@ -907,6 +944,107 @@ export default function WorkOrderDetailPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Work Order Confirmation Modal */}
+      {showDeleteModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          backdropFilter: 'blur(4px)',
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            border: '1px solid var(--color-border)',
+            borderRadius: '16px',
+            maxWidth: '460px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  backgroundColor: '#FEE2E2',
+                  color: '#EF4444',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Trash2 size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--color-text)' }}>
+                    Delete Work Order
+                  </h3>
+                  <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                    {wo.id} • {wo.customerName}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => !isDeleting && setShowDeleteModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ backgroundColor: '#F8FAFC', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E2E8F0', marginBottom: '16px', fontSize: '13px', color: 'var(--color-text)' }}>
+              <div style={{ marginBottom: '4px' }}><strong>Unit:</strong> {wo.unitNumber || 'N/A'}</div>
+              <div><strong>Status:</strong> {(statusLabels[wo.status] || {}).label || wo.status}</div>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#64748B', lineHeight: '1.5', margin: '0 0 20px 0' }}>
+              Are you sure you want to permanently delete this repair order? All associated labor lines, parts assignments, and customer portal links for this work order will be removed from Supabase. This cannot be undone.
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+                style={{ padding: '8px 16px' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={confirmDeleteJob}
+                disabled={isDeleting}
+                style={{
+                  backgroundColor: '#EF4444',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: isDeleting ? 'not-allowed' : 'pointer',
+                  fontWeight: 600
+                }}
+              >
+                {isDeleting ? 'Deleting...' : (
+                  <>
+                    <Trash2 size={16} /> Delete Work Order
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
