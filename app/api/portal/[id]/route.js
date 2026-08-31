@@ -37,7 +37,11 @@ export async function GET(request, { params }) {
         .maybeSingle();
 
       if (dbOrder) {
-        order = dbOrder;
+        order = {
+          ...dbOrder,
+          labour_lines: dbOrder.labour || [],
+          parts_lines: dbOrder.parts || []
+        };
 
         if (order.customer_id) {
           const { data: custData } = await supabase
@@ -70,9 +74,9 @@ export async function GET(request, { params }) {
       console.warn("Database lookup note:", dbErr.message);
     }
 
-    // 2. Fallback to demo data if not yet created in database
+    // 2. Fallback to demo data only if the specific ID matches demoData exactly
     if (!order) {
-      const demoOrder = workOrders.find(w => w.id === id || w.woNumber === id) || workOrders[0];
+      const demoOrder = workOrders.find(w => w.id === id || w.woNumber === id);
       if (demoOrder) {
         order = {
           id: demoOrder.id || id,
@@ -80,44 +84,34 @@ export async function GET(request, { params }) {
           status: demoOrder.status || 'diagnosing',
           customer_id: demoOrder.customerId || 'CUST-001',
           unit_display: demoOrder.unit || 'Unit #104 - 2022 Freightliner Cascadia',
-          complaint: demoOrder.complaint || 'Check engine light on, DEF system warning on dash.',
-          cause: demoOrder.cause || 'DEF doser valve clogged with crystallized urea.',
-          correction: demoOrder.correction || 'Cleaned DEF doser valve, performed forced regen.',
-          estimated_cost: demoOrder.total || 850.00,
-          authorized: demoOrder.status === 'repairing' || demoOrder.status === 'completed' || demoOrder.status === 'paid',
-          signature: demoOrder.authorized ? 'Authorized on File' : null,
-          labour_lines: [
-            { id: '1', description: 'Diagnostic Scan & Forced DPF Regeneration', hours: 2.5, rate: 145.00, total: 362.50 }
-          ],
-          parts_lines: [
-            { id: '1', part_number: 'A0001402039', description: 'DEF Doser Injection Valve', quantity: 1, sell_price: 385.00, total: 385.00 }
-          ]
+          complaint: demoOrder.complaint || '',
+          cause: demoOrder.cause || '',
+          correction: demoOrder.correction || '',
+          estimated_cost: demoOrder.total || 0,
+          authorized: !!demoOrder.authorized,
+          signature: demoOrder.signature || null,
+          labour: demoOrder.labour || [],
+          parts: demoOrder.parts || [],
+          labour_lines: demoOrder.labour || [],
+          parts_lines: demoOrder.parts || []
         };
 
-        const demoCust = customers.find(c => c.id === order.customer_id) || customers[0];
+        const demoCust = customers.find(c => c.id === order.customer_id);
         if (demoCust) {
           customer = {
             id: demoCust.id,
             company: demoCust.company,
             contact_name: demoCust.contact,
             phone: demoCust.phone,
-            email: demoCust.email || 'dispatch@interstatehaulers.ca',
-            address: demoCust.address || '4500 54 Ave SE, Calgary, AB T2C 2Z2'
+            email: demoCust.email || '',
+            address: demoCust.address || ''
           };
         }
-
-        unit = {
-          unit_number: '104',
-          make: 'Freightliner',
-          model: 'Cascadia',
-          year: 2022,
-          vin: '1FUJGLDR5NLAA1928'
-        };
 
         invoice = {
           id: `INV-${id.replace('WO-', '')}`,
           total: order.estimated_cost,
-          status: order.status === 'paid' ? 'paid' : 'sent',
+          status: order.status === 'paid' ? 'paid' : 'draft',
           issue_date: new Date().toISOString().split('T')[0]
         };
       }

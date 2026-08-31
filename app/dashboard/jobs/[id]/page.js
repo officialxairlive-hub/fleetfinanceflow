@@ -148,6 +148,24 @@ export default function WorkOrderDetailPage() {
     }
   };
 
+  // Helper to synchronize any existing invoice with the authoritative Work Order
+  const syncExistingInvoice = async (labourTotal, partsTotal, shopSupplies, tax, total) => {
+    try {
+      const invId = `INV-${id.replace('WO-', '')}`;
+      await supabase
+        .from('invoices')
+        .update({
+          labour_total: labourTotal,
+          parts_total: partsTotal,
+          shop_supplies: shopSupplies,
+          tax_amount: tax,
+          total: total
+        })
+        .or(`id.eq.${invId},work_order_id.eq.${id}`)
+        .eq('status', 'draft');
+    } catch (_) {}
+  };
+
   // Labour Handlers
   const handleAddLabourLine = async (e) => {
     e.preventDefault();
@@ -166,8 +184,8 @@ export default function WorkOrderDetailPage() {
 
       const updatedLabour = [...(wo.labour || []), newLine];
       
-      const labourTotal = updatedLabour.reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0);
-      const partsTotal = (wo.parts || []).reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.price || 0)), 0);
+      const labourTotal = updatedLabour.reduce((sum, l) => sum + ((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)), 0);
+      const partsTotal = (wo.parts || []).reduce((sum, p) => sum + ((parseFloat(p.quantity || p.qty) || 0) * (parseFloat(p.sellPrice || p.price || p.sell) || 0)), 0);
       const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
       const subtotal = labourTotal + partsTotal + shopSupplies;
       const tax = subtotal * 0.05;
@@ -182,6 +200,8 @@ export default function WorkOrderDetailPage() {
         .eq('id', id);
 
       if (error) throw error;
+
+      await syncExistingInvoice(labourTotal, partsTotal, shopSupplies, tax, newEstimatedCost);
 
       setWo(prev => ({
         ...prev,
@@ -207,8 +227,8 @@ export default function WorkOrderDetailPage() {
     if (!confirm('Are you sure you want to remove this labour line?')) return;
 
     const updatedLabour = (wo.labour || []).filter((_, i) => i !== indexToRemove);
-    const labourTotal = updatedLabour.reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0);
-    const partsTotal = (wo.parts || []).reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.price || 0)), 0);
+    const labourTotal = updatedLabour.reduce((sum, l) => sum + ((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)), 0);
+    const partsTotal = (wo.parts || []).reduce((sum, p) => sum + ((parseFloat(p.quantity || p.qty) || 0) * (parseFloat(p.sellPrice || p.price || p.sell) || 0)), 0);
     const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
     const subtotal = labourTotal + partsTotal + shopSupplies;
     const tax = subtotal * 0.05;
@@ -224,6 +244,8 @@ export default function WorkOrderDetailPage() {
         .eq('id', id);
 
       if (error) throw error;
+
+      await syncExistingInvoice(labourTotal, partsTotal, shopSupplies, tax, newEstimatedCost);
 
       setWo(prev => ({
         ...prev,
@@ -298,6 +320,8 @@ export default function WorkOrderDetailPage() {
 
       if (error) throw error;
 
+      await syncExistingInvoice(labourTotal, partsTotal, shopSupplies, tax, newEstimatedCost);
+
       if (selectedInventoryPartId) {
         const invPart = inventoryParts.find(p => p.id === selectedInventoryPartId);
         if (invPart) {
@@ -333,8 +357,8 @@ export default function WorkOrderDetailPage() {
     if (!confirm('Are you sure you want to remove this part?')) return;
 
     const updatedParts = (wo.parts || []).filter((_, i) => i !== indexToRemove);
-    const labourTotal = (wo.labour || []).reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0);
-    const partsTotal = updatedParts.reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.price || 0)), 0);
+    const labourTotal = (wo.labour || []).reduce((sum, l) => sum + ((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)), 0);
+    const partsTotal = updatedParts.reduce((sum, p) => sum + ((parseFloat(p.quantity || p.qty) || 0) * (parseFloat(p.sellPrice || p.price || p.sell) || 0)), 0);
     const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
     const subtotal = labourTotal + partsTotal + shopSupplies;
     const tax = subtotal * 0.05;
@@ -350,6 +374,8 @@ export default function WorkOrderDetailPage() {
         .eq('id', id);
 
       if (error) throw error;
+
+      await syncExistingInvoice(labourTotal, partsTotal, shopSupplies, tax, newEstimatedCost);
 
       setWo(prev => ({
         ...prev,
@@ -378,8 +404,8 @@ export default function WorkOrderDetailPage() {
   const calculateTotals = () => {
     if (!wo) return { labourTotal: 0, partsTotal: 0, shopSupplies: 0, subtotal: 0, tax: 0, total: 0 };
     
-    const labourTotal = (wo.labour || []).reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0);
-    const partsTotal = (wo.parts || []).reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.price || 0)), 0);
+    const labourTotal = (wo.labour || []).reduce((sum, l) => sum + ((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)), 0);
+    const partsTotal = (wo.parts || []).reduce((sum, p) => sum + ((parseFloat(p.quantity || p.qty) || 0) * (parseFloat(p.sellPrice || p.price || p.sell) || 0)), 0);
     const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50); 
     const subtotal = labourTotal + partsTotal + shopSupplies;
     const tax = subtotal * 0.05; 
@@ -415,17 +441,20 @@ export default function WorkOrderDetailPage() {
       const today = new Date().toISOString().split('T')[0];
       const dueDate = new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
 
+      // Exact mathematical calculation strictly from Work Order authoritative lines
+      const computedTotals = calculateTotals();
+
       const { data, error } = await supabase
         .from('invoices')
         .upsert([{
           id: invId,
           customer_id: wo.customer_id,
           work_order_id: wo.id,
-          total: totals.total || 0,
-          tax_amount: totals.tax || 0,
-          labour_total: totals.labourTotal || 0,
-          parts_total: totals.partsTotal || 0,
-          shop_supplies: totals.shopSupplies || 0,
+          total: computedTotals.total,
+          tax_amount: computedTotals.tax,
+          labour_total: computedTotals.labourTotal,
+          parts_total: computedTotals.partsTotal,
+          shop_supplies: computedTotals.shopSupplies,
           status: 'draft',
           issue_date: today,
           due_date: dueDate
@@ -437,10 +466,10 @@ export default function WorkOrderDetailPage() {
 
       await supabase
         .from('work_orders')
-        .update({ status: 'invoiced' })
+        .update({ status: 'invoiced', estimated_cost: computedTotals.total })
         .eq('id', wo.id);
 
-      alert(`Invoice #${invId} created successfully!`);
+      alert(`✅ Invoice #${invId} generated directly from Work Order #${wo.id}!`);
       router.push(`/dashboard/invoices/${invId}`);
     } catch (err) {
       alert(`Error generating invoice: ${err.message}`);

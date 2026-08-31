@@ -85,15 +85,15 @@ export default function ApprovalPage() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
 
-  // Safe Financial Calculations (Available before all hooks)
+  // Safe Financial Calculations strictly from authoritative Work Order
   const labourList = order?.labour || order?.labour_lines || [];
   const partsList = order?.parts || order?.parts_lines || [];
-  const labourTotal = labourList.reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0) || 362.50;
-  const partsTotal = partsList.reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.sell_price || p.price || 0)), 0) || 285.00;
-  const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50.00);
+  const labourTotal = labourList.reduce((sum, l) => sum + ((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)), 0);
+  const partsTotal = partsList.reduce((sum, p) => sum + ((parseFloat(p.quantity || p.qty) || 0) * (parseFloat(p.sellPrice || p.sell_price || p.price || p.sell) || 0)), 0);
+  const shopSupplies = (labourTotal + partsTotal > 0) ? Math.min((labourTotal + partsTotal) * 0.05, 50.00) : 0;
   const subtotalCad = labourTotal + partsTotal + shopSupplies;
   const tax = subtotalCad * 0.05;
-  const grandTotalCad = parseFloat(order?.estimated_cost) || (subtotalCad + tax) || 850.00;
+  const grandTotalCad = subtotalCad + tax;
 
   // Global Data Fetcher
   const fetchOrderData = useCallback(async () => {

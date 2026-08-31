@@ -99,12 +99,12 @@ export default function InvoicesList() {
 
       const labourList = wo.labour || [];
       const partsList = wo.parts || [];
-      const labourTotal = labourList.reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0);
-      const partsTotal = partsList.reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.price || 0)), 0);
+      const labourTotal = labourList.reduce((sum, l) => sum + ((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)), 0);
+      const partsTotal = partsList.reduce((sum, p) => sum + ((parseFloat(p.quantity || p.qty) || 0) * (parseFloat(p.sellPrice || p.price || p.sell) || 0)), 0);
       const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
       const subtotal = labourTotal + partsTotal + shopSupplies;
       const tax = subtotal * 0.05;
-      const total = wo.estimated_cost || (subtotal + tax);
+      const total = subtotal + tax;
 
       const { error: insertErr } = await supabase
         .from('invoices')

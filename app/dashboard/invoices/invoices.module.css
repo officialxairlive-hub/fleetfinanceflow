@@ -304,8 +304,25 @@
   font-weight: 600;
 }
 
+.billToSection {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+  background: #f8fafc;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+@media (max-width: 640px) {
+  .billToSection {
+    grid-template-columns: 1fr;
+  }
+}
+
 .billTo {
-  margin-bottom: var(--space-8);
+  margin-bottom: 0;
 }
 
 .billTo h3 {
