@@ -60,6 +60,24 @@ export default function ApprovalPage() {
   const [isPaying, setIsPaying] = useState(false);
   const [paySuccess, setPaySuccess] = useState(false);
   const [paidReceipt, setPaidReceipt] = useState(null);
+  const [shopLogo, setShopLogo] = useState(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const localLogo = localStorage.getItem('shop_invoice_logo');
+      if (localLogo) setShopLogo(localLogo);
+    }
+    async function fetchShopLogo() {
+      try {
+        const res = await fetch('/api/settings/logo');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.logoUrl) setShopLogo(data.logoUrl);
+        }
+      } catch (_) {}
+    }
+    fetchShopLogo();
+  }, []);
 
   // Canvas Signature
   const canvasRef = useRef(null);
@@ -499,10 +517,14 @@ export default function ApprovalPage() {
 
   return (
     <div className={styles.container}>
-      {/* 1. Header with Official Fleet Finance Flow Logo */}
+      {/* 1. Header with Official Shop Logo */}
       <header className={styles.header}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Logo size="small" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {shopLogo ? (
+            <img src={shopLogo} alt="Shop Logo" style={{ maxHeight: '34px', maxWidth: '160px', objectFit: 'contain' }} />
+          ) : (
+            <Logo size="small" />
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span className={styles.portalBadge}>

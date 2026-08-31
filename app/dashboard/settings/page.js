@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Save, 
   Building, 
@@ -12,7 +12,13 @@ import {
   Check, 
   Plus,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Image as ImageIcon,
+  Upload,
+  Trash2,
+  CheckCircle2,
+  Eye,
+  RefreshCw
 } from 'lucide-react';
 import styles from './settings.module.css';
 import { supabase } from '../../lib/supabaseClient';
@@ -21,6 +27,19 @@ import { shopSettings, labourRateTypes } from '../../lib/demoData';
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('shop');
   const [settings, setSettings] = useState(shopSettings);
+  
+  // Invoice Logo & Branding State
+  const fileInputRef = useRef(null);
+  const [logoUrl, setLogoUrl] = useState(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoFileDetails, setLogoFileDetails] = useState(null);
+  const [logoPreferences, setLogoPreferences] = useState({
+    showLogoOnInvoices: true,
+    logoAlignment: 'left',
+    logoSize: 'medium',
+    tagline: 'Heavy Duty Truck, Trailer & Fleet Services'
+  });
+  const [isDragOver, setIsDragOver] = useState(false);
   
   // User Management State
   const [techs, setTechs] = useState([]);
@@ -77,6 +96,152 @@ export default function SettingsPage() {
       }
     }
   }, []);
+
+  // Load saved logo & preferences
+  React.useEffect(() => {
+    async function loadLogoSettings() {
+      // 1. Instant local preview
+      if (typeof window !== 'undefined') {
+        const localLogo = localStorage.getItem('shop_invoice_logo');
+        const localPrefs = localStorage.getItem('shop_invoice_preferences');
+        if (localLogo) setLogoUrl(localLogo);
+        if (localPrefs) {
+          try {
+            setLogoPreferences(prev => ({ ...prev, ...JSON.parse(localPrefs) }));
+          } catch (_) {}
+        }
+      }
+
+      // 2. Fetch from cloud storage
+      try {
+        const res = await fetch(`/api/settings/logo?shopId=${shopId || 'default'}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.logoUrl) {
+            setLogoUrl(data.logoUrl);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('shop_invoice_logo', data.logoUrl);
+            }
+          }
+          if (data.preferences) {
+            setLogoPreferences(prev => ({ ...prev, ...data.preferences }));
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('shop_invoice_preferences', JSON.stringify(data.preferences));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch cloud logo settings:', err);
+      }
+    }
+    loadLogoSettings();
+  }, [shopId]);
+
+  const processLogoFile = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload a valid image file (PNG, JPG, SVG, or WebP).');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Logo file size exceeds 5MB. Please choose a smaller image.');
+      return;
+    }
+
+    setLogoUploading(true);
+    setLogoFileDetails({
+      name: file.name,
+      size: `${(file.size / 1024).toFixed(1)} KB`
+    });
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const dataUrl = e.target.result;
+      setLogoUrl(dataUrl);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('shop_invoice_logo', dataUrl);
+      }
+
+      // Upload to Supabase bucket via API
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('shopId', shopId || 'default');
+        formData.append('preferences', JSON.stringify(logoPreferences));
+
+        const res = await fetch('/api/settings/logo', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (res.ok) {
+          const result = await res.json();
+          if (result.logoUrl) {
+            setLogoUrl(result.logoUrl);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('shop_invoice_logo', result.logoUrl);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error uploading logo to cloud:', err);
+      } finally {
+        setLogoUploading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleLogoFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) processLogoFile(file);
+  };
+
+  const handleLogoDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processLogoFile(file);
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!confirm('Are you sure you want to remove the invoice logo?')) return;
+    setLogoUrl(null);
+    setLogoFileDetails(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('shop_invoice_logo');
+    }
+    try {
+      await fetch(`/api/settings/logo?shopId=${shopId || 'default'}`, {
+        method: 'DELETE'
+      });
+    } catch (err) {
+      console.warn('Error deleting logo on server:', err);
+    }
+  };
+
+  const updateLogoPreferences = async (newPrefs) => {
+    const updated = { ...logoPreferences, ...newPrefs };
+    setLogoPreferences(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('shop_invoice_preferences', JSON.stringify(updated));
+    }
+
+    try {
+      await fetch('/api/settings/logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shopId: shopId || 'default',
+          logoUrl,
+          preferences: updated
+        })
+      });
+    } catch (err) {
+      console.error('Error syncing logo preferences:', err);
+    }
+  };
+
 
   const handleSaveBankDetails = async (e) => {
     e?.preventDefault();
@@ -268,6 +433,35 @@ export default function SettingsPage() {
                     <label>Website</label>
                     <input type="url" className={styles.input} defaultValue="www.fleetfinanceflow.com" />
                   </div>
+                  <div className={styles.formGroup} style={{ gridColumn: '1 / -1', background: '#F8FAFC', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      {logoUrl ? (
+                        <div style={{ background: 'white', border: '1px solid #CBD5E1', borderRadius: '6px', padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <img src={logoUrl} alt="Shop Logo" style={{ maxHeight: '36px', maxWidth: '100px', objectFit: 'contain' }} />
+                        </div>
+                      ) : (
+                        <div style={{ width: '40px', height: '40px', background: '#EFF6FF', color: 'var(--color-primary)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <ImageIcon size={20} />
+                        </div>
+                      )}
+                      <div>
+                        <strong style={{ fontSize: '13px', display: 'block', color: 'var(--color-text)' }}>
+                          Shop & Invoice Logo
+                        </strong>
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+                          {logoUrl ? '✓ Custom logo active on printed invoices and customer portal' : 'No logo uploaded yet. Upload one to appear on invoices.'}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      style={{ fontSize: '12px', padding: '6px 12px' }}
+                      onClick={() => setActiveSection('invoicing')}
+                    >
+                      {logoUrl ? 'Manage Invoice Logo →' : '+ Add Logo on Invoicing Tab →'}
+                    </button>
+                  </div>
                 </div>
                 <div className={styles.cardFooter}>
                   <button type="submit" className="btn btn-primary" disabled={shopSaveLoading}>
@@ -375,9 +569,198 @@ export default function SettingsPage() {
             <div className={styles.section}>
               <div className={styles.sectionHeader}>
                 <h2>Invoicing Preferences</h2>
-                <p>Set up how your documents are numbered and formatted.</p>
+                <p>Set up how your documents are numbered, branded, and formatted.</p>
               </div>
+
+              {/* Invoice Logo & Branding Card */}
               <div className={styles.card}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '1rem', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, border: 'none', padding: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <ImageIcon size={20} color="var(--color-primary)" />
+                      Invoice Logo & Header Branding
+                    </h3>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                      Upload your shop logo to appear on printed and digital customer invoices and estimates.
+                    </p>
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, background: '#F8FAFC', padding: '6px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                    <input
+                      type="checkbox"
+                      checked={logoPreferences.showLogoOnInvoices}
+                      onChange={(e) => updateLogoPreferences({ showLogoOnInvoices: e.target.checked })}
+                      style={{ width: '16px', height: '16px', accentColor: 'var(--color-primary)' }}
+                    />
+                    <span>Show Logo on Invoices</span>
+                  </label>
+                </div>
+
+                {/* Upload Dropzone or Active Preview */}
+                {!logoUrl ? (
+                  <div
+                    className={`${styles.logoDropzone} ${isDragOver ? styles.logoDropzoneDragOver : ''}`}
+                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                    onDragLeave={() => setIsDragOver(false)}
+                    onDrop={handleLogoDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                      style={{ display: 'none' }}
+                      onChange={handleLogoFileChange}
+                    />
+                    <div className={styles.logoDropzoneIcon}>
+                      <Upload size={22} />
+                    </div>
+                    <div className={styles.logoDropzoneTitle}>
+                      {logoUploading ? 'Uploading Logo to Cloud...' : 'Click to upload or drag & drop shop logo'}
+                    </div>
+                    <div className={styles.logoDropzoneHint}>
+                      Supports PNG, JPG, SVG, WebP (Max 5MB • Transparent background recommended for invoices)
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.logoPreviewCard}>
+                    <div className={styles.logoPreviewBox}>
+                      <img src={logoUrl} alt="Invoice Logo Preview" className={styles.logoPreviewImg} />
+                    </div>
+                    <div className={styles.logoDetails}>
+                      <div className={styles.logoFileName}>
+                        {logoFileDetails?.name || 'Shop Invoice Logo'}
+                      </div>
+                      <span className={styles.logoStatusTag}>
+                        <CheckCircle2 size={12} /> Active on Invoices & Estimates
+                      </span>
+                      <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                        This logo is automatically scaled for crisp 300 DPI high-resolution invoice printing.
+                      </p>
+                    </div>
+                    <div className={styles.logoActions}>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                        style={{ display: 'none' }}
+                        onChange={handleLogoFileChange}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{ fontSize: '12px', padding: '6px 12px' }}
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={logoUploading}
+                      >
+                        <RefreshCw size={14} /> Replace
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{ fontSize: '12px', padding: '6px 12px', borderColor: '#EF4444', color: '#EF4444' }}
+                        onClick={handleRemoveLogo}
+                      >
+                        <Trash2 size={14} /> Remove
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Logo Alignment & Sizing Controls */}
+                <div style={{ marginTop: '1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text)' }}>
+                      Logo Placement
+                    </label>
+                    <div className={styles.optionPills}>
+                      <button
+                        type="button"
+                        className={`${styles.optionPill} ${logoPreferences.logoAlignment === 'left' ? styles.optionPillActive : ''}`}
+                        onClick={() => updateLogoPreferences({ logoAlignment: 'left' })}
+                      >
+                        Left Header (Standard)
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.optionPill} ${logoPreferences.logoAlignment === 'right' ? styles.optionPillActive : ''}`}
+                        onClick={() => updateLogoPreferences({ logoAlignment: 'right' })}
+                      >
+                        Right Header
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text)' }}>
+                      Print Display Size
+                    </label>
+                    <div className={styles.optionPills}>
+                      <button
+                        type="button"
+                        className={`${styles.optionPill} ${logoPreferences.logoSize === 'small' ? styles.optionPillActive : ''}`}
+                        onClick={() => updateLogoPreferences({ logoSize: 'small' })}
+                      >
+                        Compact (45px)
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.optionPill} ${logoPreferences.logoSize === 'medium' ? styles.optionPillActive : ''}`}
+                        onClick={() => updateLogoPreferences({ logoSize: 'medium' })}
+                      >
+                        Standard (65px)
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.optionPill} ${logoPreferences.logoSize === 'large' ? styles.optionPillActive : ''}`}
+                        onClick={() => updateLogoPreferences({ logoSize: 'large' })}
+                      >
+                        Prominent (85px)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live Invoice Header Preview Mockup */}
+                <div className={styles.sampleInvoiceBox}>
+                  <div className={styles.sampleInvoiceTitle}>
+                    <Eye size={14} /> Live Invoice Header Preview
+                  </div>
+                  <div className={styles.samplePaper}>
+                    <div className={styles.sampleHeader} style={{ flexDirection: logoPreferences.logoAlignment === 'right' ? 'row-reverse' : 'row' }}>
+                      <div className={styles.sampleLogoArea}>
+                        {logoUrl && logoPreferences.showLogoOnInvoices ? (
+                          <img
+                            src={logoUrl}
+                            alt="Logo Preview"
+                            className={styles.sampleLogoImg}
+                            style={{
+                              maxHeight: logoPreferences.logoSize === 'small' ? '45px' : logoPreferences.logoSize === 'large' ? '85px' : '65px'
+                            }}
+                          />
+                        ) : null}
+                        <div className={styles.sampleShopInfo}>
+                          <h4>{shopName || settings.companyName || 'Thompson Heavy Duty Repair'}</h4>
+                          <p>{settings.address || '1840 Industrial Blvd, Calgary, AB T2C 2X1'}</p>
+                          <p>{settings.phone || '(403) 555-0192'} • {settings.email || 'billing@thompsonrepair.ca'}</p>
+                          <p style={{ color: '#94A3B8' }}>GST / Tax ID: {settings.taxNumber || 'GST #849201948RT0001'}</p>
+                        </div>
+                      </div>
+                      <div className={styles.sampleInvoiceMeta}>
+                        <div className={styles.sampleInvWord}>INVOICE</div>
+                        <div className={styles.sampleInvDetails}>
+                          <div>Invoice #: <strong>INV-1045</strong></div>
+                          <div>Date: <strong>{new Date().toLocaleDateString()}</strong></div>
+                          <div>Terms: <strong>Net 30</strong></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Document Numbering & Formatting Card */}
+              <div className={styles.card}>
+                <h3>Document Numbering & Formatting</h3>
                 <div className={styles.formGrid}>
                   <div className={styles.formGroup}>
                     <label>Invoice Number Prefix</label>

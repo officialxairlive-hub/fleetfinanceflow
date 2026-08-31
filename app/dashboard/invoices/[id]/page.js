@@ -28,6 +28,42 @@ export default function InvoiceDetail() {
     notes: ''
   });
 
+  const [logoUrl, setLogoUrl] = useState(null);
+  const [logoPreferences, setLogoPreferences] = useState({
+    showLogoOnInvoices: true,
+    logoAlignment: 'left',
+    logoSize: 'medium'
+  });
+
+  useEffect(() => {
+    // 1. Instant check from localStorage
+    if (typeof window !== 'undefined') {
+      const localLogo = localStorage.getItem('shop_invoice_logo');
+      const localPrefs = localStorage.getItem('shop_invoice_preferences');
+      if (localLogo) setLogoUrl(localLogo);
+      if (localPrefs) {
+        try {
+          setLogoPreferences(prev => ({ ...prev, ...JSON.parse(localPrefs) }));
+        } catch (_) {}
+      }
+    }
+
+    // 2. Cloud storage fetch
+    async function fetchLogo() {
+      try {
+        const res = await fetch('/api/settings/logo');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.logoUrl) setLogoUrl(data.logoUrl);
+          if (data.preferences) setLogoPreferences(prev => ({ ...prev, ...data.preferences }));
+        }
+      } catch (err) {
+        console.warn('Could not fetch invoice logo:', err);
+      }
+    }
+    fetchLogo();
+  }, []);
+
   useEffect(() => {
     async function fetchInvoiceDetails() {
       setIsLoading(true);
@@ -171,12 +207,26 @@ export default function InvoiceDetail() {
       <div className={styles.detailLayout}>
         <div className={styles.invoicePaper}>
           {/* Header */}
-          <div className={styles.invHeader}>
-            <div className={styles.companyInfo}>
-              <h2>{shop.companyName}</h2>
-              <p>{shop.address}</p>
-              <p>{shop.phone} | {shop.email}</p>
-              <p>{shop.taxNumber}</p>
+          <div className={styles.invHeader} style={{ flexDirection: logoPreferences.logoAlignment === 'right' ? 'row-reverse' : 'row' }}>
+            <div className={styles.companyInfoArea}>
+              {logoUrl && logoPreferences.showLogoOnInvoices && (
+                <div className={styles.invoiceLogoContainer}>
+                  <img
+                    src={logoUrl}
+                    alt="Shop Logo"
+                    className={styles.invoiceLogoImg}
+                    style={{
+                      maxHeight: logoPreferences.logoSize === 'small' ? '50px' : logoPreferences.logoSize === 'large' ? '90px' : '70px'
+                    }}
+                  />
+                </div>
+              )}
+              <div className={styles.companyInfo}>
+                <h2>{shop.companyName}</h2>
+                <p>{shop.address}</p>
+                <p>{shop.phone} | {shop.email}</p>
+                <p>{shop.taxNumber}</p>
+              </div>
             </div>
             <div className={styles.invMeta}>
               <h1 className={styles.invTitle}>INVOICE</h1>
