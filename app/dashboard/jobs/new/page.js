@@ -37,7 +37,9 @@ export default function CreateWorkOrderPage() {
     phone: '',
     email: '',
     address: '',
-    paymentTerms: 'Net 30'
+    paymentTerms: 'Net 30',
+    labourRate: '145.00',
+    pstNumber: ''
   });
 
   // Quick Add Unit Modal
@@ -90,6 +92,9 @@ export default function CreateWorkOrderPage() {
     setSavingCustomer(true);
     try {
       const newCustId = `CUST-${Date.now().toString().slice(-4)}`;
+      const rateNum = parseFloat(customerForm.labourRate) || 145.00;
+      const pstVal = (customerForm.pstNumber || '').trim();
+
       const payload = {
         id: newCustId,
         company: customerForm.company.trim(),
@@ -98,6 +103,9 @@ export default function CreateWorkOrderPage() {
         email: customerForm.email.trim(),
         address: customerForm.address.trim(),
         payment_terms: customerForm.paymentTerms || 'Net 30',
+        labour_rate: rateNum,
+        tax_setting: pstVal ? `PST# ${pstVal}` : 'GST+PST',
+        notes: pstVal ? `PST / Tax Exemption #: ${pstVal}` : '',
         balance: 0,
         status: 'active'
       };
@@ -120,9 +128,11 @@ export default function CreateWorkOrderPage() {
         phone: '',
         email: '',
         address: '',
-        paymentTerms: 'Net 30'
+        paymentTerms: 'Net 30',
+        labourRate: '145.00',
+        pstNumber: ''
       });
-      alert(`Customer "${createdCust.company}" added and selected!`);
+      alert(`✅ Customer "${createdCust.company}" added with Rate $${rateNum}/hr${pstVal ? ` and PST #${pstVal}` : ''}!`);
     } catch (err) {
       alert(`Error creating customer: ${err.message}`);
     } finally {
@@ -306,6 +316,27 @@ export default function CreateWorkOrderPage() {
                       <option key={c.id} value={c.id}>{c.company || c.company_name}</option>
                     ))}
                   </select>
+                  {selectedCustomer && (() => {
+                    const cust = customers.find(c => c.id === selectedCustomer);
+                    if (!cust) return null;
+                    const rate = cust.labour_rate || cust.custom_labour_rate;
+                    const tax = cust.tax_setting;
+                    if (!rate && !tax) return null;
+                    return (
+                      <div style={{ marginTop: '6px', fontSize: '11px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {rate && (
+                          <span style={{ background: '#EFF6FF', color: 'var(--color-primary)', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                            Rate: ${rate}/hr
+                          </span>
+                        )}
+                        {tax && (
+                          <span style={{ background: '#F1F5F9', color: '#475569', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                            {tax}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className={styles.formGroup}>
@@ -495,6 +526,30 @@ export default function CreateWorkOrderPage() {
                       <option>Net 15</option>
                       <option>Net 60</option>
                     </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Customer Rate ($ CAD / hr)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g. 145.00"
+                      value={customerForm.labourRate}
+                      onChange={(e) => setCustomerForm({ ...customerForm, labourRate: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>PST No. / Tax Exemption #</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. PST-1004-8921"
+                      value={customerForm.pstNumber}
+                      onChange={(e) => setCustomerForm({ ...customerForm, pstNumber: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                    />
                   </div>
                 </div>
 

@@ -49,13 +49,13 @@ export default function CustomerDetailPage() {
 
         setCustomer({
           ...custRes.data,
-          company: custRes.data.company_name,
-          contact: custRes.data.contact_name,
+          company: custRes.data.company || custRes.data.company_name,
+          contact: custRes.data.contact || custRes.data.contact_name,
           creditLimit: custRes.data.credit_limit,
           paymentTerms: custRes.data.payment_terms,
           taxSetting: custRes.data.tax_setting,
-          labourRate: custRes.data.custom_labour_rate,
-          partsMarkup: custRes.data.custom_parts_markup,
+          labourRate: custRes.data.labour_rate || custRes.data.custom_labour_rate || 145,
+          partsMarkup: custRes.data.parts_markup || custRes.data.custom_parts_markup || 30,
           createdAt: custRes.data.created_at
         });
         
@@ -225,8 +225,10 @@ export default function CustomerDetailPage() {
               <span className={styles.infoValue}>{customer.paymentTerms || '-'}</span>
             </div>
             <div className={styles.infoItem}>
-              <span className={styles.infoLabel}>Tax</span>
-              <span className={styles.infoValue}>{customer.taxSetting || '-'}</span>
+              <span className={styles.infoLabel}>Tax / PST #</span>
+              <span className={styles.infoValue} style={{ fontWeight: 600, color: customer.taxSetting?.includes('PST') ? 'var(--color-primary)' : 'inherit' }}>
+                {customer.taxSetting || '-'}
+              </span>
             </div>
           </div>
         </div>

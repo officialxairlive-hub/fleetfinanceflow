@@ -184,9 +184,10 @@ export default function CustomersPage() {
               const address = form.address.value;
               const creditLimit = parseFloat(form.creditLimit.value) || 0;
               const paymentTerms = form.paymentTerms.value;
-              const labourRate = parseFloat(form.labourRate.value) || 125;
+              const labourRate = parseFloat(form.labourRate.value) || 145;
               const partsMarkup = parseFloat(form.partsMarkup.value) || 30;
               const taxSetting = form.taxSetting.value;
+              const pstNumber = form.pstNumber?.value?.trim() || '';
 
               const newId = `CUST-${Math.floor(100 + Math.random() * 900)}`;
 
@@ -202,7 +203,8 @@ export default function CustomersPage() {
                   payment_terms: paymentTerms,
                   labour_rate: labourRate,
                   parts_markup: partsMarkup,
-                  tax_setting: taxSetting,
+                  tax_setting: pstNumber ? `PST# ${pstNumber} (${taxSetting})` : taxSetting,
+                  notes: pstNumber ? `PST / Tax Exemption #: ${pstNumber}` : '',
                   balance: 0,
                   status: 'active'
                 }]).select().single();
@@ -250,8 +252,12 @@ export default function CustomersPage() {
                   </select>
                 </div>
                 <div className={styles.formGroup}>
-                  <label>Labour Rate ($)</label>
-                  <input name="labourRate" type="number" step="0.01" defaultValue="125" />
+                  <label>Customer Labour Rate ($/hr)</label>
+                  <input name="labourRate" type="number" step="0.01" defaultValue="145.00" />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>PST No. / Tax Exemption #</label>
+                  <input name="pstNumber" type="text" placeholder="e.g. PST-1004-8921" />
                 </div>
                 <div className={styles.formGroup}>
                   <label>Parts Markup (%)</label>
