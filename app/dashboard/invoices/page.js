@@ -1,9 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { supabase } from '../../lib/supabaseClient';
-import { Plus, Search, Eye, Send, CheckCircle, Printer, X, Receipt, Mail, Paperclip } from 'lucide-react';
+import { Plus, Search, Eye, Send, CheckCircle, Printer, X, Receipt, Mail, Paperclip, RotateCcw } from 'lucide-react';
 import styles from './invoices.module.css';
 
 export default function InvoicesList() {
@@ -97,6 +94,48 @@ export default function InvoicesList() {
     }
     fetchShop();
   }, []);
+
+  const handleUpdateStatus = async (inv, newStatus) => {
+    const isPaid = newStatus === 'paid';
+    const today = new Date().toISOString().split('T')[0];
+    const originalStatus = inv.status;
+    const originalPaidDate = inv.paid_date;
+    
+    // Optimistic update
+    setInvoices(prev => prev.map(item => item.id === inv.id ? { 
+      ...item, 
+      status: newStatus, 
+      paid_date: isPaid ? today : null 
+    } : item));
+
+    try {
+      const { error: invErr } = await supabase
+        .from('invoices')
+        .update({ 
+          status: newStatus, 
+          paid_date: isPaid ? today : null 
+        })
+        .eq('id', inv.id);
+
+      if (invErr) throw invErr;
+
+      // Sync linked work order status
+      if (inv.work_order_id) {
+        const woStatus = isPaid ? 'paid' : (newStatus === 'sent' ? 'invoiced' : 'invoiced');
+        await supabase
+          .from('work_orders')
+          .update({ status: woStatus })
+          .eq('id', inv.work_order_id);
+      }
+    } catch (err) {
+      alert(`Error updating invoice status: ${err.message}`);
+      setInvoices(prev => prev.map(item => item.id === inv.id ? { 
+        ...item, 
+        status: originalStatus, 
+        paid_date: originalPaidDate 
+      } : item));
+    }
+  };
 
   const openEmailModal = (inv) => {
     setSelectedInvoiceForEmail(inv);
@@ -342,9 +381,17 @@ Email: ${shop.email}`;
                     </td>
                     <td><strong>${Number(inv.total || 0).toFixed(2)}</strong></td>
                     <td>
-                      <span className={`${styles.statusPill} ${styles[inv.status]}`}>
-                        {inv.status ? inv.status.charAt(0).toUpperCase() + inv.status.slice(1) : 'Draft'}
-                      </span>
+                      <select
+                        className={`${styles.statusSelect} ${styles[inv.status || 'draft']}`}
+                        value={inv.status || 'draft'}
+                        onChange={(e) => handleUpdateStatus(inv, e.target.value)}
+                        title="Click to change invoice status"
+                      >
+                        <option value="draft">Draft (Unpaid)</option>
+                        <option value="sent">Sent</option>
+                        <option value="paid">Paid</option>
+                        <option value="overdue">Overdue</option>
+                      </select>
                     </td>
                     <td>{inv.issue_date || '-'}</td>
                     <td>{inv.due_date || '-'}</td>
@@ -356,22 +403,27 @@ Email: ${shop.email}`;
                         <button className={styles.iconBtn} title="Print Invoice" onClick={() => window.print()}>
                           <Printer size={18} />
                         </button>
-                        {inv.status !== 'paid' && (
-                          <button className={styles.iconBtn} title="Email Invoice to Customer" onClick={() => openEmailModal(inv)}>
-                            <Send size={18} />
-                          </button>
-                        )}
-                        {inv.status !== 'paid' ? (
+                        <button className={styles.iconBtn} title="Email Invoice / Receipt" onClick={() => openEmailModal(inv)}>
+                          <Send size={18} />
+                        </button>
+                        {inv.status === 'paid' ? (
                           <button 
-                            className={styles.iconBtn} 
-                            title="Mark as Paid" 
-                            style={{ color: '#10b981' }}
-                            onClick={() => handleMarkPaid(inv)}
+                            className={`${styles.statusActionBtn} ${styles.reverseBtn}`}
+                            title="Undo / Reverse to Unpaid"
+                            onClick={() => handleUpdateStatus(inv, 'draft')}
                           >
-                            <CheckCircle size={18} />
+                            <RotateCcw size={13} />
+                            <span>Unpaid</span>
                           </button>
                         ) : (
-                          <span style={{ color: '#10b981', fontSize: '11px', fontWeight: 'bold' }}>✓ Paid</span>
+                          <button 
+                            className={`${styles.statusActionBtn} ${styles.markPaidBtn}`}
+                            title="Mark as Paid"
+                            onClick={() => handleUpdateStatus(inv, 'paid')}
+                          >
+                            <CheckCircle size={13} />
+                            <span>Mark Paid</span>
+                          </button>
                         )}
                       </div>
                     </td>

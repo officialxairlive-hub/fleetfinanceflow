@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
 import { shopSettings } from '../../../lib/demoData';
-import { Mail, DollarSign, Printer, CheckCircle, X, ArrowLeft, RefreshCw, FileText, Wrench, Package, Send, Paperclip } from 'lucide-react';
+import { Mail, DollarSign, Printer, CheckCircle, X, ArrowLeft, RefreshCw, FileText, Wrench, Package, Send, Paperclip, RotateCcw } from 'lucide-react';
 import styles from '../invoices.module.css';
 
 export default function InvoiceDetail() {
@@ -403,31 +403,52 @@ Address: ${shop.address}`;
     }
   };
 
-  const handleQuickMarkPaid = async () => {
+  const handleUpdateInvoiceStatus = async (newStatus) => {
+    const isPaid = newStatus === 'paid';
+    const today = new Date().toISOString().split('T')[0];
+    const previousStatus = invoice?.status;
+    const previousPaidDate = invoice?.paid_date || invoice?.paidDate;
+
+    // Optimistic update
+    setInvoice(prev => ({
+      ...prev,
+      status: newStatus,
+      paid_date: isPaid ? today : null,
+      paidDate: isPaid ? today : null
+    }));
+
     try {
-      const today = new Date().toISOString().split('T')[0];
-      setInvoice(prev => ({ ...prev, status: 'paid', paid_date: today, paidDate: today }));
-      
       const { error: invErr } = await supabase
         .from('invoices')
-        .update({ status: 'paid', paid_date: today })
+        .update({
+          status: newStatus,
+          paid_date: isPaid ? today : null
+        })
         .eq('id', invoiceId);
-        
+
       if (invErr) throw invErr;
 
       if (invoice?.work_order_id) {
+        const woStatus = isPaid ? 'paid' : (newStatus === 'sent' ? 'invoiced' : 'invoiced');
         await supabase
           .from('work_orders')
-          .update({ status: 'paid' })
+          .update({ status: woStatus })
           .eq('id', invoice.work_order_id);
       }
 
-      alert(`✅ Invoice #${invoiceId} marked as PAID!`);
+      alert(`✅ Invoice #${invoiceId} status updated to ${newStatus.toUpperCase()}`);
     } catch (err) {
-      alert(`Error marking invoice paid: ${err.message}`);
-      setInvoice(prev => ({ ...prev, status: 'draft' }));
+      alert(`Error updating invoice status: ${err.message}`);
+      setInvoice(prev => ({
+        ...prev,
+        status: previousStatus,
+        paid_date: previousPaidDate,
+        paidDate: previousPaidDate
+      }));
     }
   };
+
+  const handleQuickMarkPaid = () => handleUpdateInvoiceStatus('paid');
 
   const handleRecordPayment = async (e) => {
     e.preventDefault();
@@ -535,9 +556,17 @@ Address: ${shop.address}`;
                 <div className={styles.metaValue}>{new Date(invoice.dueDate || Date.now()).toLocaleDateString()}</div>
                 <div className={styles.metaLabel}>Status:</div>
                 <div className={styles.metaValue}>
-                  <span className={`${styles.pill} ${styles[invoice.status?.toLowerCase()] || ''}`} style={{ textTransform: 'capitalize' }}>
-                    {invoice.status}
-                  </span>
+                  <select
+                    className={`${styles.statusSelect} ${styles[invoice.status?.toLowerCase() || 'draft']}`}
+                    value={invoice.status?.toLowerCase() || 'draft'}
+                    onChange={(e) => handleUpdateInvoiceStatus(e.target.value)}
+                    title="Click to change invoice status"
+                  >
+                    <option value="draft">Draft (Unpaid)</option>
+                    <option value="sent">Sent</option>
+                    <option value="paid">Paid</option>
+                    <option value="overdue">Overdue</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -719,7 +748,6 @@ Address: ${shop.address}`;
               className="btn btn-primary" 
               style={{width: '100%', justifyContent: 'flex-start'}}
               onClick={() => setShowPaymentModal(true)}
-              disabled={invoice.status === 'paid'}
             >
               <DollarSign size={18} /> Record Payment
             </button>
@@ -730,19 +758,56 @@ Address: ${shop.address}`;
             >
               <Printer size={18} /> Print PDF
             </button>
-            <button 
-              className="btn btn-outline" 
-              style={{
-                width: '100%', 
-                justifyContent: 'flex-start', 
-                color: invoice.status === 'paid' ? 'var(--color-text-secondary)' : '#10b981', 
-                borderColor: invoice.status === 'paid' ? 'var(--color-border)' : '#10b981'
-              }} 
-              disabled={invoice.status === 'paid'}
-              onClick={handleQuickMarkPaid}
-            >
-              <CheckCircle size={18} /> {invoice.status === 'paid' ? '✓ Paid in Full' : 'Mark as Paid'}
-            </button>
+
+            {/* Reversible Paid/Unpaid Action */}
+            {invoice.status === 'paid' ? (
+              <button 
+                className="btn btn-outline" 
+                style={{
+                  width: '100%', 
+                  justifyContent: 'flex-start', 
+                  color: '#d97706', 
+                  borderColor: '#fde68a',
+                  backgroundColor: '#fffbeb'
+                }} 
+                onClick={() => handleUpdateInvoiceStatus('draft')}
+                title="Accidentally marked paid? Click to reverse to Unpaid (Draft)"
+              >
+                <RotateCcw size={18} /> Reverse to Unpaid (Draft)
+              </button>
+            ) : (
+              <button 
+                className="btn btn-outline" 
+                style={{
+                  width: '100%', 
+                  justifyContent: 'flex-start', 
+                  color: '#10b981', 
+                  borderColor: '#10b981',
+                  backgroundColor: '#ecfdf5'
+                }} 
+                onClick={() => handleUpdateInvoiceStatus('paid')}
+              >
+                <CheckCircle size={18} /> Mark as Paid
+              </button>
+            )}
+
+            {/* Quick Status Switcher */}
+            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--color-border)' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>
+                Change Status
+              </label>
+              <select
+                className={`${styles.statusSelect} ${styles[invoice.status?.toLowerCase() || 'draft']}`}
+                style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '13px' }}
+                value={invoice.status?.toLowerCase() || 'draft'}
+                onChange={(e) => handleUpdateInvoiceStatus(e.target.value)}
+              >
+                <option value="draft">Draft (Unpaid)</option>
+                <option value="sent">Sent</option>
+                <option value="paid">Paid</option>
+                <option value="overdue">Overdue</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>

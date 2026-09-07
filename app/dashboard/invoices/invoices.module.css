@@ -151,7 +151,7 @@
   background-color: #fee2e2;
 }
 
-.pill {
+.pill, .statusPill {
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
@@ -161,29 +161,98 @@
   text-transform: capitalize;
 }
 
-.pill.draft { background: #f3f4f6; color: #4b5563; }
-.pill.sent { background: #e0f2fe; color: #0284c7; }
-.pill.paid { background: #dcfce3; color: #166534; }
-.pill.overdue { background: #fee2e2; color: #991b1b; }
+.pill.draft, .statusPill.draft { background: #f3f4f6; color: #4b5563; }
+.pill.sent, .statusPill.sent { background: #e0f2fe; color: #0284c7; }
+.pill.paid, .statusPill.paid { background: #dcfce3; color: #166534; }
+.pill.overdue, .statusPill.overdue { background: #fee2e2; color: #991b1b; }
+
+.statusSelect {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.statusSelect.draft { background: #f3f4f6; color: #4b5563; border-color: #d1d5db; }
+.statusSelect.sent { background: #e0f2fe; color: #0284c7; border-color: #bae6fd; }
+.statusSelect.paid { background: #dcfce3; color: #166534; border-color: #bbf7d0; }
+.statusSelect.overdue { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+
+.statusSelect:hover {
+  filter: brightness(0.95);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
 
 .actions {
   display: flex;
-  gap: var(--space-2);
+  align-items: center;
+  gap: 6px;
 }
 
-.actionBtn {
+.actionBtn, .iconBtn {
   background: transparent;
   border: none;
   color: var(--color-text-secondary);
   cursor: pointer;
-  padding: var(--space-1);
-  border-radius: var(--radius-sm);
+  padding: 5px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.2s;
+  text-decoration: none;
 }
 
-.actionBtn:hover {
+.actionBtn:hover, .iconBtn:hover {
   background: var(--color-border);
   color: var(--color-text);
+}
+
+.statusActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.reverseBtn {
+  color: #d97706;
+  border-color: #fde68a;
+  background-color: #fffbeb;
+}
+
+.reverseBtn:hover {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.markPaidBtn {
+  color: #10b981;
+  border-color: #a7f3d0;
+  background-color: #ecfdf5;
+}
+
+.markPaidBtn:hover {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.statusDropdownWrap {
+  position: relative;
+  display: inline-block;
 }
 
 /* Invoice Detail Specific Styles */
