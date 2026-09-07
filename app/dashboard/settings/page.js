@@ -53,6 +53,21 @@ export default function SettingsPage() {
   const [shopName, setShopName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [shopSaveLoading, setShopSaveLoading] = useState(false);
+  const [shopSaveSuccess, setShopSaveSuccess] = useState(false);
+
+  const [shopForm, setShopForm] = useState({
+    companyName: 'Road Ready',
+    ownerName: 'Harman Buttar',
+    streetAddress: '18983 72a Avenue',
+    city: 'Surrey',
+    province: 'BC',
+    postalCode: 'V4N 0B2',
+    phone: '(604) 555-0100',
+    email: 'service@roadreadyrepair.ca',
+    website: 'www.fleetfinanceflow.com',
+    taxNumber: 'GST # 783920194 RT0001'
+  });
+
   const [stripeConnecting, setStripeConnecting] = useState(false);
   const [stripeConnected, setStripeConnected] = useState(true); // Connected with test keys
   const [showConnectModal, setShowConnectModal] = useState(false);
@@ -67,25 +82,62 @@ export default function SettingsPage() {
   const [savingBank, setSavingBank] = useState(false);
 
   React.useEffect(() => {
-    async function fetchShopData() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+    // 1. Instant local preview from localStorage
+    if (typeof window !== 'undefined') {
+      const savedInfo = localStorage.getItem('shop_info');
+      if (savedInfo) {
+        try {
+          const parsed = JSON.parse(savedInfo);
+          setShopForm(prev => ({ ...prev, ...parsed }));
+          if (parsed.companyName) setShopName(parsed.companyName);
+          if (parsed.ownerName) setOwnerName(parsed.ownerName);
+        } catch (_) {}
+      }
+    }
 
-      const { data: profile } = await supabase.from('profiles').select('*, shops(*)').eq('id', session.user.id).single();
-      if (profile) {
-        setOwnerName(profile.full_name || '');
-        if (profile.shop_id) {
-          setShopId(profile.shop_id);
-          if (profile.shops) {
-            setShopName(profile.shops.name || '');
+    async function fetchShopData() {
+      // 2. Fetch session and profile
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: profile } = await supabase.from('profiles').select('*, shops(*)').eq('id', session.user.id).single();
+          if (profile) {
+            if (profile.full_name) {
+              setOwnerName(profile.full_name);
+              setShopForm(prev => ({ ...prev, ownerName: prev.ownerName || profile.full_name }));
+            }
+            if (profile.shop_id) {
+              setShopId(profile.shop_id);
+              if (profile.shops && profile.shops.name) {
+                setShopName(profile.shops.name);
+              }
+              const { data: t } = await supabase.from('technicians').select('*').eq('shop_id', profile.shop_id);
+              setTechs(t || []);
+            }
           }
-          const { data: t } = await supabase.from('technicians').select('*').eq('shop_id', profile.shop_id);
-          setTechs(t || []);
         }
+      } catch (_) {}
+
+      // 3. Fetch cloud persisted shop info
+      try {
+        const res = await fetch(`/api/settings/shop?shopId=${shopId || 'default'}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.shopInfo) {
+            setShopForm(prev => ({ ...prev, ...data.shopInfo }));
+            if (data.shopInfo.companyName) setShopName(data.shopInfo.companyName);
+            if (data.shopInfo.ownerName) setOwnerName(data.shopInfo.ownerName);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('shop_info', JSON.stringify(data.shopInfo));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch cloud shop info:', err);
       }
     }
     fetchShopData();
-  }, []);
+  }, [shopId]);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -310,20 +362,42 @@ export default function SettingsPage() {
   };
 
   const handleSaveShopInfo = async (e) => {
-    e.preventDefault();
-    if (!shopId || !shopName.trim()) return;
+    if (e) e.preventDefault();
+    if (!shopForm.companyName?.trim()) {
+      alert('Please enter a Company / Shop Name.');
+      return;
+    }
 
     setShopSaveLoading(true);
-    try {
-      const { error } = await supabase
-        .from('shops')
-        .update({ name: shopName })
-        .eq('id', shopId);
+    setShopSaveSuccess(false);
 
-      if (error) throw error;
-      alert('Shop settings updated live in Supabase!');
+    try {
+      // 1. Immediately cache in localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('shop_info', JSON.stringify(shopForm));
+      }
+
+      // 2. Save in cloud storage via API
+      const res = await fetch('/api/settings/shop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shopId: shopId || 'default',
+          shopInfo: shopForm
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to save shop settings to cloud');
+
+      const data = await res.json();
+      if (data.shopInfo) {
+        setShopForm(data.shopInfo);
+      }
+
+      setShopSaveSuccess(true);
+      alert('✅ Shop information saved successfully! It will now appear on all invoices.');
     } catch (err) {
-      alert(`Error updating shop: ${err.message}`);
+      alert(`Error saving shop info: ${err.message}`);
     } finally {
       setShopSaveLoading(false);
     }
@@ -357,10 +431,9 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    // Simulate save
-    alert('Settings saved successfully!');
+    await handleSaveShopInfo(e);
   };
 
   const sections = [
@@ -379,8 +452,8 @@ export default function SettingsPage() {
           <h1 className={styles.title}>Settings</h1>
           <p className={styles.subtitle}>Manage your shop preferences and configurations</p>
         </div>
-        <button className="btn btn-primary" onClick={handleSave}>
-          <Save size={18} /> Save All Changes
+        <button className="btn btn-primary" onClick={handleSave} disabled={shopSaveLoading}>
+          <Save size={18} /> {shopSaveLoading ? 'Saving...' : 'Save All Changes'}
         </button>
       </div>
 
@@ -411,28 +484,138 @@ export default function SettingsPage() {
                 <div className={styles.formGrid}>
                   <div className={styles.formGroup}>
                     <label>Company / Shop Name</label>
-                    <input type="text" required className={styles.input} value={shopName} onChange={e => setShopName(e.target.value)} />
+                    <input 
+                      type="text" 
+                      required 
+                      className={styles.input} 
+                      value={shopForm.companyName} 
+                      onChange={e => setShopForm({ ...shopForm, companyName: e.target.value })} 
+                      placeholder="e.g. Road Ready"
+                    />
                   </div>
                   <div className={styles.formGroup}>
                     <label>Owner Name</label>
-                    <input type="text" className={styles.input} value={ownerName} onChange={e => setOwnerName(e.target.value)} readOnly />
+                    <input 
+                      type="text" 
+                      className={styles.input} 
+                      value={shopForm.ownerName} 
+                      onChange={e => setShopForm({ ...shopForm, ownerName: e.target.value })} 
+                      placeholder="e.g. Harman Buttar"
+                    />
                   </div>
+
+                  {/* Complete Address Fields */}
                   <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
-                    <label>Shop Address</label>
-                    <input type="text" className={styles.input} defaultValue={settings.address} />
+                    <label>Shop Address (Street)</label>
+                    <input 
+                      type="text" 
+                      className={styles.input} 
+                      value={shopForm.streetAddress} 
+                      onChange={e => setShopForm({ ...shopForm, streetAddress: e.target.value })} 
+                      placeholder="e.g. 18983 72a Avenue"
+                    />
                   </div>
+
+                  <div className={styles.formGroup}>
+                    <label>City</label>
+                    <input 
+                      type="text" 
+                      className={styles.input} 
+                      value={shopForm.city} 
+                      onChange={e => setShopForm({ ...shopForm, city: e.target.value })} 
+                      placeholder="e.g. Surrey"
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Province / State</label>
+                    <select 
+                      className={styles.input} 
+                      value={shopForm.province} 
+                      onChange={e => setShopForm({ ...shopForm, province: e.target.value })}
+                    >
+                      <optgroup label="Canadian Provinces">
+                        <option value="BC">British Columbia (BC)</option>
+                        <option value="AB">Alberta (AB)</option>
+                        <option value="ON">Ontario (ON)</option>
+                        <option value="SK">Saskatchewan (SK)</option>
+                        <option value="MB">Manitoba (MB)</option>
+                        <option value="QC">Quebec (QC)</option>
+                        <option value="NB">New Brunswick (NB)</option>
+                        <option value="NS">Nova Scotia (NS)</option>
+                        <option value="PE">Prince Edward Island (PE)</option>
+                        <option value="NL">Newfoundland & Labrador (NL)</option>
+                        <option value="YT">Yukon (YT)</option>
+                        <option value="NT">Northwest Territories (NT)</option>
+                        <option value="NU">Nunavut (NU)</option>
+                      </optgroup>
+                      <optgroup label="US States">
+                        <option value="WA">Washington (WA)</option>
+                        <option value="OR">Oregon (OR)</option>
+                        <option value="CA">California (CA)</option>
+                        <option value="TX">Texas (TX)</option>
+                        <option value="ID">Idaho (ID)</option>
+                        <option value="MT">Montana (MT)</option>
+                        <option value="OTHER">Other State</option>
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Postal Code / ZIP</label>
+                    <input 
+                      type="text" 
+                      className={styles.input} 
+                      value={shopForm.postalCode} 
+                      onChange={e => setShopForm({ ...shopForm, postalCode: e.target.value })} 
+                      placeholder="e.g. V4N 0B2"
+                    />
+                  </div>
+
                   <div className={styles.formGroup}>
                     <label>Phone Number</label>
-                    <input type="tel" className={styles.input} defaultValue={settings.phone} />
+                    <input 
+                      type="tel" 
+                      className={styles.input} 
+                      value={shopForm.phone} 
+                      onChange={e => setShopForm({ ...shopForm, phone: e.target.value })} 
+                      placeholder="e.g. (604) 555-0100"
+                    />
                   </div>
+
                   <div className={styles.formGroup}>
                     <label>Email Address</label>
-                    <input type="email" className={styles.input} defaultValue={settings.email} />
+                    <input 
+                      type="email" 
+                      className={styles.input} 
+                      value={shopForm.email} 
+                      onChange={e => setShopForm({ ...shopForm, email: e.target.value })} 
+                      placeholder="e.g. service@roadreadyrepair.ca"
+                    />
                   </div>
+
                   <div className={styles.formGroup}>
                     <label>Website</label>
-                    <input type="url" className={styles.input} defaultValue="www.fleetfinanceflow.com" />
+                    <input 
+                      type="text" 
+                      className={styles.input} 
+                      value={shopForm.website} 
+                      onChange={e => setShopForm({ ...shopForm, website: e.target.value })} 
+                      placeholder="e.g. www.fleetfinanceflow.com"
+                    />
                   </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Business / Tax / GST Number</label>
+                    <input 
+                      type="text" 
+                      className={styles.input} 
+                      value={shopForm.taxNumber} 
+                      onChange={e => setShopForm({ ...shopForm, taxNumber: e.target.value })} 
+                      placeholder="e.g. GST # 783920194 RT0001"
+                    />
+                  </div>
+
                   <div className={styles.formGroup} style={{ gridColumn: '1 / -1', background: '#F8FAFC', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       {logoUrl ? (

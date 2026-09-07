@@ -12,7 +12,15 @@ export default function InvoiceDetail() {
   const params = useParams();
   const invoiceId = params.id;
   
-  const shop = shopSettings;
+  const [shop, setShop] = useState({
+    companyName: 'Road Ready',
+    ownerName: 'Harman Buttar',
+    address: '18983 72a Avenue, Surrey, BC V4N 0B2',
+    phone: '(604) 555-0100',
+    email: 'service@roadreadyrepair.ca',
+    website: 'www.fleetfinanceflow.com',
+    taxNumber: 'GST # 783920194 RT0001'
+  });
 
   const [invoice, setInvoice] = useState(null);
   const [customer, setCustomer] = useState(null);
@@ -119,16 +127,32 @@ export default function InvoiceDetail() {
     if (typeof window !== 'undefined') {
       const localLogo = localStorage.getItem('shop_invoice_logo');
       const localPrefs = localStorage.getItem('shop_invoice_preferences');
+      const localShop = localStorage.getItem('shop_info');
       if (localLogo) setLogoUrl(localLogo);
       if (localPrefs) {
         try {
           setLogoPreferences(prev => ({ ...prev, ...JSON.parse(localPrefs) }));
         } catch (_) {}
       }
+      if (localShop) {
+        try {
+          const s = JSON.parse(localShop);
+          const fullAddr = [s.streetAddress, s.city, s.province, s.postalCode].filter(Boolean).join(', ');
+          setShop({
+            companyName: s.companyName || 'Road Ready',
+            ownerName: s.ownerName || 'Harman Buttar',
+            address: fullAddr || s.address || '18983 72a Avenue, Surrey, BC V4N 0B2',
+            phone: s.phone || '(604) 555-0100',
+            email: s.email || 'service@roadreadyrepair.ca',
+            website: s.website || 'www.fleetfinanceflow.com',
+            taxNumber: s.taxNumber || 'GST # 783920194 RT0001'
+          });
+        } catch (_) {}
+      }
     }
 
     // 2. Cloud storage fetch
-    async function fetchLogo() {
+    async function fetchLogoAndShop() {
       try {
         const res = await fetch('/api/settings/logo');
         if (res.ok) {
@@ -139,8 +163,33 @@ export default function InvoiceDetail() {
       } catch (err) {
         console.warn('Could not fetch invoice logo:', err);
       }
+
+      try {
+        const shopRes = await fetch('/api/settings/shop');
+        if (shopRes.ok) {
+          const sData = await shopRes.json();
+          if (sData.shopInfo) {
+            const s = sData.shopInfo;
+            const fullAddr = [s.streetAddress, s.city, s.province, s.postalCode].filter(Boolean).join(', ');
+            setShop({
+              companyName: s.companyName || 'Road Ready',
+              ownerName: s.ownerName || 'Harman Buttar',
+              address: fullAddr || s.address || '18983 72a Avenue, Surrey, BC V4N 0B2',
+              phone: s.phone || '(604) 555-0100',
+              email: s.email || 'service@roadreadyrepair.ca',
+              website: s.website || 'www.fleetfinanceflow.com',
+              taxNumber: s.taxNumber || 'GST # 783920194 RT0001'
+            });
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('shop_info', JSON.stringify(sData.shopInfo));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch shop info:', err);
+      }
     }
-    fetchLogo();
+    fetchLogoAndShop();
   }, []);
 
   useEffect(() => {
