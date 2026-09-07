@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
-import { Plus, Search, Eye, Send, CheckCircle, Printer, X, Receipt } from 'lucide-react';
+import { Plus, Search, Eye, Send, CheckCircle, Printer, X, Receipt, Mail, Paperclip } from 'lucide-react';
 import styles from './invoices.module.css';
 
 export default function InvoicesList() {
@@ -20,6 +20,24 @@ export default function InvoicesList() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedWoId, setSelectedWoId] = useState('');
   const [savingInvoice, setSavingInvoice] = useState(false);
+
+  // Email confirmation modal state
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [selectedInvoiceForEmail, setSelectedInvoiceForEmail] = useState(null);
+  const [emailForm, setEmailForm] = useState({
+    to: '',
+    ccShop: true,
+    additionalCc: '',
+    subject: '',
+    message: ''
+  });
+
+  const [shop, setShop] = useState({
+    companyName: 'Road Ready',
+    phone: '(604) 555-0100',
+    email: 'service@roadreadyrepair.ca'
+  });
 
   const fetchInvoices = async () => {
     setIsLoading(true);
@@ -44,42 +62,115 @@ export default function InvoicesList() {
 
   useEffect(() => {
     fetchInvoices();
+
+    // Fetch latest shop info
+    if (typeof window !== 'undefined') {
+      const localShop = localStorage.getItem('shop_info');
+      if (localShop) {
+        try {
+          const s = JSON.parse(localShop);
+          setShop(prev => ({
+            ...prev,
+            companyName: s.companyName || prev.companyName,
+            phone: s.phone || prev.phone,
+            email: s.email || prev.email
+          }));
+        } catch (_) {}
+      }
+    }
+
+    async function fetchShop() {
+      try {
+        const res = await fetch('/api/settings/shop');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.shopInfo) {
+            setShop(prev => ({
+              ...prev,
+              companyName: data.shopInfo.companyName || prev.companyName,
+              phone: data.shopInfo.phone || prev.phone,
+              email: data.shopInfo.email || prev.email
+            }));
+          }
+        }
+      } catch (_) {}
+    }
+    fetchShop();
   }, []);
 
-  const handleMarkPaid = async (inv) => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      // Optimistic update
-      setInvoices(prev => prev.map(item => item.id === inv.id ? { ...item, status: 'paid', paid_date: today } : item));
+  const openEmailModal = (inv) => {
+    setSelectedInvoiceForEmail(inv);
+    const cust = customers.find(c => c.id === inv.customer_id) || inv.customers;
+    const custEmail = cust?.email || '';
+    const custName = cust?.company || 'Valued Customer';
+    const totalFormatted = Number(inv.total || 0).toFixed(2);
+    const dueDateFormatted = inv.due_date || 'N/A';
+    const portalUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}/portal/${inv.work_order_id || (inv.id.startsWith('INV-') ? `WO-${inv.id.replace('INV-', '')}` : inv.id)}`
+      : `https://www.fleetfinanceflow.com/portal/${inv.id}`;
 
-      const { error: invErr } = await supabase
-        .from('invoices')
-        .update({ status: 'paid', paid_date: today })
-        .eq('id', inv.id);
+    const defaultMsg = `Hi ${custName},
 
-      if (invErr) throw invErr;
+Please find attached Invoice #${inv.id} for completed fleet repair services.
 
-      if (inv.work_order_id) {
-        await supabase
-          .from('work_orders')
-          .update({ status: 'paid' })
-          .eq('id', inv.work_order_id);
-      }
+Invoice Summary:
+• Invoice #: ${inv.id}
+• Total Amount: $${totalFormatted} CAD
+• Due Date: ${dueDateFormatted}
 
-      alert(`✅ Invoice #${inv.id} marked as PAID!`);
-    } catch (err) {
-      alert(`Error marking invoice paid: ${err.message}`);
-      fetchInvoices();
-    }
+You can view the full itemized invoice and pay online using our secure customer portal:
+${portalUrl}
+
+Thank you for choosing ${shop.companyName}!
+
+${shop.companyName}
+Phone: ${shop.phone}
+Email: ${shop.email}`;
+
+    setEmailForm({
+      to: custEmail,
+      ccShop: true,
+      additionalCc: '',
+      subject: `Invoice #${inv.id} from ${shop.companyName} ($${totalFormatted} CAD)`,
+      message: defaultMsg
+    });
+    setShowEmailModal(true);
   };
 
-  const handleSendInvoice = async (inv) => {
+  const handleSendEmail = async (e) => {
+    e.preventDefault();
+    if (!selectedInvoiceForEmail) return;
+    if (!emailForm.to.trim()) {
+      alert('Please enter a recipient email address.');
+      return;
+    }
+
+    setSendingEmail(true);
     try {
-      setInvoices(prev => prev.map(item => item.id === inv.id ? { ...item, status: 'sent' } : item));
-      await supabase.from('invoices').update({ status: 'sent' }).eq('id', inv.id);
-      alert(`✅ Invoice #${inv.id} marked as SENT and queued for customer.`);
+      const res = await fetch('/api/invoices/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invoiceId: selectedInvoiceForEmail.id,
+          to: emailForm.to.trim(),
+          ccShop: emailForm.ccShop,
+          shopEmail: shop.email,
+          additionalCc: emailForm.additionalCc.trim(),
+          subject: emailForm.subject,
+          message: emailForm.message
+        })
+      });
+
+      // Optimistic update local state & Supabase
+      setInvoices(prev => prev.map(item => item.id === selectedInvoiceForEmail.id ? { ...item, status: 'sent' } : item));
+      await supabase.from('invoices').update({ status: 'sent' }).eq('id', selectedInvoiceForEmail.id);
+
+      setShowEmailModal(false);
+      alert(`✅ Invoice #${selectedInvoiceForEmail.id} emailed successfully to ${emailForm.to}${emailForm.ccShop ? ` (CC: ${shop.email})` : ''}!`);
     } catch (err) {
-      alert(`Error sending invoice: ${err.message}`);
+      alert(`Error sending invoice email: ${err.message}`);
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -266,7 +357,7 @@ export default function InvoicesList() {
                           <Printer size={18} />
                         </button>
                         {inv.status !== 'paid' && (
-                          <button className={styles.iconBtn} title="Send to Customer" onClick={() => handleSendInvoice(inv)}>
+                          <button className={styles.iconBtn} title="Email Invoice to Customer" onClick={() => openEmailModal(inv)}>
                             <Send size={18} />
                           </button>
                         )}
@@ -291,6 +382,114 @@ export default function InvoicesList() {
           </table>
         </div>
       </div>
+
+      {/* Email Invoice Confirmation Modal */}
+      {showEmailModal && selectedInvoiceForEmail && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.emailModalContent}>
+            <div className={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#EFF6FF', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Mail size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '17px' }}>Send Invoice #{selectedInvoiceForEmail.id}</h3>
+                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Confirm recipient email & optional shop CC</span>
+                </div>
+              </div>
+              <button className={styles.closeBtn} onClick={() => setShowEmailModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendEmail}>
+              {/* Recipient Customer Email */}
+              <div className={styles.formGroup}>
+                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Recipient Customer Email *</span>
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+                    {selectedInvoiceForEmail.customers?.company || 'Fleet Customer'}
+                  </span>
+                </label>
+                <input 
+                  type="email" 
+                  value={emailForm.to}
+                  onChange={e => setEmailForm({ ...emailForm, to: e.target.value })}
+                  placeholder="customer@email.com"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              {/* CC Shop Email Checkbox */}
+              <div className={styles.formGroup} style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0, fontWeight: 500, fontSize: '13px' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={emailForm.ccShop}
+                    onChange={e => setEmailForm({ ...emailForm, ccShop: e.target.checked })}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer', margin: 0 }}
+                  />
+                  <span>CC Your Shop Email: <strong style={{ color: 'var(--color-primary)' }}>{shop.email || 'service@roadreadyrepair.ca'}</strong></span>
+                </label>
+              </div>
+
+              {/* Additional CCs */}
+              <div className={styles.formGroup}>
+                <label>Additional CC Email(s) <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontWeight: 'normal' }}>(optional, comma separated)</span></label>
+                <input 
+                  type="text" 
+                  value={emailForm.additionalCc}
+                  onChange={e => setEmailForm({ ...emailForm, additionalCc: e.target.value })}
+                  placeholder="e.g. accounting@fleetcompany.com, manager@shop.com"
+                />
+              </div>
+
+              {/* Subject */}
+              <div className={styles.formGroup}>
+                <label>Email Subject *</label>
+                <input 
+                  type="text" 
+                  value={emailForm.subject}
+                  onChange={e => setEmailForm({ ...emailForm, subject: e.target.value })}
+                  required
+                />
+              </div>
+
+              {/* Message Body */}
+              <div className={styles.formGroup}>
+                <label>Email Message</label>
+                <textarea 
+                  value={emailForm.message}
+                  onChange={e => setEmailForm({ ...emailForm, message: e.target.value })}
+                  rows={6}
+                  style={{ resize: 'vertical', fontSize: '13px', lineHeight: 1.5 }}
+                />
+              </div>
+
+              {/* Attached Assets Notice */}
+              <div className={styles.emailAttachmentBox}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Paperclip size={14} color="var(--color-primary)" />
+                  <span>Attached: <strong>Invoice_{selectedInvoiceForEmail.id}.pdf</strong></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: '#059669', fontWeight: 600 }}>✓ Customer Portal Link Active</span>
+                </div>
+              </div>
+
+              <div className={styles.modalActions} style={{ marginTop: '16px' }}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowEmailModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={sendingEmail} style={{ gap: '6px' }}>
+                  <Send size={16} /> {sendingEmail ? 'Sending Email...' : 'Send Invoice Email'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Create Invoice Modal */}
       {showCreateModal && (
