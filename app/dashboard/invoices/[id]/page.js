@@ -533,6 +533,34 @@ Address: ${shop.address}`;
 
   const handleQuickMarkPaid = () => handleUpdateInvoiceStatus('paid');
 
+  const handleDownloadInvoicePdf = () => {
+    const loadScript = (src) => new Promise((resolve, reject) => {
+      if (document.querySelector(`script[src="${src}"]`)) return resolve();
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+
+    Promise.all([
+      loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'),
+      loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+    ]).then(() => {
+      const element = document.querySelector('[class*="invoicePaper"]');
+      if (!element) return alert('Invoice area not found.');
+      window.html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`Invoice_${invoice?.id || 'download'}.pdf`);
+      });
+    }).catch(() => alert('Failed to load PDF libraries. Please check your internet connection.'));
+  };
+
   const handleRecordPayment = async (e) => {
     e.preventDefault();
     try {
@@ -650,6 +678,25 @@ Address: ${shop.address}`;
                     <option value="paid">Paid</option>
                     <option value="overdue">Overdue</option>
                   </select>
+                </div>
+                <div className={styles.metaLabel}>Actions:</div>
+                <div className={styles.metaValue} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button
+                    className={`${styles.iconBtn} no-print`}
+                    title="Print Invoice"
+                    onClick={() => window.print()}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', fontSize: '12px', cursor: 'pointer' }}
+                  >
+                    <Printer size={14} /> Print
+                  </button>
+                  <button
+                    className={`${styles.iconBtn} no-print`}
+                    title="Download Invoice as PDF (invoice area only)"
+                    onClick={handleDownloadInvoicePdf}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', fontSize: '12px', cursor: 'pointer', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '6px' }}
+                  >
+                    <Printer size={14} /> Download PDF
+                  </button>
                 </div>
               </div>
             </div>
