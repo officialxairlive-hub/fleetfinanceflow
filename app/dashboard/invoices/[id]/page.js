@@ -549,7 +549,37 @@ Address: ${shop.address}`;
     ]).then(() => {
       const element = document.querySelector('[class*="invoicePaper"]');
       if (!element) return alert('Invoice area not found.');
-      window.html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
+
+      // Hide all no-print elements before capturing
+      const noPrintEls = document.querySelectorAll('.no-print, [class*="no-print"]');
+      const hiddenEls = [];
+      noPrintEls.forEach(el => {
+        if (el.style.display !== 'none') {
+          hiddenEls.push({ el, display: el.style.display });
+          el.style.display = 'none';
+        }
+      });
+
+      // Also hide statusSelect dropdowns (they appear in print)
+      const selectEls = element.querySelectorAll('select');
+      const selectTexts = [];
+      selectEls.forEach(sel => {
+        const span = document.createElement('span');
+        span.textContent = sel.options[sel.selectedIndex]?.text || sel.value;
+        span.style.fontWeight = '600';
+        sel.parentNode.insertBefore(span, sel);
+        selectTexts.push({ sel, span });
+        sel.style.display = 'none';
+      });
+
+      window.html2canvas(element, { scale: 2, useCORS: true, logging: false }).then(canvas => {
+        // Restore hidden elements
+        hiddenEls.forEach(({ el, display }) => { el.style.display = display; });
+        selectTexts.forEach(({ sel, span }) => {
+          sel.style.display = '';
+          span.remove();
+        });
+
         const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
@@ -557,6 +587,10 @@ Address: ${shop.address}`;
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`Invoice_${invoice?.id || 'download'}.pdf`);
+      }).catch(err => {
+        hiddenEls.forEach(({ el, display }) => { el.style.display = display; });
+        selectTexts.forEach(({ sel, span }) => { sel.style.display = ''; span.remove(); });
+        alert('PDF generation failed: ' + err.message);
       });
     }).catch(() => alert('Failed to load PDF libraries. Please check your internet connection.'));
   };
