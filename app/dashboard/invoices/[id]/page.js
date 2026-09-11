@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
 import { shopSettings } from '../../../lib/demoData';
-import { Mail, DollarSign, Printer, CheckCircle, X, ArrowLeft, RefreshCw, FileText, Wrench, Package, Send, Paperclip, RotateCcw } from 'lucide-react';
+import { Mail, DollarSign, Printer, CheckCircle, X, ArrowLeft, RefreshCw, FileText, Wrench, Package, Send, Paperclip, RotateCcw, Edit } from 'lucide-react';
 import styles from '../invoices.module.css';
 
 export default function InvoiceDetail() {
@@ -67,6 +67,20 @@ export default function InvoiceDetail() {
     showLogoOnInvoices: true,
     logoAlignment: 'left',
     logoSize: 'medium'
+  });
+
+  // Diagnostic Report (The 3 C's: Fault, Cause, Correction) State
+  const [report, setReport] = useState({
+    fault: '',
+    cause: '',
+    correction: ''
+  });
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [savingReport, setSavingReport] = useState(false);
+  const [reportForm, setReportForm] = useState({
+    fault: '',
+    cause: '',
+    correction: ''
   });
 
   // Pure function to calculate exact financials from Work Order (Single Source of Truth)
@@ -250,6 +264,29 @@ export default function InvoiceDetail() {
         // 4. Compute Exact Financials & Line Items strictly from Work Order
         const comp = computeFromWO(loadedWo, loadedCustomer, invData);
 
+        // 5. Extract Fault, Cause, and Correction (The 3 C's)
+        let initialFault = invData.fault || invData.complaint || loadedWo?.complaint || '';
+        let initialCause = invData.cause || loadedWo?.cause || '';
+        let initialCorrection = invData.correction || loadedWo?.correction || '';
+
+        // Check if report details were saved into invoice notes
+        if (!initialFault && invData.notes && invData.notes.includes('[Diagnostic Report]')) {
+          const mFault = invData.notes.match(/Fault:\s*([^|]+)/);
+          const mCause = invData.notes.match(/Cause:\s*([^|]+)/);
+          const mCorrection = invData.notes.match(/Correction:\s*(.+)/);
+          if (mFault) initialFault = mFault[1].trim();
+          if (mCause) initialCause = mCause[1].trim();
+          if (mCorrection) initialCorrection = mCorrection[1].trim();
+        }
+
+        const repData = {
+          fault: initialFault || (loadedWo?.unit_display ? `Scheduled maintenance and diagnostic inspection for ${loadedWo.unit_display}` : 'Diagnostic mechanical evaluation and service request.'),
+          cause: initialCause || 'Component inspection, wear diagnostics, and system testing completed.',
+          correction: initialCorrection || 'Repairs completed with certified replacement parts. System road tested.'
+        };
+        setReport(repData);
+        setReportForm(repData);
+
         setWorkOrder(loadedWo);
         setCustomer(loadedCustomer);
         setBreakdown(comp);
@@ -264,7 +301,7 @@ export default function InvoiceDetail() {
         
         setPaymentForm(prev => ({ ...prev, amount: comp.total }));
 
-        // 5. Automatically keep draft invoice in Supabase synchronized with Work Order
+        // 6. Automatically keep draft invoice in Supabase synchronized with Work Order
         if (loadedWo && invData.status === 'draft') {
           await supabase.from('invoices').update({
             labour_total: comp.labourTotal,
@@ -310,6 +347,16 @@ export default function InvoiceDetail() {
       setInvoice(prev => ({ ...prev, amount: comp.total }));
       setPaymentForm(prev => ({ ...prev, amount: comp.total }));
 
+      if (freshWo.complaint || freshWo.cause || freshWo.correction) {
+        const repData = {
+          fault: freshWo.complaint || report.fault,
+          cause: freshWo.cause || report.cause,
+          correction: freshWo.correction || report.correction
+        };
+        setReport(repData);
+        setReportForm(repData);
+      }
+
       await supabase.from('invoices').update({
         labour_total: comp.labourTotal,
         parts_total: comp.partsTotal,
@@ -319,11 +366,47 @@ export default function InvoiceDetail() {
         work_order_id: freshWo.id
       }).eq('id', invoiceId);
 
-      alert(`✅ Invoice synchronized with Work Order #${freshWo.id} line items!`);
+      alert(`✅ Invoice synchronized with Work Order #${freshWo.id} line items & diagnostic report!`);
     } catch (err) {
       alert(`Error syncing: ${err.message}`);
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleSaveReport = async (e) => {
+    e.preventDefault();
+    setSavingReport(true);
+    try {
+      setReport({ ...reportForm });
+
+      const noteStr = `[Diagnostic Report] Fault: ${reportForm.fault || 'N/A'} | Cause: ${reportForm.cause || 'N/A'} | Correction: ${reportForm.correction || 'N/A'}`;
+      await supabase.from('invoices').update({
+        notes: noteStr
+      }).eq('id', invoiceId);
+
+      const targetWoId = workOrder?.id || invoice?.work_order_id;
+      if (targetWoId) {
+        await supabase.from('work_orders').update({
+          complaint: reportForm.fault,
+          cause: reportForm.cause,
+          correction: reportForm.correction
+        }).eq('id', targetWoId);
+
+        setWorkOrder(prev => prev ? ({
+          ...prev,
+          complaint: reportForm.fault,
+          cause: reportForm.cause,
+          correction: reportForm.correction
+        }) : prev);
+      }
+
+      setShowReportModal(false);
+      alert('✅ Service & Diagnostic Report (Fault, Cause, Correction) updated and synchronized!');
+    } catch (err) {
+      alert(`Error saving report: ${err.message}`);
+    } finally {
+      setSavingReport(false);
     }
   };
 
@@ -588,19 +671,78 @@ Address: ${shop.address}`;
               )}
             </div>
 
-            {workOrder && (
-              <div className={styles.billTo} style={{ borderLeft: '1px solid var(--color-border)', paddingLeft: '20px' }}>
-                <h3>JOB / WORK ORDER REFERENCE</h3>
+            <div className={styles.billTo} style={{ borderLeft: '1px solid var(--color-border)', paddingLeft: '20px' }}>
+              <h3>JOB / VEHICLE REFERENCE</h3>
+              {workOrder ? (
                 <p style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 4px 0' }}>
                   <Link href={`/dashboard/jobs/${workOrder.id}`} style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>
                     Work Order #{workOrder.id} ↗
                   </Link>
                 </p>
-                <p><strong>Unit / Truck:</strong> {workOrder.unit_display || 'N/A'}</p>
-                {workOrder.complaint && <p><strong>Complaint:</strong> {workOrder.complaint}</p>}
-                {workOrder.correction && <p><strong>Correction:</strong> {workOrder.correction}</p>}
+              ) : (
+                <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-secondary)', margin: '0 0 4px 0' }}>Direct Invoice</p>
+              )}
+              <p><strong>Unit / Truck:</strong> {workOrder?.unit_display || 'Heavy Duty Fleet Unit'}</p>
+              {workOrder?.trailer && <p><strong>Trailer:</strong> {workOrder.trailer}</p>}
+              <p><strong>Service Advisor / Tech:</strong> {workOrder?.tech_name || 'Thompson Heavy Duty Team'}</p>
+            </div>
+          </div>
+
+          {/* Service & Diagnostic Report: Fault, Cause & Correction (The 3 C's) */}
+          <div className={styles.diagnosticCard}>
+            <div className={styles.diagnosticHeader}>
+              <div className={styles.diagnosticTitleGroup}>
+                <FileText size={17} color="var(--color-primary)" />
+                <h3 className={styles.diagnosticTitle}>Service & Diagnostic Report</h3>
+                <span className={styles.threeCsBadge}>The 3 C's: Fault • Cause • Correction</span>
               </div>
-            )}
+              <button 
+                type="button" 
+                className={`${styles.editReportBtn} no-print`}
+                onClick={() => {
+                  setReportForm({ ...report });
+                  setShowReportModal(true);
+                }}
+                title="Edit Fault, Cause, and Correction for this invoice"
+              >
+                <Edit size={13} /> Edit 3 C's
+              </button>
+            </div>
+
+            <div className={styles.threeCsGrid}>
+              {/* 1. FAULT / COMPLAINT */}
+              <div className={`${styles.cBlock} ${styles.cBlockFault}`}>
+                <div className={styles.cBlockHeader}>
+                  <span className={`${styles.cBadge} ${styles.cBadgeFault}`}>1. FAULT / CONCERN</span>
+                  <span className={styles.cSub}>Customer Symptom</span>
+                </div>
+                <p className={styles.cContent}>
+                  {report.fault || 'Diagnostic evaluation and mechanical inspection.'}
+                </p>
+              </div>
+
+              {/* 2. CAUSE */}
+              <div className={`${styles.cBlock} ${styles.cBlockCause}`}>
+                <div className={styles.cBlockHeader}>
+                  <span className={`${styles.cBadge} ${styles.cBadgeCause}`}>2. DIAGNOSTIC CAUSE</span>
+                  <span className={styles.cSub}>Technician Finding</span>
+                </div>
+                <p className={styles.cContent}>
+                  {report.cause || 'Mechanical teardown & diagnostic root-cause inspection.'}
+                </p>
+              </div>
+
+              {/* 3. CORRECTION */}
+              <div className={`${styles.cBlock} ${styles.cBlockCorrection}`}>
+                <div className={styles.cBlockHeader}>
+                  <span className={`${styles.cBadge} ${styles.cBadgeCorrection}`}>3. CORRECTION / REPAIR</span>
+                  <span className={styles.cSub}>Services Rendered</span>
+                </div>
+                <p className={styles.cContent}>
+                  {report.correction || 'Certified service completed and road tested OK.'}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Line Items Table (Authoritative Work Order Items) */}
@@ -737,6 +879,17 @@ Address: ${shop.address}`;
                 <RefreshCw size={18} /> {isSyncing ? 'Syncing...' : 'Sync from Work Order'}
               </button>
             )}
+            <button 
+              className="btn btn-outline" 
+              style={{ width: '100%', justifyContent: 'flex-start' }}
+              onClick={() => {
+                setReportForm({ ...report });
+                setShowReportModal(true);
+              }}
+              title="Edit Fault, Cause, and Correction"
+            >
+              <Edit size={18} /> Edit 3 C's Report
+            </button>
             <button 
               className="btn btn-outline" 
               style={{width: '100%', justifyContent: 'flex-start'}}
@@ -911,6 +1064,83 @@ Address: ${shop.address}`;
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={sendingEmail} style={{ gap: '6px' }}>
                   <Send size={16} /> {sendingEmail ? 'Sending Email...' : 'Send Invoice Email'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Diagnostic Report (3 C's: Fault, Cause, Correction) Modal */}
+      {showReportModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent} style={{ maxWidth: '640px' }}>
+            <div className={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={20} color="var(--color-primary)" />
+                <h3 style={{ margin: 0 }}>Edit Service & Diagnostic Report (The 3 C's)</h3>
+              </div>
+              <button className={styles.closeBtn} onClick={() => setShowReportModal(false)}>
+                <X size={22} />
+              </button>
+            </div>
+            
+            <p style={{ margin: '0 0 16px', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+              Update the customer-facing <strong>Fault</strong>, <strong>Cause</strong>, and <strong>Correction</strong> for Invoice #{invoiceId}. Changes will also automatically synchronize with the linked Work Order.
+            </p>
+
+            <form onSubmit={handleSaveReport}>
+              <div className={styles.formGroup}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                  <span className={`${styles.cBadge} ${styles.cBadgeFault}`}>1. FAULT / COMPLAINT</span>
+                  <span>Customer or Driver Reported Symptom *</span>
+                </label>
+                <textarea 
+                  value={reportForm.fault}
+                  onChange={e => setReportForm({ ...reportForm, fault: e.target.value })}
+                  rows={3}
+                  required
+                  placeholder="e.g. Driver reports spongy brake pedal and grinding noise from front axle during braking."
+                  style={{ width: '100%', padding: '8px 12px', fontSize: '13px' }}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                  <span className={`${styles.cBadge} ${styles.cBadgeCause}`}>2. DIAGNOSTIC CAUSE</span>
+                  <span>Technician Diagnostic Findings & Root Problem *</span>
+                </label>
+                <textarea 
+                  value={reportForm.cause}
+                  onChange={e => setReportForm({ ...reportForm, cause: e.target.value })}
+                  rows={3}
+                  required
+                  placeholder="e.g. Front brake rotors worn below minimum thickness. Left caliper seized. Brake pads at 5% remaining."
+                  style={{ width: '100%', padding: '8px 12px', fontSize: '13px' }}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                  <span className={`${styles.cBadge} ${styles.cBadgeCorrection}`}>3. CORRECTION / REPAIR</span>
+                  <span>Repairs Performed, Parts Replaced & Road Test *</span>
+                </label>
+                <textarea 
+                  value={reportForm.correction}
+                  onChange={e => setReportForm({ ...reportForm, correction: e.target.value })}
+                  rows={3}
+                  required
+                  placeholder="e.g. Replaced both front rotors, all brake pads, rebuilt left caliper, adjusted slack adjusters. Road tested OK."
+                  style={{ width: '100%', padding: '8px 12px', fontSize: '13px' }}
+                />
+              </div>
+
+              <div className={styles.modalActions} style={{ marginTop: '20px' }}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowReportModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={savingReport}>
+                  {savingReport ? 'Saving Report...' : 'Save Diagnostic Report'}
                 </button>
               </div>
             </form>

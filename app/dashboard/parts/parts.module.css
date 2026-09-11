@@ -462,3 +462,219 @@
     display: none;
   }
 }
+
+/* ==========================================================
+   AI Supplier Invoice & PDF Scanner Styles
+   ========================================================== */
+.aiModalContent {
+  composes: modalContent;
+  max-width: 1100px;
+  width: 95vw;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.aiHeaderGradient {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.aiSparkleIcon {
+  color: #6366f1;
+  animation: pulse 2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.85; }
+}
+
+.aiDropzone {
+  border: 2px dashed #6366f1;
+  background: rgba(99, 102, 241, 0.03);
+  border-radius: var(--radius-lg);
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.aiDropzone:hover, .aiDropzoneActive {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: #4f46e5;
+  transform: translateY(-2px);
+}
+
+.aiDropzoneIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.aiScanningContainer {
+  padding: 3.5rem 2rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.aiRadarPulse {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
+  animation: radarWave 1.8s infinite;
+}
+
+@keyframes radarWave {
+  0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
+  70% { box-shadow: 0 0 0 24px rgba(99, 102, 241, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+
+.aiSummaryBar {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1fr 1fr;
+  gap: 1rem;
+  align-items: center;
+}
+
+.aiSummaryField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aiSummaryLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+}
+
+.aiSummaryInput {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  background: white;
+  color: var(--color-text);
+}
+
+.aiTableContainer {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: white;
+  max-height: 440px;
+}
+
+.aiTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.aiTable th {
+  background: #F1F5F9;
+  color: #475569;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #CBD5E1;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.aiTable td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #E2E8F0;
+  vertical-align: middle;
+}
+
+.aiInputInline {
+  font-size: 12px;
+  padding: 4px 8px;
+  border: 1px solid #CBD5E1;
+  border-radius: 4px;
+  background: #FFFFFF;
+  color: #1E293B;
+  width: 100%;
+}
+
+.aiInputInline:focus {
+  border-color: #6366f1;
+  outline: none;
+}
+
+.badgeNew {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #ECFDF5;
+  color: #059669;
+  border: 1px solid #A7F3D0;
+  white-space: nowrap;
+}
+
+.badgeExisting {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #EFF6FF;
+  color: #2563EB;
+  border: 1px solid #BFDBFE;
+  white-space: nowrap;
+}
+
+.tierPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #F5F3FF;
+  color: #6D28D9;
+  border: 1px solid #DDD6FE;
+  white-space: nowrap;
+}

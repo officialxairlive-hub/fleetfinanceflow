@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Clock, Printer, Mail, CheckCircle, Plus, ChevronRight, Receipt, X, Wrench, Package, Trash2, ExternalLink } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { statusLabels } from '../../../lib/demoData';
+import { calculateMarkupAndSellPrice, formatTierBracket } from '../../../lib/markupUtils';
 import styles from '../jobs.module.css';
 
 const WORKFLOW_STEPS = ['new', 'diagnosing', 'waiting_parts', 'repairing', 'completed', 'ready_to_invoice', 'invoiced', 'paid'];
@@ -266,8 +267,10 @@ export default function WorkOrderDetailPage() {
       const p = inventoryParts.find(item => item.id === partId);
       if (p) {
         const costVal = p.cost || 0;
-        const sellVal = p.sell || p.price || (costVal * 1.35);
-        const markupVal = costVal > 0 ? (((sellVal - costVal) / costVal) * 100).toFixed(0) : '35';
+        const defaultCalc = calculateMarkupAndSellPrice(costVal);
+        const sellVal = p.sell || p.price || defaultCalc.sellPrice;
+        const markupVal = costVal > 0 ? (((sellVal - costVal) / costVal) * 100).toFixed(0) : defaultCalc.markup.toString();
+        const tierLabel = defaultCalc.matchedTier ? (defaultCalc.matchedTier.label || formatTierBracket(defaultCalc.matchedTier)) : `Default (${markupVal}%)`;
 
         setPartForm({
           partNumber: p.part_number,
@@ -275,10 +278,27 @@ export default function WorkOrderDetailPage() {
           quantity: '1',
           cost: costVal.toString(),
           sellPrice: sellVal.toString(),
-          markup: markupVal
+          markup: markupVal,
+          tierLabel
         });
       }
     }
+  };
+
+  const handleJobPartCostChange = (costVal) => {
+    const c = parseFloat(costVal) || 0;
+    if (costVal === '' || c <= 0) {
+      setPartForm(prev => ({ ...prev, cost: costVal, sellPrice: '', markup: '', tierLabel: '' }));
+      return;
+    }
+    const calc = calculateMarkupAndSellPrice(c);
+    setPartForm(prev => ({
+      ...prev,
+      cost: costVal,
+      sellPrice: calc.sellPrice.toFixed(2),
+      markup: calc.markup.toString(),
+      tierLabel: calc.matchedTier ? (calc.matchedTier.label || formatTierBracket(calc.matchedTier)) : `Fallback (${calc.markup}%)`
+    }));
   };
 
   const handleAddPartLine = async (e) => {
@@ -947,19 +967,37 @@ export default function WorkOrderDetailPage() {
                       step="0.01"
                       placeholder="45.00"
                       value={partForm.cost}
-                      onChange={(e) => setPartForm({ ...partForm, cost: e.target.value })}
+                      onChange={(e) => handleJobPartCostChange(e.target.value)}
                       style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
                     />
+                    {partForm.tierLabel && (
+                      <span style={{ display: 'block', fontSize: '11px', color: '#16a34a', fontWeight: 600, marginTop: '3px' }}>
+                        ⚡ Tier Applied: {partForm.tierLabel} ({partForm.markup}% Markup)
+                      </span>
+                    )}
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Customer Sell Price ($ CAD)</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600' }}>Customer Sell Price ($ CAD)</label>
+                      {partForm.markup && (
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+                          Markup: {partForm.markup}%
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="number"
                       step="0.01"
                       required
                       placeholder="65.00"
                       value={partForm.sellPrice}
-                      onChange={(e) => setPartForm({ ...partForm, sellPrice: e.target.value })}
+                      onChange={(e) => {
+                        const sVal = e.target.value;
+                        const sNum = parseFloat(sVal) || 0;
+                        const cNum = parseFloat(partForm.cost) || 0;
+                        const mVal = cNum > 0 ? (((sNum - cNum) / cNum) * 100).toFixed(0) : '';
+                        setPartForm({ ...partForm, sellPrice: sVal, markup: mVal, tierLabel: 'Manual Override' });
+                      }}
                       style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
                     />
                   </div>

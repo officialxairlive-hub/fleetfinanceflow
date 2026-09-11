@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import styles from './parts.module.css';
 import { supabase } from '../../lib/supabaseClient';
-import { Search, Plus, Package, DollarSign, AlertTriangle, ArrowUpDown, Edit, History, X, ChevronUp, ChevronDown, CheckCircle, Clock, ShoppingCart } from 'lucide-react';
+import { Search, Plus, Package, DollarSign, AlertTriangle, ArrowUpDown, Edit, History, X, ChevronUp, ChevronDown, CheckCircle, Clock, ShoppingCart, Sparkles, UploadCloud, FileText, Trash2, Check, RefreshCw, Layers } from 'lucide-react';
+import { calculateMarkupAndSellPrice, formatTierBracket, getSavedMarkupSettings } from '../../lib/markupUtils';
 
 const CATEGORIES = ['All', 'Brakes', 'Engine', 'Drivetrain', 'Air System', 'Suspension', 'HVAC', 'Fluids', 'Filters'];
 
@@ -24,6 +25,14 @@ export default function PartsPage() {
   const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
   const [selectedPart, setSelectedPart] = useState(null);
   const [selectedRequest, setSelectedRequest] = useState(null);
+
+  // AI Scanner States
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isAiScanning, setIsAiScanning] = useState(false);
+  const [aiScanStep, setAiScanStep] = useState('');
+  const [aiInvoiceData, setAiInvoiceData] = useState(null);
+  const [aiError, setAiError] = useState(null);
+  const [isAiImporting, setIsAiImporting] = useState(false);
 
   // Form States
   const [partForm, setPartForm] = useState({
@@ -151,6 +160,8 @@ export default function PartsPage() {
       binLocation: '',
       cost: '',
       sellPrice: '',
+      markup: '35',
+      appliedTierLabel: '',
       minStock: '2',
       maxStock: '10',
       coreCharge: '0',
@@ -161,6 +172,8 @@ export default function PartsPage() {
 
   const openEditModal = (part) => {
     setSelectedPart(part);
+    const costNum = parseFloat(part.cost) || 0;
+    const calc = calculateMarkupAndSellPrice(costNum);
     setPartForm({
       partNumber: part.partNumber || '',
       category: part.category || 'Brakes',
@@ -169,12 +182,57 @@ export default function PartsPage() {
       binLocation: part.binLocation || '',
       cost: part.cost?.toString() || '',
       sellPrice: part.sellPrice?.toString() || '',
+      markup: part.markup ? part.markup.toString() : calc.markup.toString(),
+      appliedTierLabel: calc.matchedTier ? (calc.matchedTier.label || formatTierBracket(calc.matchedTier)) : `Fallback (${calc.markup}%)`,
       minStock: part.minStock?.toString() || '2',
       maxStock: part.maxStock?.toString() || '10',
       coreCharge: part.coreCharge?.toString() || '0',
       initialQty: part.qtyOnHand?.toString() || '0'
     });
     setIsEditModalOpen(true);
+  };
+
+  const handlePartCostChange = (costVal) => {
+    const c = parseFloat(costVal) || 0;
+    if (costVal === '' || c <= 0) {
+      setPartForm(prev => ({ ...prev, cost: costVal, sellPrice: '', appliedTierLabel: '', markup: '' }));
+      return;
+    }
+    const calc = calculateMarkupAndSellPrice(c);
+    setPartForm(prev => ({
+      ...prev,
+      cost: costVal,
+      sellPrice: calc.sellPrice.toFixed(2),
+      markup: calc.markup.toString(),
+      appliedTierLabel: calc.matchedTier ? (calc.matchedTier.label || formatTierBracket(calc.matchedTier)) : `Fallback (${calc.markup}%)`
+    }));
+  };
+
+  const handlePartSellPriceChange = (sellVal) => {
+    const sell = parseFloat(sellVal) || 0;
+    const cost = parseFloat(partForm.cost) || 0;
+    const markup = cost > 0 ? (((sell - cost) / cost) * 100).toFixed(0) : '35';
+    setPartForm(prev => ({
+      ...prev,
+      sellPrice: sellVal,
+      markup,
+      appliedTierLabel: 'Manual Override'
+    }));
+  };
+
+  const handleReceiveCostChange = (costVal) => {
+    const c = parseFloat(costVal) || 0;
+    if (costVal === '' || c <= 0) {
+      setReceiveForm(prev => ({ ...prev, cost: costVal, sellPrice: '', tierLabel: '' }));
+      return;
+    }
+    const calc = calculateMarkupAndSellPrice(c);
+    setReceiveForm(prev => ({
+      ...prev,
+      cost: costVal,
+      sellPrice: calc.sellPrice.toFixed(2),
+      tierLabel: calc.matchedTier ? (calc.matchedTier.label || formatTierBracket(calc.matchedTier)) : `Fallback (${calc.markup}%)`
+    }));
   };
 
   const openAdjustModal = (part) => {
@@ -191,8 +249,9 @@ export default function PartsPage() {
     e.preventDefault();
     try {
       const cost = parseFloat(partForm.cost) || 0;
-      const sell = parseFloat(partForm.sellPrice) || (cost * 1.3);
-      const markup = cost > 0 ? ((sell - cost) / cost) * 100 : 30;
+      const defaultCalc = calculateMarkupAndSellPrice(cost);
+      const sell = parseFloat(partForm.sellPrice) || defaultCalc.sellPrice;
+      const markup = cost > 0 ? parseFloat((((sell - cost) / cost) * 100).toFixed(1)) : defaultCalc.markup;
       const partNumber = partForm.partNumber?.trim() || `PART-${Date.now().toString().slice(-6)}`;
       const binLocation = partForm.binLocation?.trim() || '-';
 
@@ -394,6 +453,242 @@ export default function PartsPage() {
     }
   };
 
+  // ==========================================================
+  // AI Supplier Invoice & PDF Scanner Handlers
+  // ==========================================================
+  const openAiModal = () => {
+    setAiInvoiceData(null);
+    setAiError(null);
+    setIsAiScanning(false);
+    setIsAiModalOpen(true);
+  };
+
+  const handleAiScanFile = async (file) => {
+    if (!file) return;
+    setIsAiScanning(true);
+    setAiError(null);
+    setAiScanStep('Reading supplier document & extracting text...');
+    
+    try {
+      const { tiers, fallbackMarkup } = getSavedMarkupSettings();
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('tiers', JSON.stringify(tiers));
+      formData.append('fallbackMarkup', fallbackMarkup.toString());
+
+      setAiScanStep('Groq AI parsing line items, quantities & unit costs...');
+      const res = await fetch('/api/parts/ai-scan', {
+        method: 'POST',
+        body: formData
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || 'Failed to scan invoice document');
+      }
+
+      setAiInvoiceData(json);
+    } catch (err) {
+      console.error('AI scan error:', err);
+      setAiError(err.message || 'Error analyzing document');
+    } finally {
+      setIsAiScanning(false);
+    }
+  };
+
+  const handleAiScanSample = async () => {
+    setIsAiScanning(true);
+    setAiError(null);
+    setAiScanStep('Loading sample FleetPride Heavy Duty invoice...');
+
+    try {
+      const { tiers, fallbackMarkup } = getSavedMarkupSettings();
+      const sampleText = `
+FLEETPRIDE COMMERCIAL PARTS
+Invoice Number: FP-2026-98124
+Invoice Date: ${new Date().toISOString().split('T')[0]}
+
+Items:
+1. Part # FL-2051S - Motorcraft Heavy Duty Oil Filter - 6 units - Line Total $90.00
+2. Part # HD-3030-DP - Type 30/30 Air Brake Chamber - 2 units - Line Total $90.00
+3. Part # BRK-8921-X - Heavy Duty Brake Shoe Kit - 4 units - Line Total $320.00
+4. Part # ROT-T6-5W40 - Shell Rotella T6 5W-40 Synthetic 5Gal - 2 units - Line Total $190.00
+
+Total Invoice: $690.00
+      `.trim();
+
+      const formData = new FormData();
+      formData.append('text', sampleText);
+      formData.append('tiers', JSON.stringify(tiers));
+      formData.append('fallbackMarkup', fallbackMarkup.toString());
+
+      setAiScanStep('Groq AI parsing line items, quantities & unit costs...');
+      const res = await fetch('/api/parts/ai-scan', {
+        method: 'POST',
+        body: formData
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || 'Failed to analyze sample invoice');
+      }
+
+      setAiInvoiceData(json);
+    } catch (err) {
+      console.error('AI sample error:', err);
+      setAiError(err.message || 'Error analyzing sample invoice');
+    } finally {
+      setIsAiScanning(false);
+    }
+  };
+
+  const handleAiItemChange = (index, field, value) => {
+    if (!aiInvoiceData || !aiInvoiceData.items) return;
+    const items = [...aiInvoiceData.items];
+    const item = { ...items[index] };
+    const { tiers, fallbackMarkup } = getSavedMarkupSettings();
+
+    if (field === 'quantity') {
+      const q = Math.max(1, parseInt(value) || 1);
+      item.quantity = q;
+      item.totalCost = +(item.unitCost * q).toFixed(2);
+      item.newStock = (item.currentStock || 0) + q;
+    } else if (field === 'unitCost') {
+      const c = Math.max(0, parseFloat(value) || 0);
+      item.unitCost = c;
+      item.totalCost = +(c * item.quantity).toFixed(2);
+      const calc = calculateMarkupAndSellPrice(c, tiers, fallbackMarkup);
+      item.markup = calc.markup;
+      item.sellPrice = calc.sellPrice;
+      item.profit = calc.profit;
+      item.marginPercent = calc.marginPercent;
+      item.tierLabel = calc.matchedTier ? (calc.matchedTier.label || formatTierBracket(calc.matchedTier)) : `Fallback (${calc.markup}%)`;
+    } else if (field === 'sellPrice') {
+      const s = Math.max(0, parseFloat(value) || 0);
+      item.sellPrice = s;
+      item.markup = item.unitCost > 0 ? Math.round(((s - item.unitCost) / item.unitCost) * 100) : 35;
+      item.profit = +(s - item.unitCost).toFixed(2);
+      item.tierLabel = 'Manual Override';
+    } else {
+      item[field] = value;
+    }
+
+    items[index] = item;
+    setAiInvoiceData({
+      ...aiInvoiceData,
+      items,
+      totalInvoiceAmount: items.reduce((s, it) => s + (parseFloat(it.totalCost) || 0), 0),
+      totalPartsCount: items.length,
+      totalUnitsCount: items.reduce((s, it) => s + (parseInt(it.quantity) || 0), 0)
+    });
+  };
+
+  const handleAiDeleteItem = (index) => {
+    if (!aiInvoiceData || !aiInvoiceData.items) return;
+    const items = aiInvoiceData.items.filter((_, i) => i !== index);
+    setAiInvoiceData({
+      ...aiInvoiceData,
+      items,
+      totalInvoiceAmount: items.reduce((s, it) => s + (parseFloat(it.totalCost) || 0), 0),
+      totalPartsCount: items.length,
+      totalUnitsCount: items.reduce((s, it) => s + (parseInt(it.quantity) || 0), 0)
+    });
+  };
+
+  const handleAiAddItem = () => {
+    if (!aiInvoiceData) return;
+    const { tiers, fallbackMarkup } = getSavedMarkupSettings();
+    const defaultCost = 45.00;
+    const calc = calculateMarkupAndSellPrice(defaultCost, tiers, fallbackMarkup);
+    const newItem = {
+      id: `new-${Date.now()}`,
+      partNumber: `PART-${Date.now().toString().slice(-4)}`,
+      description: 'New Replacement Part',
+      category: 'Engine',
+      quantity: 1,
+      unitCost: defaultCost,
+      totalCost: defaultCost,
+      markup: calc.markup,
+      sellPrice: calc.sellPrice,
+      profit: calc.profit,
+      marginPercent: calc.marginPercent,
+      tierLabel: calc.matchedTier ? (calc.matchedTier.label || formatTierBracket(calc.matchedTier)) : `Fallback (${calc.markup}%)`,
+      isExisting: false,
+      currentStock: 0,
+      newStock: 1,
+      binLocation: 'A-01'
+    };
+    const items = [...(aiInvoiceData.items || []), newItem];
+    setAiInvoiceData({
+      ...aiInvoiceData,
+      items,
+      totalInvoiceAmount: items.reduce((s, it) => s + (parseFloat(it.totalCost) || 0), 0),
+      totalPartsCount: items.length,
+      totalUnitsCount: items.reduce((s, it) => s + (parseInt(it.quantity) || 0), 0)
+    });
+  };
+
+  const handleImportAiParts = async () => {
+    if (!aiInvoiceData || !aiInvoiceData.items || aiInvoiceData.items.length === 0) return;
+    setIsAiImporting(true);
+
+    try {
+      let importedCount = 0;
+      let updatedCount = 0;
+
+      for (const item of aiInvoiceData.items) {
+        if (item.isExisting && item.id && !item.id.toString().startsWith('new-')) {
+          // Update existing part
+          const { error } = await supabase
+            .from('parts')
+            .update({
+              qty_on_hand: item.newStock,
+              cost: item.unitCost,
+              sell: item.sellPrice,
+              markup: item.markup,
+              supplier: aiInvoiceData.supplier || item.supplier
+            })
+            .eq('id', item.id);
+
+          if (error) console.warn(`Failed to update part ${item.partNumber}:`, error.message);
+          else updatedCount++;
+        } else {
+          // Insert new part
+          const newPartId = `PART-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
+          const { error } = await supabase
+            .from('parts')
+            .insert([{
+              id: newPartId,
+              part_number: item.partNumber,
+              category: item.category || 'Engine',
+              description: item.description || 'Commercial Replacement Part',
+              supplier: aiInvoiceData.supplier || 'Supplier',
+              bin_location: item.binLocation || 'A-01',
+              cost: item.unitCost,
+              sell: item.sellPrice,
+              markup: item.markup,
+              qty_on_hand: item.quantity,
+              min_stock: 2,
+              max_stock: 10,
+              core_charge: 0
+            }]);
+
+          if (error) console.warn(`Failed to insert new part ${item.partNumber}:`, error.message);
+          else importedCount++;
+        }
+      }
+
+      alert(`✅ Inventory Updated Successfully!\n- ${importedCount} new part(s) added to catalog.\n- ${updatedCount} existing part(s) restocked.`);
+      setIsAiModalOpen(false);
+      setAiInvoiceData(null);
+      fetchPartsAndRequests();
+    } catch (err) {
+      alert(`Error importing parts to inventory: ${err.message}`);
+    } finally {
+      setIsAiImporting(false);
+    }
+  };
+
   const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
 
   return (
@@ -405,10 +700,31 @@ export default function PartsPage() {
             Manage warehouse inventory, track stock levels, and order parts requested by mechanics.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={openAddModal}>
-          <Plus size={20} />
-          Add New Part
-        </button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button 
+            type="button"
+            className="btn" 
+            onClick={openAiModal}
+            style={{ 
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', 
+              color: 'white', 
+              border: 'none',
+              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            <Sparkles size={18} />
+            AI Scan Supplier Invoice / PDF
+          </button>
+          <button className="btn btn-primary" onClick={openAddModal}>
+            <Plus size={20} />
+            Add New Part
+          </button>
+        </div>
       </header>
 
       {/* Tabs */}
@@ -745,12 +1061,14 @@ export default function PartsPage() {
                       step="0.01"
                       className={styles.input}
                       value={receiveForm.cost}
-                      onChange={(e) => {
-                        const c = parseFloat(e.target.value) || 0;
-                        setReceiveForm({ ...receiveForm, cost: e.target.value, sellPrice: (c * 1.35).toFixed(2) });
-                      }}
+                      onChange={(e) => handleReceiveCostChange(e.target.value)}
                       required
                     />
+                    {receiveForm.tierLabel && (
+                      <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, marginTop: '3px' }}>
+                        ⚡ Default Markup: {receiveForm.tierLabel}
+                      </span>
+                    )}
                   </div>
                   <div className={styles.formGroup}>
                     <label className={styles.label}>Billable Sell Price ($)</label>
@@ -904,28 +1222,37 @@ export default function PartsPage() {
                     />
                   </div>
                   <div className={styles.formGroup}>
-                    <label className={styles.label}>Cost Price ($)</label>
+                    <label className={styles.label}>Supplier Cost Price ($)</label>
                     <input
                       type="number"
                       step="0.01"
                       className={styles.input}
                       value={partForm.cost}
-                      onChange={(e) => {
-                        const c = parseFloat(e.target.value) || 0;
-                        setPartForm({ ...partForm, cost: e.target.value, sellPrice: (c * 1.35).toFixed(2) });
-                      }}
+                      onChange={(e) => handlePartCostChange(e.target.value)}
                       required
                       placeholder="45.00"
                     />
+                    {partForm.appliedTierLabel && (
+                      <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, marginTop: '3px' }}>
+                        ⚡ Applied Tier: {partForm.appliedTierLabel} ({partForm.markup}% Markup)
+                      </span>
+                    )}
                   </div>
                   <div className={styles.formGroup}>
-                    <label className={styles.label}>Sell Price ($)</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label className={styles.label}>Billable Sell Price ($)</label>
+                      {partForm.markup && (
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+                          Markup: {partForm.markup}%
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="number"
                       step="0.01"
                       className={styles.input}
                       value={partForm.sellPrice}
-                      onChange={(e) => setPartForm({ ...partForm, sellPrice: e.target.value })}
+                      onChange={(e) => handlePartSellPriceChange(e.target.value)}
                       placeholder="65.00"
                     />
                   </div>
@@ -971,6 +1298,328 @@ export default function PartsPage() {
           </div>
         </div>
       )}
+
+      {/* AI Supplier Invoice & PDF Scanner Modal */}
+      {isAiModalOpen && (
+        <div className={styles.modalOverlay} style={{ zIndex: 1050 }}>
+          <div className={styles.aiModalContent}>
+            <div className={styles.modalHeader} style={{ background: 'linear-gradient(90deg, #F8FAFC 0%, #EFF6FF 100%)' }}>
+              <div className={styles.aiHeaderGradient}>
+                <div style={{ background: '#6366f1', color: 'white', borderRadius: '8px', padding: '8px', display: 'flex' }}>
+                  <Sparkles size={22} />
+                </div>
+                <div>
+                  <h3 className={styles.modalTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    AI Supplier Invoice & PDF Scanner
+                    <span style={{ fontSize: '11px', background: '#EEF2FF', color: '#6366f1', padding: '2px 8px', borderRadius: '12px', border: '1px solid #C7D2FE', fontWeight: 600 }}>
+                      Powered by Groq AI
+                    </span>
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                    Auto-read invoice PDF, compute single unit costs, apply shop tiered markup, and add directly to inventory.
+                  </p>
+                </div>
+              </div>
+              <button className={styles.closeBtn} onClick={() => { setIsAiModalOpen(false); setAiInvoiceData(null); }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className={styles.modalBody} style={{ padding: '1.25rem' }}>
+              {aiError && (
+                <div style={{ padding: '12px 16px', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '8px', color: '#991B1B', marginBottom: '1rem', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertTriangle size={18} />
+                  <span>{aiError}</span>
+                </div>
+              )}
+
+              {/* State 1: Scanning / Radar progress */}
+              {isAiScanning && (
+                <div className={styles.aiScanningContainer}>
+                  <div className={styles.aiRadarPulse}>
+                    <Sparkles size={36} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+                      AI Invoice Intelligence at Work
+                    </h4>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
+                      {aiScanStep}
+                    </p>
+                  </div>
+                  <div style={{ width: '220px', height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ width: '75%', height: '100%', background: 'linear-gradient(90deg, #6366f1, #8b5cf6)', borderRadius: '3px', animation: 'pulse 1.5s infinite' }}></div>
+                  </div>
+                </div>
+              )}
+
+              {/* State 2: Upload Dropzone when no data yet */}
+              {!isAiScanning && !aiInvoiceData && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div 
+                    className={styles.aiDropzone}
+                    onClick={() => document.getElementById('ai-file-input')?.click()}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                        handleAiScanFile(e.dataTransfer.files[0]);
+                      }
+                    }}
+                  >
+                    <input 
+                      id="ai-file-input"
+                      type="file" 
+                      accept=".pdf,.png,.jpg,.jpeg,.txt" 
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleAiScanFile(e.target.files[0]);
+                        }
+                      }}
+                    />
+                    <div className={styles.aiDropzoneIcon}>
+                      <UploadCloud size={28} />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 600, color: '#1E293B' }}>
+                        Drag & drop supplier invoice or parts PDF here
+                      </h4>
+                      <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
+                        Supports PDF packing slips, supplier bills (FleetPride, Napa, Cummins, LKQ), or click to browse
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <FileText size={20} color="#6366f1" />
+                      <div>
+                        <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>
+                          Want to test without a physical document?
+                        </p>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#64748B' }}>
+                          Simulate an incoming heavy-duty parts delivery from FleetPride Commercial Parts.
+                        </p>
+                      </div>
+                    </div>
+                    <button 
+                      type="button"
+                      className="btn btn-outline" 
+                      onClick={handleAiScanSample}
+                      style={{ fontSize: '12px', padding: '8px 14px', borderColor: '#C7D2FE', color: '#4F46E5', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      <Sparkles size={14} style={{ marginRight: '6px' }} />
+                      Load Sample Supplier Invoice
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* State 3: Parsed Invoice Review Table */}
+              {!isAiScanning && aiInvoiceData && (
+                <div>
+                  {/* Summary Bar */}
+                  <div className={styles.aiSummaryBar}>
+                    <div className={styles.aiSummaryField}>
+                      <label className={styles.aiSummaryLabel}>Supplier / Vendor</label>
+                      <input 
+                        className={styles.aiSummaryInput}
+                        value={aiInvoiceData.supplier || ''}
+                        onChange={(e) => setAiInvoiceData({ ...aiInvoiceData, supplier: e.target.value })}
+                        placeholder="Supplier Name"
+                      />
+                    </div>
+                    <div className={styles.aiSummaryField}>
+                      <label className={styles.aiSummaryLabel}>Invoice / PO #</label>
+                      <input 
+                        className={styles.aiSummaryInput}
+                        value={aiInvoiceData.invoiceNumber || ''}
+                        onChange={(e) => setAiInvoiceData({ ...aiInvoiceData, invoiceNumber: e.target.value })}
+                        placeholder="Invoice #"
+                      />
+                    </div>
+                    <div className={styles.aiSummaryField}>
+                      <label className={styles.aiSummaryLabel}>Document Total</label>
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: '#0F172A', padding: '6px 0' }}>
+                        {formatCurrency(aiInvoiceData.totalInvoiceAmount)}
+                      </div>
+                    </div>
+                    <div className={styles.aiSummaryField}>
+                      <label className={styles.aiSummaryLabel}>Total Received</label>
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: '#2563EB', padding: '6px 0' }}>
+                        {aiInvoiceData.totalUnitsCount || aiInvoiceData.items.reduce((s, it) => s + (parseInt(it.quantity) || 0), 0)} units ({aiInvoiceData.items.length} SKUs)
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Review Table */}
+                  <div className={styles.aiTableContainer}>
+                    <table className={styles.aiTable}>
+                      <thead>
+                        <tr>
+                          <th style={{ width: '14%' }}>Part # / SKU</th>
+                          <th style={{ width: '22%' }}>Description</th>
+                          <th style={{ width: '12%' }}>Category</th>
+                          <th style={{ width: '7%', textAlign: 'center' }}>Qty</th>
+                          <th style={{ width: '10%' }}>Unit Cost ($)</th>
+                          <th style={{ width: '13%' }}>Tier Markup</th>
+                          <th style={{ width: '10%' }}>Sell Price ($)</th>
+                          <th style={{ width: '10%' }}>Inventory Match</th>
+                          <th style={{ width: '2%', textAlign: 'center' }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {aiInvoiceData.items.map((item, idx) => (
+                          <tr key={item.id || idx}>
+                            <td>
+                              <input 
+                                className={styles.aiInputInline}
+                                value={item.partNumber}
+                                onChange={(e) => handleAiItemChange(idx, 'partNumber', e.target.value)}
+                                style={{ fontWeight: 600, fontFamily: 'monospace' }}
+                              />
+                            </td>
+                            <td>
+                              <input 
+                                className={styles.aiInputInline}
+                                value={item.description}
+                                onChange={(e) => handleAiItemChange(idx, 'description', e.target.value)}
+                              />
+                            </td>
+                            <td>
+                              <select 
+                                className={styles.aiInputInline}
+                                value={item.category}
+                                onChange={(e) => handleAiItemChange(idx, 'category', e.target.value)}
+                              >
+                                {CATEGORIES.filter(c => c !== 'All').map(cat => (
+                                  <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td>
+                              <input 
+                                type="number"
+                                min="1"
+                                className={styles.aiInputInline}
+                                value={item.quantity}
+                                onChange={(e) => handleAiItemChange(idx, 'quantity', e.target.value)}
+                                style={{ textAlign: 'center', fontWeight: 600 }}
+                              />
+                            </td>
+                            <td>
+                              <input 
+                                type="number"
+                                step="0.01"
+                                className={styles.aiInputInline}
+                                value={item.unitCost}
+                                onChange={(e) => handleAiItemChange(idx, 'unitCost', e.target.value)}
+                                style={{ fontWeight: 600 }}
+                              />
+                            </td>
+                            <td>
+                              <span className={styles.tierPill} title="Applied tiered bracket markup">
+                                ⚡ {item.tierLabel || `${item.markup}%`}
+                              </span>
+                            </td>
+                            <td>
+                              <input 
+                                type="number"
+                                step="0.01"
+                                className={styles.aiInputInline}
+                                value={item.sellPrice}
+                                onChange={(e) => handleAiItemChange(idx, 'sellPrice', e.target.value)}
+                                style={{ fontWeight: 700, color: '#16A34A' }}
+                              />
+                            </td>
+                            <td>
+                              {item.isExisting ? (
+                                <span className={styles.badgeExisting} title={`Currently in warehouse: ${item.currentStock} units`}>
+                                  <RefreshCw size={11} />
+                                  Update (+{item.quantity})
+                                </span>
+                              ) : (
+                                <span className={styles.badgeNew}>
+                                  <Plus size={11} />
+                                  New Part
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button 
+                                type="button"
+                                onClick={() => handleAiDeleteItem(idx)}
+                                style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px' }}
+                                title="Remove line item"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                    <button 
+                      type="button" 
+                      className="btn btn-outline" 
+                      onClick={handleAiAddItem}
+                      style={{ fontSize: '12px', padding: '6px 12px', cursor: 'pointer' }}
+                    >
+                      <Plus size={14} style={{ marginRight: '4px' }} />
+                      Add Another Line Item
+                    </button>
+
+                    <button 
+                      type="button" 
+                      onClick={() => setAiInvoiceData(null)}
+                      style={{ fontSize: '12px', color: '#64748B', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      Scan a different document
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className={styles.modalFooter} style={{ borderTop: '1px solid #E2E8F0', padding: '1rem 1.5rem', background: '#F8FAFC' }}>
+              <button 
+                type="button" 
+                className="btn btn-outline" 
+                onClick={() => { setIsAiModalOpen(false); setAiInvoiceData(null); }}
+              >
+                Cancel
+              </button>
+
+              {aiInvoiceData && (
+                <button 
+                  type="button" 
+                  className="btn btn-primary"
+                  onClick={handleImportAiParts}
+                  disabled={isAiImporting || !aiInvoiceData.items || aiInvoiceData.items.length === 0}
+                  style={{ 
+                    background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontWeight: 600,
+                    padding: '8px 20px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Package size={18} />
+                  {isAiImporting ? 'Importing Parts...' : `Confirm & Import ${aiInvoiceData.items.length} Parts to Inventory`}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

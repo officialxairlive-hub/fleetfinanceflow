@@ -18,11 +18,21 @@ import {
   Trash2,
   CheckCircle2,
   Eye,
-  RefreshCw
+  RefreshCw,
+  Calculator,
+  Percent,
+  Sparkles
 } from 'lucide-react';
 import styles from './settings.module.css';
 import { supabase } from '../../lib/supabaseClient';
 import { shopSettings, labourRateTypes } from '../../lib/demoData';
+import { 
+  DEFAULT_MARKUP_TIERS, 
+  DEFAULT_FALLBACK_MARKUP, 
+  PRESET_MATRICES, 
+  calculateMarkupAndSellPrice, 
+  formatTierBracket 
+} from '../../lib/markupUtils';
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('shop');
@@ -65,8 +75,16 @@ export default function SettingsPage() {
     phone: '(604) 555-0100',
     email: 'service@roadreadyrepair.ca',
     website: 'www.fleetfinanceflow.com',
-    taxNumber: 'GST # 783920194 RT0001'
+    taxNumber: 'GST # 783920194 RT0001',
+    defaultLabourRate: 145,
+    defaultPartsMarkup: 35,
+    shopSupplyRate: 5,
+    envFee: 10,
+    partsMarkupTiers: DEFAULT_MARKUP_TIERS
   });
+
+  const [testCost, setTestCost] = useState('75.00');
+  const [activePreset, setActivePreset] = useState('standard');
 
   const [stripeConnecting, setStripeConnecting] = useState(false);
   const [stripeConnected, setStripeConnected] = useState(true); // Connected with test keys
@@ -431,6 +449,63 @@ export default function SettingsPage() {
     }
   };
 
+  const handleTierChange = (index, field, val) => {
+    setShopForm(prev => {
+      const updatedTiers = [...(prev.partsMarkupTiers || DEFAULT_MARKUP_TIERS)];
+      const current = { ...updatedTiers[index] };
+      if (field === 'markup') {
+        current.markup = Math.max(0, parseFloat(val) || 0);
+      } else if (field === 'minCost') {
+        current.minCost = Math.max(0, parseFloat(val) || 0);
+      } else if (field === 'maxCost') {
+        current.maxCost = val === '' ? null : Math.max(0, parseFloat(val) || 0);
+      } else if (field === 'label') {
+        current.label = val;
+      }
+      updatedTiers[index] = current;
+      return { ...prev, partsMarkupTiers: updatedTiers };
+    });
+  };
+
+  const handleAddTier = () => {
+    setShopForm(prev => {
+      const currentTiers = prev.partsMarkupTiers || DEFAULT_MARKUP_TIERS;
+      const lastTier = currentTiers[currentTiers.length - 1];
+      const nextMin = lastTier && lastTier.maxCost != null ? +(parseFloat(lastTier.maxCost) + 0.01).toFixed(2) : 1000.01;
+      const nextMax = +(nextMin + 500).toFixed(2);
+      const newTier = {
+        id: `tier-${Date.now().toString().slice(-4)}`,
+        minCost: nextMin,
+        maxCost: nextMax,
+        markup: 25,
+        label: `$${nextMin.toFixed(2)} – $${nextMax.toFixed(2)}`
+      };
+      return { ...prev, partsMarkupTiers: [...currentTiers, newTier] };
+    });
+  };
+
+  const handleRemoveTier = (index) => {
+    setShopForm(prev => {
+      const currentTiers = prev.partsMarkupTiers || DEFAULT_MARKUP_TIERS;
+      if (currentTiers.length <= 1) {
+        alert('You must keep at least one parts markup tier.');
+        return prev;
+      }
+      const filtered = currentTiers.filter((_, i) => i !== index);
+      return { ...prev, partsMarkupTiers: filtered };
+    });
+  };
+
+  const handleApplyPreset = (key) => {
+    const preset = PRESET_MATRICES[key];
+    if (!preset) return;
+    setActivePreset(key);
+    setShopForm(prev => ({
+      ...prev,
+      partsMarkupTiers: JSON.parse(JSON.stringify(preset.tiers))
+    }));
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     await handleSaveShopInfo(e);
@@ -703,20 +778,248 @@ export default function SettingsPage() {
                 <div className={styles.formGrid}>
                   <div className={styles.formGroup}>
                     <label>Default Labour Rate ($/hr)</label>
-                    <input type="number" className={styles.input} defaultValue={settings.defaultLabourRate} />
+                    <input 
+                      type="number" 
+                      className={styles.input} 
+                      value={shopForm.defaultLabourRate || 145} 
+                      onChange={(e) => setShopForm({ ...shopForm, defaultLabourRate: parseFloat(e.target.value) || 0 })}
+                    />
                   </div>
                   <div className={styles.formGroup}>
-                    <label>Default Parts Markup (%)</label>
-                    <input type="number" className={styles.input} defaultValue="40" />
+                    <label>Fallback Parts Markup (%) <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>(When outside tiered brackets)</span></label>
+                    <input 
+                      type="number" 
+                      className={styles.input} 
+                      value={shopForm.defaultPartsMarkup ?? 35} 
+                      onChange={(e) => setShopForm({ ...shopForm, defaultPartsMarkup: parseFloat(e.target.value) || 0 })}
+                    />
                   </div>
                   <div className={styles.formGroup}>
                     <label>Shop Supply Rate (%)</label>
-                    <input type="number" className={styles.input} defaultValue="5" />
+                    <input 
+                      type="number" 
+                      className={styles.input} 
+                      value={shopForm.shopSupplyRate || 5} 
+                      onChange={(e) => setShopForm({ ...shopForm, shopSupplyRate: parseFloat(e.target.value) || 0 })}
+                    />
                   </div>
                   <div className={styles.formGroup}>
                     <label>Environmental Fee ($)</label>
-                    <input type="number" className={styles.input} defaultValue="10" />
+                    <input 
+                      type="number" 
+                      className={styles.input} 
+                      value={shopForm.envFee || 10} 
+                      onChange={(e) => setShopForm({ ...shopForm, envFee: parseFloat(e.target.value) || 0 })}
+                    />
                   </div>
+                </div>
+              </div>
+
+              {/* Tiered Parts Markup Matrix */}
+              <div className={styles.card}>
+                <div className={styles.matrixHeader}>
+                  <div>
+                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Percent size={18} color="var(--color-primary)" />
+                      Parts Pricing & Tiered Markup Matrix
+                    </h3>
+                    <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                      Set default markup on parts based on supplier part cost. When a supplier invoice or part cost falls between <strong>Cost (From)</strong> and <strong>Cost (To)</strong>, the system automatically calculates the billable customer sell price.
+                    </p>
+                  </div>
+                  <div className={styles.presetGroup}>
+                    <span className={styles.presetLabel}>Quick Presets:</span>
+                    {Object.entries(PRESET_MATRICES).map(([k, p]) => (
+                      <button
+                        key={k}
+                        type="button"
+                        className={`${styles.presetBtn} ${activePreset === k ? styles.presetBtnActive : ''}`}
+                        onClick={() => handleApplyPreset(k)}
+                        title={p.description}
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ overflowX: 'auto' }}>
+                  <table className={styles.matrixTable}>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '22%' }}>Bracket / Tier Name</th>
+                        <th style={{ width: '20%' }}>Supplier Cost From ($)</th>
+                        <th style={{ width: '20%' }}>Supplier Cost To ($)</th>
+                        <th style={{ width: '18%' }}>Default Markup (%)</th>
+                        <th style={{ width: '12%' }}>Gross Margin</th>
+                        <th style={{ width: '8%', textAlign: 'center' }}>Remove</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(shopForm.partsMarkupTiers || DEFAULT_MARKUP_TIERS).map((tier, idx) => {
+                        const markupVal = parseFloat(tier.markup) || 0;
+                        const marginVal = markupVal > 0 ? ((markupVal / (100 + markupVal)) * 100).toFixed(1) : '0.0';
+                        return (
+                          <tr key={tier.id || idx}>
+                            <td>
+                              <input
+                                type="text"
+                                className={styles.input}
+                                value={tier.label || ''}
+                                placeholder="e.g. Under $25"
+                                onChange={(e) => handleTierChange(idx, 'label', e.target.value)}
+                                style={{ padding: '6px 10px', fontSize: '13px' }}
+                              />
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>$</span>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  className={styles.input}
+                                  value={tier.minCost ?? 0}
+                                  onChange={(e) => handleTierChange(idx, 'minCost', e.target.value)}
+                                  style={{ padding: '6px 10px', fontSize: '13px' }}
+                                />
+                              </div>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>$</span>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  className={styles.input}
+                                  value={tier.maxCost != null ? tier.maxCost : ''}
+                                  placeholder="No upper limit (+)"
+                                  onChange={(e) => handleTierChange(idx, 'maxCost', e.target.value)}
+                                  style={{ padding: '6px 10px', fontSize: '13px' }}
+                                />
+                              </div>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <input
+                                  type="number"
+                                  step="1"
+                                  min="0"
+                                  className={styles.input}
+                                  value={tier.markup ?? 30}
+                                  onChange={(e) => handleTierChange(idx, 'markup', e.target.value)}
+                                  style={{ padding: '6px 10px', fontSize: '13px', fontWeight: 700 }}
+                                />
+                                <span style={{ fontWeight: 700, color: 'var(--color-text-secondary)' }}>%</span>
+                              </div>
+                            </td>
+                            <td>
+                              <span className={styles.marginPill}>
+                                {marginVal}%
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                className="btn btn-outline"
+                                onClick={() => handleRemoveTier(idx)}
+                                style={{ padding: '6px 8px', color: '#ef4444', borderColor: '#fecaca' }}
+                                title="Remove bracket tier"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginTop: '10px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={handleAddTier}
+                    style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Plus size={15} /> Add Cost Range / Tier
+                  </button>
+
+                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                    Fallback markup when outside ranges: <strong>{shopForm.defaultPartsMarkup ?? 35}%</strong>
+                  </span>
+                </div>
+
+                {/* Interactive Simulator */}
+                {(() => {
+                  const sim = calculateMarkupAndSellPrice(testCost, shopForm.partsMarkupTiers, shopForm.defaultPartsMarkup);
+                  return (
+                    <div className={styles.simulatorBox}>
+                      <div className={styles.simTitle}>
+                        <Calculator size={16} color="#2563eb" />
+                        Live Pricing Matrix Simulator
+                      </div>
+                      <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#475569' }}>
+                        Type any sample part cost from a supplier to verify how your default markup and customer sell price will calculate:
+                      </p>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <label style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
+                            Supplier Part Cost ($ CAD):
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className={styles.input}
+                            value={testCost}
+                            onChange={(e) => setTestCost(e.target.value)}
+                            style={{ width: '120px', padding: '6px 10px', fontWeight: 700, backgroundColor: 'white' }}
+                          />
+                        </div>
+                        <span style={{ fontSize: '12px', color: '#64748b' }}>(Try $15, $75, $250, $850, or $1500)</span>
+                      </div>
+
+                      <div className={styles.simGrid}>
+                        <div className={styles.simCard}>
+                          <div className={styles.simCardLabel}>Matched Bracket</div>
+                          <div className={styles.simCardValue}>
+                            {sim.matchedTier ? (sim.matchedTier.label || formatTierBracket(sim.matchedTier)) : 'Fallback Default'}
+                          </div>
+                        </div>
+
+                        <div className={styles.simCard}>
+                          <div className={styles.simCardLabel}>Applied Markup</div>
+                          <div className={`${styles.simCardValue} ${styles.simCardValueHighlight}`}>
+                            {sim.markup}%
+                          </div>
+                        </div>
+
+                        <div className={styles.simCard}>
+                          <div className={styles.simCardLabel}>Customer Sell Price</div>
+                          <div className={styles.simCardValue}>
+                            ${sim.sellPrice.toFixed(2)} CAD
+                          </div>
+                        </div>
+
+                        <div className={styles.simCard}>
+                          <div className={styles.simCardLabel}>Shop Profit (Margin)</div>
+                          <div className={`${styles.simCardValue} ${styles.simCardValueProfit}`}>
+                            +${sim.profit.toFixed(2)} ({sim.marginPercent}%)
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div className={styles.cardFooter}>
+                  <button className="btn btn-primary" onClick={handleSave} disabled={shopSaveLoading}>
+                    <Save size={16} /> Save Rates & Markup Matrix
+                  </button>
                 </div>
               </div>
 
@@ -742,7 +1045,9 @@ export default function SettingsPage() {
                 </table>
                 <button className="btn btn-outline" style={{ marginTop: '1rem' }}><Plus size={16}/> Add Rate Type</button>
                 <div className={styles.cardFooter}>
-                  <button className="btn btn-primary" onClick={handleSave}>Save Changes</button>
+                  <button className="btn btn-primary" onClick={handleSave} disabled={shopSaveLoading}>
+                    <Save size={16} /> Save Changes
+                  </button>
                 </div>
               </div>
             </div>

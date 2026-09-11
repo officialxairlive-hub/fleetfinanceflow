@@ -590,26 +590,46 @@ export default function ApprovalPage() {
           </div>
         </div>
 
-        {/* 4. Diagnostics & Reported Complaints */}
+        {/* 4. Diagnostics & Reported Complaints (The 3 C's) */}
         <div className={styles.card}>
-          <div className={styles.section}>
-            <h4 className={styles.sectionTitle}>Reported Concern / Complaint</h4>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: 'var(--color-text)' }}>
+              Service & Diagnostic Report
+            </h3>
+            <span style={{ fontSize: '11px', fontWeight: 700, backgroundColor: '#E0F2FE', color: '#0369A1', padding: '3px 8px', borderRadius: '12px' }}>
+              Fault • Cause • Correction
+            </span>
+          </div>
+
+          <div className={styles.section} style={{ marginBottom: '12px' }}>
+            <h4 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ backgroundColor: '#FEE2E2', color: '#991B1B', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                1. FAULT
+              </span>
+              <span>Reported Concern / Complaint</span>
+            </h4>
             <p className={styles.sectionText}>{order.complaint || 'Diagnostic inspection and mechanical evaluation.'}</p>
           </div>
 
-          {order.cause && (
-            <div className={styles.section}>
-              <h4 className={styles.sectionTitle}>Diagnostic Cause</h4>
-              <p className={styles.sectionText}>{order.cause}</p>
-            </div>
-          )}
+          <div className={styles.section} style={{ marginBottom: '12px' }}>
+            <h4 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                2. CAUSE
+              </span>
+              <span>Diagnostic Cause & Teardown Findings</span>
+            </h4>
+            <p className={styles.sectionText}>{order.cause || 'Mechanical inspection and component testing completed.'}</p>
+          </div>
 
-          {order.correction && (
-            <div className={styles.section}>
-              <h4 className={styles.sectionTitle}>Correction & Services Rendered</h4>
-              <p className={styles.sectionText}>{order.correction}</p>
-            </div>
-          )}
+          <div className={styles.section}>
+            <h4 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ backgroundColor: '#DCFCE7', color: '#166534', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                3. CORRECTION
+              </span>
+              <span>Correction & Services Rendered</span>
+            </h4>
+            <p className={styles.sectionText}>{order.correction || 'Certified service completed and road tested OK.'}</p>
+          </div>
         </div>
 
         {/* 5. Online Invoicing & Instant Payment (If Invoiced or Paid) */}

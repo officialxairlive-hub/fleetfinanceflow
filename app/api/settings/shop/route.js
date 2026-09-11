@@ -24,7 +24,16 @@ const DEFAULT_SHOP_INFO = {
   phone: '(604) 555-0100',
   email: 'service@roadreadyrepair.ca',
   website: 'www.fleetfinanceflow.com',
-  taxNumber: 'GST # 783920194 RT0001'
+  taxNumber: 'GST # 783920194 RT0001',
+  defaultLabourRate: 145,
+  defaultPartsMarkup: 35,
+  partsMarkupTiers: [
+    { id: 'tier-1', minCost: 0, maxCost: 25, markup: 60, label: 'Under $25.00' },
+    { id: 'tier-2', minCost: 25.01, maxCost: 100, markup: 50, label: '$25.01 – $100.00' },
+    { id: 'tier-3', minCost: 100.01, maxCost: 300, markup: 40, label: '$100.01 – $300.00' },
+    { id: 'tier-4', minCost: 300.01, maxCost: 1000, markup: 30, label: '$300.01 – $1,000.00' },
+    { id: 'tier-5', minCost: 1000.01, maxCost: null, markup: 20, label: '$1,000.01 and above' }
+  ]
 };
 
 // GET: Retrieve saved shop information

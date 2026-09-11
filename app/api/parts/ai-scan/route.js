@@ -1,0 +1,281 @@
+import { Groq } from 'groq-sdk';
+import { PDFParse } from 'pdf-parse';
+import { createClient } from '@supabase/supabase-js';
+import { calculateMarkupAndSellPrice, DEFAULT_MARKUP_TIERS, DEFAULT_FALLBACK_MARKUP } from '../../../lib/markupUtils.js';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+if (typeof global.WebSocket === 'undefined') {
+  global.WebSocket = class DummyWebSocket {};
+}
+
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  try {
+    return createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+  } catch (e) {
+    console.warn('Could not initialize Supabase client in ai-scan:', e);
+    return null;
+  }
+}
+
+const ALLOWED_CATEGORIES = ['Brakes', 'Engine', 'Drivetrain', 'Air System', 'Suspension', 'HVAC', 'Fluids', 'Filters'];
+
+export async function POST(request) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file');
+    const rawText = formData.get('text');
+    const customTiersRaw = formData.get('tiers');
+    const fallbackMarkupRaw = formData.get('fallbackMarkup');
+
+    let tiers = DEFAULT_MARKUP_TIERS;
+    let fallbackMarkup = DEFAULT_FALLBACK_MARKUP;
+
+    if (customTiersRaw) {
+      try {
+        const parsed = JSON.parse(customTiersRaw);
+        if (Array.isArray(parsed) && parsed.length > 0) tiers = parsed;
+      } catch (e) {
+        console.warn('Could not parse custom tiers:', e);
+      }
+    }
+    if (fallbackMarkupRaw) {
+      const parsedFb = parseFloat(fallbackMarkupRaw);
+      if (!isNaN(parsedFb)) fallbackMarkup = parsedFb;
+    }
+
+    let invoiceText = '';
+
+    // 1. Extract text from uploaded document or raw payload
+    if (rawText && typeof rawText === 'string' && rawText.trim().length > 0) {
+      invoiceText = rawText.trim();
+    } else if (file && typeof file === 'object' && typeof file.arrayBuffer === 'function') {
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const fileName = (file.name || '').toLowerCase();
+      const fileType = (file.type || '').toLowerCase();
+
+      if (fileType.includes('pdf') || fileName.endsWith('.pdf')) {
+        try {
+          const parser = new PDFParse({ data: buffer });
+          const pdfResult = await parser.getText();
+          invoiceText = pdfResult.text || '';
+        } catch (pdfErr) {
+          console.error('PDF text extraction error:', pdfErr);
+          throw new Error(`Failed to extract text from PDF (${pdfErr.message}). Please ensure the PDF contains readable text or try another file.`);
+        }
+      } else {
+        // Plain text, CSV, or markdown file
+        invoiceText = buffer.toString('utf-8');
+      }
+    }
+
+    if (!invoiceText || invoiceText.trim().length < 5) {
+      return Response.json(
+        { error: 'No readable invoice text found in uploaded document. Please upload a PDF with text, or paste invoice text.' },
+        { status: 400 }
+      );
+    }
+
+    // 2. Call Groq AI to parse supplier invoice into structured JSON
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      return Response.json(
+        { error: 'Groq API key not configured. Please set GROQ_API_KEY in .env.local' },
+        { status: 500 }
+      );
+    }
+    const groq = new Groq({ apiKey });
+
+    let parsedResult = null;
+
+    const systemPrompt = `You are an expert commercial fleet and automotive parts invoice parser.
+Extract the following information from the invoice text into a valid JSON object:
+- supplier: company or vendor name (e.g. FleetPride, Napa, Cummins, Freightliner, LKQ, etc.)
+- invoiceNumber: invoice, PO, or order number
+- invoiceDate: date of invoice (e.g. YYYY-MM-DD or as printed)
+- totalInvoiceAmount: total invoice dollar amount as a number
+- items: array of line items with:
+  - partNumber: manufacturer SKU or supplier part number
+  - description: description / part name
+  - category: categorize into one of: 'Brakes', 'Engine', 'Drivetrain', 'Air System', 'Suspension', 'HVAC', 'Fluids', 'Filters'
+  - quantity: integer units received (>= 1)
+  - totalCost: total line cost as a number
+  - unitCost: cost for a single unit as a number. If not printed, calculate as totalCost / quantity.
+
+Return strictly a valid JSON object. Do not include markdown code block backticks.`;
+
+    // Try Primary Model: Qwen 3.6 27B
+    try {
+      const completion = await groq.chat.completions.create({
+        model: 'qwen/qwen3.6-27b',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Parse this parts supplier invoice into structured JSON:\n\n${invoiceText.slice(0, 8000)}` }
+        ],
+        temperature: 0.1,
+        max_completion_tokens: 800
+      });
+
+      let rawContent = completion.choices[0]?.message?.content || '';
+      // Strip <think> tags if present
+      rawContent = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+      const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsedResult = JSON.parse(jsonMatch[0]);
+      } else {
+        parsedResult = JSON.parse(rawContent);
+      }
+    } catch (primaryErr) {
+      console.warn('Qwen model parsing failed or rate-limited, falling back to compound-mini:', primaryErr.message);
+
+      // Fallback Model: groq/compound-mini
+      try {
+        const fallbackComp = await groq.chat.completions.create({
+          model: 'groq/compound-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Parse this parts supplier invoice into structured JSON:\n\n${invoiceText.slice(0, 8000)}` }
+          ],
+          temperature: 0.1,
+          max_tokens: 800,
+          response_format: { type: 'json_object' }
+        });
+
+        const fallbackContent = fallbackComp.choices[0]?.message?.content || '{}';
+        parsedResult = JSON.parse(fallbackContent);
+      } catch (fallbackErr) {
+        console.error('Groq AI fallback also failed:', fallbackErr);
+        throw new Error(`AI Invoice parsing failed: ${fallbackErr.message}`);
+      }
+    }
+
+    if (!parsedResult || !Array.isArray(parsedResult.items)) {
+      return Response.json(
+        { error: 'Could not detect structured parts line items in the invoice text.' },
+        { status: 422 }
+      );
+    }
+
+    // 3. Query Supabase to cross-reference existing catalog parts
+    const existingPartsMap = new Map();
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        const { data: existingParts, error: partsErr } = await supabase
+          .from('parts')
+          .select('id, part_number, description, qty_on_hand, cost, sell, bin_location');
+
+        if (!partsErr && Array.isArray(existingParts)) {
+          for (const p of existingParts) {
+            if (p.part_number) {
+              existingPartsMap.set(p.part_number.trim().toLowerCase(), p);
+            }
+          }
+        }
+      } catch (dbErr) {
+        console.warn('Could not fetch existing parts from Supabase:', dbErr.message);
+      }
+    }
+
+    // 4. Calculate unit cost, apply tiered markup matrix, and match with inventory
+    const processedItems = parsedResult.items.map((item, index) => {
+      const partNumber = (item.partNumber || `PART-${Date.now().toString().slice(-4)}-${index + 1}`).trim();
+      const description = (item.description || 'Heavy Duty Replacement Part').trim();
+      
+      // Match category
+      let category = item.category || 'Engine';
+      if (!ALLOWED_CATEGORIES.includes(category)) {
+        // Find best match or fallback
+        const lowerDesc = description.toLowerCase();
+        if (lowerDesc.includes('brake') || lowerDesc.includes('rotor') || lowerDesc.includes('shoe') || lowerDesc.includes('pad')) {
+          category = 'Brakes';
+        } else if (lowerDesc.includes('filter') || lowerDesc.includes('fl-')) {
+          category = 'Filters';
+        } else if (lowerDesc.includes('oil') || lowerDesc.includes('fluid') || lowerDesc.includes('coolant') || lowerDesc.includes('rotella')) {
+          category = 'Fluids';
+        } else if (lowerDesc.includes('air') || lowerDesc.includes('valve') || lowerDesc.includes('chamber')) {
+          category = 'Air System';
+        } else if (lowerDesc.includes('spring') || lowerDesc.includes('shock') || lowerDesc.includes('bushing')) {
+          category = 'Suspension';
+        } else if (lowerDesc.includes('clutch') || lowerDesc.includes('axle') || lowerDesc.includes('transmission')) {
+          category = 'Drivetrain';
+        } else if (lowerDesc.includes('ac ') || lowerDesc.includes('condenser') || lowerDesc.includes('heater')) {
+          category = 'HVAC';
+        } else {
+          category = 'Engine';
+        }
+      }
+
+      const quantity = Math.max(1, parseInt(item.quantity) || 1);
+      let totalCost = parseFloat(item.totalCost) || 0;
+      let unitCost = parseFloat(item.unitCost) || 0;
+
+      // Ensure unitCost = totalCost / quantity if only one was supplied
+      if (unitCost <= 0 && totalCost > 0) {
+        unitCost = +(totalCost / quantity).toFixed(2);
+      } else if (totalCost <= 0 && unitCost > 0) {
+        totalCost = +(unitCost * quantity).toFixed(2);
+      } else if (unitCost <= 0 && totalCost <= 0) {
+        unitCost = 25.00;
+        totalCost = +(unitCost * quantity).toFixed(2);
+      }
+
+      // Apply shop owner's tiered markup matrix
+      const pricing = calculateMarkupAndSellPrice(unitCost, tiers, fallbackMarkup);
+
+      // Check if part exists in Supabase
+      const existing = existingPartsMap.get(partNumber.toLowerCase());
+      const isExisting = Boolean(existing);
+      const currentStock = isExisting ? (parseInt(existing.qty_on_hand) || 0) : 0;
+      const newStock = currentStock + quantity;
+      const binLocation = existing?.bin_location || '-';
+
+      return {
+        id: existing?.id || `new-${index + 1}-${Date.now()}`,
+        partNumber,
+        description,
+        category,
+        quantity,
+        totalCost,
+        unitCost,
+        markup: pricing.markup,
+        sellPrice: pricing.sellPrice,
+        profit: pricing.profit,
+        marginPercent: pricing.marginPercent,
+        tierLabel: pricing.matchedTier ? (pricing.matchedTier.label || `${pricing.markup}% Markup`) : `Fallback (${pricing.markup}%)`,
+        isExisting,
+        currentStock,
+        newStock,
+        binLocation,
+        supplier: parsedResult.supplier || 'Parts Supplier'
+      };
+    });
+
+    return Response.json({
+      success: true,
+      supplier: parsedResult.supplier || 'Parts Supplier',
+      invoiceNumber: parsedResult.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
+      invoiceDate: parsedResult.invoiceDate || new Date().toISOString().split('T')[0],
+      totalInvoiceAmount: parsedResult.totalInvoiceAmount || processedItems.reduce((s, i) => s + i.totalCost, 0),
+      totalPartsCount: processedItems.length,
+      totalUnitsCount: processedItems.reduce((s, i) => s + i.quantity, 0),
+      items: processedItems
+    });
+
+  } catch (error) {
+    console.error('Error in /api/parts/ai-scan:', error);
+    return Response.json(
+      { error: error.message || 'Failed to analyze invoice' },
+      { status: 500 }
+    );
+  }
+}
