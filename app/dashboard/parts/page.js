@@ -463,16 +463,81 @@ export default function PartsPage() {
     setIsAiModalOpen(true);
   };
 
+  const renderPdfInBrowser = async (file) => {
+    return new Promise((resolve) => {
+      try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const arrayBuffer = e.target?.result;
+            if (!arrayBuffer) return resolve({ imageDataUrl: null, text: '' });
+
+            let pdfjsLib = typeof window !== 'undefined' ? window.pdfjsLib : null;
+            if (!pdfjsLib) {
+              await new Promise((res, rej) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                script.onload = () => {
+                  if (window.pdfjsLib) {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                  }
+                  res();
+                };
+                script.onerror = rej;
+                document.head.appendChild(script);
+              });
+              pdfjsLib = window.pdfjsLib;
+            }
+
+            if (!pdfjsLib) return resolve({ imageDataUrl: null, text: '' });
+
+            const typedArray = new Uint8Array(arrayBuffer);
+            const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
+            const page = await pdf.getPage(1);
+            
+            // 1. Extract text from page
+            let text = '';
+            try {
+              const textContent = await page.getTextContent();
+              text = textContent.items.map(it => it.str).join(' ');
+            } catch (_) {}
+
+            // 2. Render page to canvas for high-res Vision AI
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.createElement('canvas');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            const context = canvas.getContext('2d');
+
+            await page.render({ canvasContext: context, viewport }).promise;
+            const imageDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+            resolve({ imageDataUrl, text });
+          } catch (err) {
+            console.warn('renderPdfInBrowser error:', err);
+            resolve({ imageDataUrl: null, text: '' });
+          }
+        };
+        reader.onerror = () => resolve({ imageDataUrl: null, text: '' });
+        reader.readAsArrayBuffer(file);
+      } catch (_) {
+        resolve({ imageDataUrl: null, text: '' });
+      }
+    });
+  };
+
   const handleAiScanFile = async (file) => {
     if (!file) return;
     setIsAiScanning(true);
     setAiError(null);
 
     const isImage = file.type?.startsWith('image/') || ['.png', '.jpg', '.jpeg', '.webp', '.bmp'].some(ext => file.name?.toLowerCase().endsWith(ext));
+    const isPdf = file.type?.includes('pdf') || file.name?.toLowerCase().endsWith('.pdf');
+
     if (isImage) {
       setAiScanStep('Groq Vision AI analyzing invoice image directly...');
     } else {
-      setAiScanStep('Reading supplier document & extracting text/images...');
+      setAiScanStep('Rendering invoice page & extracting layout for Groq AI...');
     }
     
     try {
@@ -484,8 +549,16 @@ export default function PartsPage() {
       formData.append('fallbackMarkup', fallbackMarkup.toString());
       if (clientApiKey) formData.append('apiKey', clientApiKey);
 
-      // If image, also convert to data URL to guarantee instant Vision AI parsing
-      if (isImage) {
+      if (isPdf) {
+        setAiScanStep('Rendering high-res invoice image & extracting text...');
+        try {
+          const { imageDataUrl, text } = await renderPdfInBrowser(file);
+          if (imageDataUrl) formData.append('image', imageDataUrl);
+          if (text) formData.append('text', text);
+        } catch (e) {
+          console.warn('Client PDF pre-rendering failed, continuing with server extraction:', e);
+        }
+      } else if (isImage) {
         try {
           const reader = new FileReader();
           const dataUrlPromise = new Promise((resolve) => {
@@ -498,7 +571,7 @@ export default function PartsPage() {
         } catch (_) {}
       }
 
-      setAiScanStep(isImage ? 'Groq Vision AI reading line items, part numbers & pricing...' : 'Groq AI parsing line items, quantities & unit costs...');
+      setAiScanStep('Groq AI extracting line items, unit costs & applying shop markup...');
       const res = await fetch('/api/parts/ai-scan', {
         method: 'POST',
         body: formData
