@@ -467,7 +467,13 @@ export default function PartsPage() {
     if (!file) return;
     setIsAiScanning(true);
     setAiError(null);
-    setAiScanStep('Reading supplier document & extracting text...');
+
+    const isImage = file.type?.startsWith('image/') || ['.png', '.jpg', '.jpeg', '.webp', '.bmp'].some(ext => file.name?.toLowerCase().endsWith(ext));
+    if (isImage) {
+      setAiScanStep('Groq Vision AI analyzing invoice image directly...');
+    } else {
+      setAiScanStep('Reading supplier document & extracting text/images...');
+    }
     
     try {
       const { tiers, fallbackMarkup } = getSavedMarkupSettings();
@@ -478,7 +484,21 @@ export default function PartsPage() {
       formData.append('fallbackMarkup', fallbackMarkup.toString());
       if (clientApiKey) formData.append('apiKey', clientApiKey);
 
-      setAiScanStep('Groq AI parsing line items, quantities & unit costs...');
+      // If image, also convert to data URL to guarantee instant Vision AI parsing
+      if (isImage) {
+        try {
+          const reader = new FileReader();
+          const dataUrlPromise = new Promise((resolve) => {
+            reader.onload = (e) => resolve(e.target?.result);
+            reader.onerror = () => resolve(null);
+          });
+          reader.readAsDataURL(file);
+          const dataUrl = await dataUrlPromise;
+          if (dataUrl) formData.append('image', dataUrl);
+        } catch (_) {}
+      }
+
+      setAiScanStep(isImage ? 'Groq Vision AI reading line items, part numbers & pricing...' : 'Groq AI parsing line items, quantities & unit costs...');
       const res = await fetch('/api/parts/ai-scan', {
         method: 'POST',
         body: formData
@@ -1407,7 +1427,7 @@ Total Invoice: $690.00
                     <input 
                       id="ai-file-input"
                       type="file" 
-                      accept=".pdf,.png,.jpg,.jpeg,.txt" 
+                      accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,image/*" 
                       style={{ display: 'none' }}
                       onChange={(e) => {
                         if (e.target.files && e.target.files[0]) {
@@ -1420,10 +1440,10 @@ Total Invoice: $690.00
                     </div>
                     <div>
                       <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 600, color: '#1E293B' }}>
-                        Drag & drop supplier invoice or parts PDF here
+                        Drag & drop supplier invoice PDF or Image (PNG, JPG, photo) here
                       </h4>
                       <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
-                        Supports PDF packing slips, supplier bills (FleetPride, Napa, Cummins, LKQ), or click to browse
+                        Supports PDF bills, scanned slips & invoice photos (Cullen Western Star, FleetPride, Napa, Cummins), or click to browse
                       </p>
                     </div>
                   </div>
