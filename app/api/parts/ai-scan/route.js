@@ -10,6 +10,79 @@ if (typeof global.WebSocket === 'undefined') {
   global.WebSocket = class DummyWebSocket {};
 }
 
+function ensureDOMMatrixPolyfill() {
+  if (typeof globalThis.DOMMatrix === 'undefined') {
+    try {
+      const CSSMatrix = require('@thednp/dommatrix');
+      globalThis.DOMMatrix = CSSMatrix.default || CSSMatrix;
+    } catch (_) {
+      class FallbackDOMMatrix {
+        constructor(init) {
+          this.a = 1; this.b = 0; this.c = 0; this.d = 1; this.e = 0; this.f = 0;
+          this.m11 = 1; this.m12 = 0; this.m13 = 0; this.m14 = 0;
+          this.m21 = 0; this.m22 = 1; this.m23 = 0; this.m24 = 0;
+          this.m31 = 0; this.m32 = 0; this.m33 = 1; this.m34 = 0;
+          this.m41 = 0; this.m42 = 0; this.m43 = 0; this.m44 = 1;
+          this.is2D = true;
+          this.isIdentity = true;
+          if (Array.isArray(init)) {
+            if (init.length === 6) {
+              this.a = this.m11 = Number(init[0]) || 1;
+              this.b = this.m12 = Number(init[1]) || 0;
+              this.c = this.m21 = Number(init[2]) || 0;
+              this.d = this.m22 = Number(init[3]) || 1;
+              this.e = this.m41 = Number(init[4]) || 0;
+              this.f = this.m42 = Number(init[5]) || 0;
+            } else if (init.length === 16) {
+              this.m11 = init[0]; this.m12 = init[1]; this.m13 = init[2]; this.m14 = init[3];
+              this.m21 = init[4]; this.m22 = init[5]; this.m23 = init[6]; this.m24 = init[7];
+              this.m31 = init[8]; this.m32 = init[9]; this.m33 = init[10]; this.m34 = init[11];
+              this.m41 = init[12]; this.m42 = init[13]; this.m43 = init[14]; this.m44 = init[15];
+              this.a = this.m11; this.b = this.m12; this.c = this.m21; this.d = this.m22; this.e = this.m41; this.f = this.m42;
+              this.is2D = false;
+            }
+          } else if (init && typeof init === 'object') {
+            this.a = init.a ?? 1; this.b = init.b ?? 0; this.c = init.c ?? 0; this.d = init.d ?? 1; this.e = init.e ?? 0; this.f = init.f ?? 0;
+          }
+        }
+        multiplySelf() { return this; }
+        preMultiplySelf() { return this; }
+        translate() { return this; }
+        scale() { return this; }
+        invertSelf() { return this; }
+        inverse() { return new FallbackDOMMatrix(); }
+        transformPoint(p) { return p; }
+      }
+      globalThis.DOMMatrix = FallbackDOMMatrix;
+    }
+  }
+}
+ensureDOMMatrixPolyfill();
+
+function extractPdfTextFallback(buffer) {
+  try {
+    const raw = buffer.toString('binary');
+    const btMatches = raw.match(/BT[\s\S]*?ET/g);
+    if (btMatches && btMatches.length > 0) {
+      let extracted = '';
+      for (const block of btMatches) {
+        const stringMatches = block.match(/\(([^)]+)\)/g);
+        if (stringMatches) {
+          extracted += stringMatches.map(s => s.slice(1, -1)).join(' ') + '\n';
+        }
+      }
+      if (extracted.trim().length > 10) return extracted;
+    }
+    const asciiStrings = raw.match(/[\x20-\x7E]{4,}/g);
+    if (asciiStrings && asciiStrings.length > 0) {
+      return asciiStrings.filter(s => !s.startsWith('/') && !s.includes('obj') && !s.includes('endobj')).join(' ');
+    }
+  } catch (e) {
+    console.warn('extractPdfTextFallback error:', e);
+  }
+  return '';
+}
+
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -131,14 +204,18 @@ export async function POST(request) {
       const fileType = (file.type || '').toLowerCase();
 
       if (fileType.includes('pdf') || fileName.endsWith('.pdf')) {
+        ensureDOMMatrixPolyfill();
         try {
           const { PDFParse } = await import('pdf-parse');
           const parser = new PDFParse({ data: buffer });
           const pdfResult = await parser.getText();
           invoiceText = pdfResult.text || '';
         } catch (pdfErr) {
-          console.error('PDF text extraction error:', pdfErr);
-          throw new Error(`Failed to extract text from PDF (${pdfErr.message}). Please ensure the PDF contains readable text, or paste invoice text.`);
+          console.warn('PDFParse getText error, attempting raw stream text recovery:', pdfErr?.message);
+          invoiceText = extractPdfTextFallback(buffer);
+          if (!invoiceText || invoiceText.trim().length < 5) {
+            throw new Error(`Failed to extract text from PDF (${pdfErr.message}). Please ensure the PDF contains readable text, or paste invoice text.`);
+          }
         }
       } else {
         // Plain text, CSV, or markdown file
