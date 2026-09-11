@@ -1,5 +1,8 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { supabase } from '../../lib/supabaseClient';
 import { Plus, Search, Eye, Send, CheckCircle, Printer, X, Receipt, Mail, Paperclip, RotateCcw } from 'lucide-react';
 import styles from './invoices.module.css';
 
