@@ -572,7 +572,7 @@ Address: ${shop.address}`;
         sel.style.display = 'none';
       });
 
-      window.html2canvas(element, { scale: 2, useCORS: true, logging: false }).then(canvas => {
+      window.html2canvas(element, { scale: 1.5, useCORS: true, logging: false }).then(canvas => {
         // Restore hidden elements
         hiddenEls.forEach(({ el, display }) => { el.style.display = display; });
         selectTexts.forEach(({ sel, span }) => {
@@ -580,12 +580,25 @@ Address: ${shop.address}`;
           span.remove();
         });
 
-        const imgData = canvas.toDataURL('image/png');
+        // Convert canvas to grayscale
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+          data[i] = gray;
+          data[i + 1] = gray;
+          data[i + 2] = gray;
+        }
+        ctx.putImageData(imageData, 0, 0);
+
+        // Use JPEG at 75% quality instead of PNG for much smaller file size
+        const imgData = canvas.toDataURL('image/jpeg', 0.75);
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`Invoice_${invoice?.id || 'download'}.pdf`);
       }).catch(err => {
         hiddenEls.forEach(({ el, display }) => { el.style.display = display; });
