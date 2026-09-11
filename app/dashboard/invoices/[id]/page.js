@@ -543,69 +543,190 @@ Address: ${shop.address}`;
       document.head.appendChild(s);
     });
 
-    Promise.all([
-      loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'),
-      loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
-    ]).then(() => {
-      const element = document.querySelector('[class*="invoicePaper"]');
-      if (!element) return alert('Invoice area not found.');
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js').then(() => {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const W = 210; // A4 width mm
+      const margin = 14;
+      const col2 = W / 2 + 4;
+      let y = 0;
 
-      // Hide all no-print elements before capturing
-      const noPrintEls = document.querySelectorAll('.no-print, [class*="no-print"]');
-      const hiddenEls = [];
-      noPrintEls.forEach(el => {
-        if (el.style.display !== 'none') {
-          hiddenEls.push({ el, display: el.style.display });
-          el.style.display = 'none';
-        }
+      // ── Helpers ──────────────────────────────────────────────
+      const line = (x1, y1, x2, y2, w = 0.3) => { pdf.setLineWidth(w); pdf.line(x1, y1, x2, y2); };
+      const rect = (x, yy, w, h, fill = false) => { pdf.rect(x, yy, w, h, fill ? 'F' : 'S'); };
+      const text = (t, x, yy, opts = {}) => {
+        pdf.setFontSize(opts.size || 9);
+        pdf.setFont('helvetica', opts.bold ? 'bold' : opts.italic ? 'italic' : 'normal');
+        pdf.text(String(t ?? ''), x, yy, { align: opts.align || 'left', maxWidth: opts.maxWidth });
+      };
+      const fmt = (n) => `$${parseFloat(n || 0).toFixed(2)}`;
+      const dateStr = (d) => new Date(d || Date.now()).toLocaleDateString('en-CA');
+
+      // ── HEADER BAND ──────────────────────────────────────────
+      pdf.setFillColor(20, 20, 20);
+      rect(0, 0, W, 28, true);
+
+      // Company name
+      pdf.setTextColor(255, 255, 255);
+      text(shop.companyName || 'Road Ready', margin, 12, { size: 16, bold: true });
+      text(shop.address || '', margin, 17.5, { size: 7.5 });
+      text(`${shop.phone || ''} | ${shop.email || ''}`, margin, 21.5, { size: 7.5 });
+      text(shop.taxNumber || '', margin, 25, { size: 7.5 });
+
+      // INVOICE title (right)
+      pdf.setTextColor(255, 255, 255);
+      text('INVOICE', W - margin, 14, { size: 22, bold: true, align: 'right' });
+      text(`#${invoice?.id || ''}`, W - margin, 20.5, { size: 9, align: 'right' });
+
+      pdf.setTextColor(0, 0, 0);
+      y = 34;
+
+      // ── META ROW (Date / Due / Status) ───────────────────────
+      const metaBoxW = (W - margin * 2) / 3;
+      const metaLabels = ['DATE', 'DUE DATE', 'STATUS'];
+      const metaVals = [
+        dateStr(invoice?.issueDate),
+        dateStr(invoice?.dueDate),
+        (invoice?.status || 'draft').toUpperCase()
+      ];
+      metaLabels.forEach((lbl, i) => {
+        const x = margin + i * metaBoxW;
+        pdf.setFillColor(245, 245, 245);
+        rect(x, y, metaBoxW - 2, 14, true);
+        pdf.setFillColor(0,0,0);
+        rect(x, y, metaBoxW - 2, 14, false);
+        text(lbl, x + 3, y + 5.5, { size: 6.5, bold: true });
+        text(metaVals[i], x + 3, y + 11.5, { size: 9, bold: true });
       });
+      y += 20;
 
-      // Also hide statusSelect dropdowns (they appear in print)
-      const selectEls = element.querySelectorAll('select');
-      const selectTexts = [];
-      selectEls.forEach(sel => {
-        const span = document.createElement('span');
-        span.textContent = sel.options[sel.selectedIndex]?.text || sel.value;
-        span.style.fontWeight = '600';
-        sel.parentNode.insertBefore(span, sel);
-        selectTexts.push({ sel, span });
-        sel.style.display = 'none';
-      });
+      // ── BILL TO / JOB REF ────────────────────────────────────
+      const halfW = (W - margin * 2 - 4) / 2;
+      text('BILL TO', margin, y, { size: 7, bold: true });
+      text('JOB / VEHICLE REFERENCE', margin + halfW + 4, y, { size: 7, bold: true });
+      y += 1;
+      line(margin, y, margin + halfW, y);
+      line(margin + halfW + 4, y, W - margin, y);
+      y += 4;
 
-      window.html2canvas(element, { scale: 1.5, useCORS: true, logging: false }).then(canvas => {
-        // Restore hidden elements
-        hiddenEls.forEach(({ el, display }) => { el.style.display = display; });
-        selectTexts.forEach(({ sel, span }) => {
-          sel.style.display = '';
-          span.remove();
+      const custName = customer?.company || customer?.companyName || workOrder?.customer_name || 'Valued Fleet Customer';
+      text(custName, margin, y, { size: 9, bold: true });
+      text(`WO #${workOrder?.id || 'Direct Invoice'}`, margin + halfW + 4, y, { size: 9, bold: true });
+      y += 4.5;
+      text(customer?.contact || customer?.contactName || '', margin, y, { size: 8 });
+      text(`Unit: ${workOrder?.unit_display || '—'}`, margin + halfW + 4, y, { size: 8 });
+      y += 4;
+      text(customer?.address || '', margin, y, { size: 8 });
+      text(`Tech: ${workOrder?.tech_name || '—'}`, margin + halfW + 4, y, { size: 8 });
+      y += 4;
+      text(customer?.email || '', margin, y, { size: 8 });
+      if (workOrder?.trailer) { text(`Trailer: ${workOrder.trailer}`, margin + halfW + 4, y, { size: 8 }); }
+      y += 4;
+      text(customer?.phone || '', margin, y, { size: 8 });
+      y += 8;
+
+      // ── 3 C's DIAGNOSTIC REPORT ──────────────────────────────
+      if (report?.fault || report?.cause || report?.correction) {
+        pdf.setFillColor(245, 245, 245);
+        rect(margin, y, W - margin * 2, 6, true);
+        text('SERVICE & DIAGNOSTIC REPORT — Fault · Cause · Correction', margin + 2, y + 4.2, { size: 7.5, bold: true });
+        y += 8;
+        const cW = (W - margin * 2 - 4) / 3;
+        const labels3 = ['1. FAULT / CONCERN', '2. DIAGNOSTIC CAUSE', '3. CORRECTION / REPAIR'];
+        const vals3 = [
+          report.fault || 'Diagnostic evaluation and mechanical inspection.',
+          report.cause || 'Mechanical teardown & diagnostic root-cause.',
+          report.correction || 'Certified service completed and road tested OK.'
+        ];
+        labels3.forEach((lbl, i) => {
+          const cx = margin + i * (cW + 2);
+          text(lbl, cx, y, { size: 6.5, bold: true });
+          const wrapped = pdf.splitTextToSize(vals3[i], cW - 2);
+          pdf.setFontSize(8);
+          pdf.setFont('helvetica', 'normal');
+          wrapped.slice(0, 4).forEach((ln, li) => { pdf.text(ln, cx, y + 4 + li * 3.8); });
         });
+        y += 24;
+      }
 
-        // Convert canvas to grayscale
-        const ctx = canvas.getContext('2d');
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        for (let i = 0; i < data.length; i += 4) {
-          const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-          data[i] = gray;
-          data[i + 1] = gray;
-          data[i + 2] = gray;
-        }
-        ctx.putImageData(imageData, 0, 0);
+      // ── LINE ITEMS TABLE ─────────────────────────────────────
+      const colDesc = margin;
+      const colQty = W - margin - 68;
+      const colRate = W - margin - 38;
+      const colAmt = W - margin;
 
-        // Use JPEG at 75% quality instead of PNG for much smaller file size
-        const imgData = canvas.toDataURL('image/jpeg', 0.75);
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`Invoice_${invoice?.id || 'download'}.pdf`);
-      }).catch(err => {
-        hiddenEls.forEach(({ el, display }) => { el.style.display = display; });
-        selectTexts.forEach(({ sel, span }) => { sel.style.display = ''; span.remove(); });
-        alert('PDF generation failed: ' + err.message);
+      // Table header
+      pdf.setFillColor(20, 20, 20);
+      rect(margin, y, W - margin * 2, 7, true);
+      pdf.setTextColor(255, 255, 255);
+      text('DESCRIPTION', colDesc + 2, y + 4.8, { size: 7.5, bold: true });
+      text('QTY / HRS', colQty, y + 4.8, { size: 7.5, bold: true, align: 'right' });
+      text('RATE / PRICE', colRate, y + 4.8, { size: 7.5, bold: true, align: 'right' });
+      text('AMOUNT', colAmt, y + 4.8, { size: 7.5, bold: true, align: 'right' });
+      pdf.setTextColor(0, 0, 0);
+      y += 9;
+
+      const drawRow = (desc, sub, qty, rate, amt, shade) => {
+        const rowH = sub ? 10 : 7;
+        if (shade) { pdf.setFillColor(250, 250, 250); rect(margin, y, W - margin * 2, rowH, true); }
+        pdf.setFillColor(0,0,0);
+        rect(margin, y, W - margin * 2, rowH);
+        text(desc, colDesc + 2, y + 4.5, { size: 8, bold: true });
+        if (sub) text(sub, colDesc + 2, y + 8.2, { size: 7, italic: true });
+        text(qty, colQty, y + 4.5, { size: 8, align: 'right' });
+        text(rate, colRate, y + 4.5, { size: 8, align: 'right' });
+        text(amt, colAmt, y + 4.5, { size: 8, bold: true, align: 'right' });
+        y += rowH;
+      };
+
+      let rowIdx = 0;
+      breakdown.labourLines.forEach(l => {
+        drawRow(l.description, `Technician: ${l.technician}`, `${l.hours} hrs`, fmt(l.rate) + '/hr', fmt(l.total), rowIdx++ % 2 === 0);
       });
-    }).catch(() => alert('Failed to load PDF libraries. Please check your internet connection.'));
+      breakdown.partsLines.forEach(p => {
+        drawRow(p.description, p.partNumber ? `Part #: ${p.partNumber}` : null, String(p.quantity), fmt(p.unitPrice), fmt(p.total), rowIdx++ % 2 === 0);
+      });
+      if (breakdown.shopSupplies > 0) {
+        drawRow('Shop Supplies & Environmental Recovery', 'Consumables, fluid disposal, safety & shop maintenance (5% capped)', '1', fmt(breakdown.shopSupplies), fmt(breakdown.shopSupplies), rowIdx++ % 2 === 0);
+      }
+      if (rowIdx === 0) {
+        drawRow('No billable items recorded on this work order.', null, '', '', '', false);
+      }
+
+      y += 4;
+
+      // ── TOTALS ───────────────────────────────────────────────
+      const totX = W - margin - 68;
+      const totW = 68;
+      const drawTotalRow = (label, val, bold = false, shade = false) => {
+        if (shade) { pdf.setFillColor(20, 20, 20); rect(totX, y, totW, 7, true); pdf.setTextColor(255,255,255); }
+        else { pdf.setTextColor(0,0,0); }
+        text(label, totX + 2, y + 4.8, { size: bold && shade ? 9 : 8, bold });
+        text(val, W - margin, y + 4.8, { size: bold && shade ? 9 : 8, bold, align: 'right' });
+        pdf.setTextColor(0,0,0);
+        y += 7;
+      };
+
+      if (breakdown.labourTotal > 0) drawTotalRow('Labour Total', fmt(breakdown.labourTotal));
+      if (breakdown.partsTotal > 0) drawTotalRow('Parts & Materials', fmt(breakdown.partsTotal));
+      if (breakdown.shopSupplies > 0) drawTotalRow('Shop Supplies', fmt(breakdown.shopSupplies));
+      drawTotalRow('Subtotal', fmt(breakdown.subtotal));
+      drawTotalRow(`GST (${breakdown.taxRate}%)`, fmt(breakdown.taxAmount));
+      if (invoice?.status === 'paid') drawTotalRow('Amount Paid', `-${fmt(breakdown.total)}`);
+      const balanceDue = invoice?.status === 'paid' ? '0.00' : breakdown.total.toFixed(2);
+      drawTotalRow(`BALANCE DUE  $${balanceDue}`, '', true, true);
+
+      y += 6;
+
+      // ── FOOTER ───────────────────────────────────────────────
+      line(margin, y, W - margin, y, 0.2);
+      y += 4;
+      text('Payment Terms: Net 30', margin, y, { size: 7.5, bold: true });
+      text(`Please make cheques payable to ${shop.companyName}. Thank you for your business!`, margin, y + 4, { size: 7.5 });
+      text(`Generated ${new Date().toLocaleString('en-CA')}`, W - margin, y, { size: 6.5, align: 'right' });
+
+      pdf.save(`Invoice_${invoice?.id || 'download'}.pdf`);
+    }).catch(() => alert('Failed to load PDF library. Please check your internet connection.'));
   };
 
   const handleRecordPayment = async (e) => {
