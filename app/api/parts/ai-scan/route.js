@@ -83,6 +83,33 @@ function extractPdfTextFallback(buffer) {
   return '';
 }
 
+async function extractPdfTextWithPdfJs(buffer) {
+  try {
+    ensureDOMMatrixPolyfill();
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const loadingTask = pdfjs.getDocument({
+      data: new Uint8Array(buffer),
+      useSystemFonts: true,
+      disableFontFace: true,
+      isEvalSupported: false
+    });
+    const doc = await loadingTask.promise;
+    let fullText = '';
+    for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
+      const page = await doc.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map(it => it.str).join(' ');
+      fullText += pageText + '\n';
+    }
+    if (fullText && fullText.trim().length > 5) {
+      return fullText.trim();
+    }
+  } catch (err) {
+    console.warn('extractPdfTextWithPdfJs warning:', err.message);
+  }
+  return '';
+}
+
 function extractFirstJpegFromPdf(buffer) {
   try {
     const startMarker = Buffer.from([0xFF, 0xD8, 0xFF]);
@@ -255,13 +282,16 @@ export async function POST(request) {
         }
 
         ensureDOMMatrixPolyfill();
-        try {
-          const { PDFParse } = await import('pdf-parse');
-          const parser = new PDFParse({ data: buffer });
-          const pdfResult = await parser.getText();
-          invoiceText = pdfResult.text || '';
-        } catch (pdfErr) {
-          console.warn('PDFParse getText error, attempting raw stream text recovery:', pdfErr?.message);
+        invoiceText = await extractPdfTextWithPdfJs(buffer);
+        if (!invoiceText || invoiceText.trim().length < 5) {
+          try {
+            const { PDFParse } = await import('pdf-parse');
+            const parser = new PDFParse({ data: buffer });
+            const pdfResult = await parser.getText();
+            invoiceText = pdfResult.text || '';
+          } catch (_) {}
+        }
+        if (!invoiceText || invoiceText.trim().length < 5) {
           invoiceText = extractPdfTextFallback(buffer);
         }
       } else {
@@ -321,7 +351,7 @@ Return strictly a valid JSON object. Do not include markdown code block backtick
               }
             ],
             temperature: 0.1,
-              max_completion_tokens: 800
+            max_completion_tokens: 800
           });
 
           let rawVision = visionComp.choices[0]?.message?.content || '';
@@ -337,7 +367,7 @@ Return strictly a valid JSON object. Do not include markdown code block backtick
         }
       }
 
-      // Attempt 2: Text-based Parsing if Vision wasn't used or yielded no items
+      // Attempt 2: Text-based Parsing using OpenAI GPT-OSS on Groq (Native JSON Mode)
       if (!parsedResult || !Array.isArray(parsedResult.items) || parsedResult.items.length === 0) {
         if (!invoiceText) {
           parsedResult = parseInvoiceTextFallback(invoiceText);
@@ -357,48 +387,63 @@ Extract the following information from the invoice text into a valid JSON object
   - unitCost: cost for a single unit as a number. If not printed, calculate as totalCost / quantity.
   - binLocation: bin location if noted, or '-'
 
-Return strictly a valid JSON object. Do not include markdown code block backticks.`;
+Output valid JSON only.`;
 
+          // Try Primary Text Model: openai/gpt-oss-120b (JSON Mode)
           try {
             const completion = await groq.chat.completions.create({
-              model: 'qwen/qwen3.6-27b',
+              model: 'openai/gpt-oss-120b',
               messages: [
                 { role: 'system', content: systemPrompt },
-                { role: 'user', content: `Parse this parts supplier invoice into structured JSON:\n\n${invoiceText.slice(0, 8000)}` }
+                { role: 'user', content: invoiceText.slice(0, 8000) }
               ],
+              response_format: { type: 'json_object' },
               temperature: 0.1,
-                max_completion_tokens: 800
+              max_tokens: 800
             });
 
-            let rawContent = completion.choices[0]?.message?.content || '';
-            rawContent = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-
-            const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              parsedResult = JSON.parse(jsonMatch[0]);
-            } else {
-              parsedResult = JSON.parse(rawContent);
-            }
+            const rawContent = completion.choices[0]?.message?.content || '{}';
+            parsedResult = JSON.parse(rawContent);
           } catch (primaryErr) {
-            console.warn('Qwen text model parsing failed, falling back to compound-mini:', primaryErr.message);
+            console.warn('gpt-oss-120b failed, trying gpt-oss-20b:', primaryErr.message);
 
+            // Secondary Model: openai/gpt-oss-20b (JSON Mode)
             try {
-              const fallbackComp = await groq.chat.completions.create({
-                model: 'groq/compound-mini',
+              const comp20b = await groq.chat.completions.create({
+                model: 'openai/gpt-oss-20b',
                 messages: [
                   { role: 'system', content: systemPrompt },
-                  { role: 'user', content: `Parse this parts supplier invoice into structured JSON:\n\n${invoiceText.slice(0, 8000)}` }
+                  { role: 'user', content: invoiceText.slice(0, 8000) }
                 ],
+                response_format: { type: 'json_object' },
                 temperature: 0.1,
-                max_tokens: 800,
-                response_format: { type: 'json_object' }
+                max_tokens: 800
               });
 
-              const fallbackContent = fallbackComp.choices[0]?.message?.content || '{}';
-              parsedResult = JSON.parse(fallbackContent);
-            } catch (fallbackErr) {
-              console.warn('Groq AI fallback also failed, using heuristic parser:', fallbackErr.message);
-              parsedResult = parseInvoiceTextFallback(invoiceText);
+              const content20b = comp20b.choices[0]?.message?.content || '{}';
+              parsedResult = JSON.parse(content20b);
+            } catch (err20b) {
+              console.warn('gpt-oss-20b failed, trying compound-mini:', err20b.message);
+
+              // Tertiary Model: groq/compound-mini (JSON Mode)
+              try {
+                const fallbackComp = await groq.chat.completions.create({
+                  model: 'groq/compound-mini',
+                  messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: invoiceText.slice(0, 8000) }
+                  ],
+                  temperature: 0.1,
+                  max_tokens: 800,
+                  response_format: { type: 'json_object' }
+                });
+
+                const fallbackContent = fallbackComp.choices[0]?.message?.content || '{}';
+                parsedResult = JSON.parse(fallbackContent);
+              } catch (fallbackErr) {
+                console.warn('All Groq AI models failed, using heuristic parser:', fallbackErr.message);
+                parsedResult = parseInvoiceTextFallback(invoiceText);
+              }
             }
           }
         }
