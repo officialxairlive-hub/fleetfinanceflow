@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import styles from './parts.module.css';
 import { supabase } from '../../lib/supabaseClient';
-import { Search, Plus, Package, DollarSign, AlertTriangle, ArrowUpDown, Edit, History, X, ChevronUp, ChevronDown, CheckCircle, Clock, ShoppingCart, Sparkles, UploadCloud, FileText, Trash2, Check, RefreshCw, Layers } from 'lucide-react';
+import { Search, Plus, Package, DollarSign, AlertTriangle, ArrowUpDown, Edit, History, X, ChevronUp, ChevronDown, CheckCircle, Clock, ShoppingCart, Sparkles, UploadCloud, FileText, Trash2, Check, RefreshCw, Layers, Key } from 'lucide-react';
 import { calculateMarkupAndSellPrice, formatTierBracket, getSavedMarkupSettings } from '../../lib/markupUtils';
 
 const CATEGORIES = ['All', 'Brakes', 'Engine', 'Drivetrain', 'Air System', 'Suspension', 'HVAC', 'Fluids', 'Filters'];
@@ -471,10 +471,12 @@ export default function PartsPage() {
     
     try {
       const { tiers, fallbackMarkup } = getSavedMarkupSettings();
+      const clientApiKey = (typeof window !== 'undefined' && localStorage.getItem('fleet_groq_api_key')) || '';
       const formData = new FormData();
       formData.append('file', file);
       formData.append('tiers', JSON.stringify(tiers));
       formData.append('fallbackMarkup', fallbackMarkup.toString());
+      if (clientApiKey) formData.append('apiKey', clientApiKey);
 
       setAiScanStep('Groq AI parsing line items, quantities & unit costs...');
       const res = await fetch('/api/parts/ai-scan', {
@@ -482,9 +484,17 @@ export default function PartsPage() {
         body: formData
       });
 
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Failed to scan invoice document');
+      const raw = await res.text();
+      let json = null;
+      try {
+        json = raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        console.error('Non-JSON response from /api/parts/ai-scan:', raw);
+        throw new Error(`Server returned error (${res.status}): ${raw.slice(0, 160) || 'Empty body'}`);
+      }
+
+      if (!res.ok || !json || json.error) {
+        throw new Error(json?.error || `Failed to scan invoice (${res.status})`);
       }
 
       setAiInvoiceData(json);
@@ -503,6 +513,7 @@ export default function PartsPage() {
 
     try {
       const { tiers, fallbackMarkup } = getSavedMarkupSettings();
+      const clientApiKey = (typeof window !== 'undefined' && localStorage.getItem('fleet_groq_api_key')) || '';
       const sampleText = `
 FLEETPRIDE COMMERCIAL PARTS
 Invoice Number: FP-2026-98124
@@ -521,6 +532,7 @@ Total Invoice: $690.00
       formData.append('text', sampleText);
       formData.append('tiers', JSON.stringify(tiers));
       formData.append('fallbackMarkup', fallbackMarkup.toString());
+      if (clientApiKey) formData.append('apiKey', clientApiKey);
 
       setAiScanStep('Groq AI parsing line items, quantities & unit costs...');
       const res = await fetch('/api/parts/ai-scan', {
@@ -528,9 +540,17 @@ Total Invoice: $690.00
         body: formData
       });
 
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || 'Failed to analyze sample invoice');
+      const raw = await res.text();
+      let json = null;
+      try {
+        json = raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        console.error('Non-JSON response from /api/parts/ai-scan:', raw);
+        throw new Error(`Server returned error (${res.status}): ${raw.slice(0, 160) || 'Empty body'}`);
+      }
+
+      if (!res.ok || !json || json.error) {
+        throw new Error(json?.error || `Failed to analyze sample invoice (${res.status})`);
       }
 
       setAiInvoiceData(json);
@@ -1309,11 +1329,27 @@ Total Invoice: $690.00
                   <Sparkles size={22} />
                 </div>
                 <div>
-                  <h3 className={styles.modalTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 className={styles.modalTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     AI Supplier Invoice & PDF Scanner
                     <span style={{ fontSize: '11px', background: '#EEF2FF', color: '#6366f1', padding: '2px 8px', borderRadius: '12px', border: '1px solid #C7D2FE', fontWeight: 600 }}>
                       Powered by Groq AI
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = (typeof window !== 'undefined' && localStorage.getItem('fleet_groq_api_key')) || '';
+                        const input = prompt('Enter or update your Groq API Key (starts with gsk_):', current);
+                        if (input !== null) {
+                          localStorage.setItem('fleet_groq_api_key', input.trim());
+                          alert('Groq API Key saved successfully in your browser!');
+                        }
+                      }}
+                      style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', textDecoration: 'underline', padding: '2px 6px' }}
+                      title="Configure Groq API Key"
+                    >
+                      <Key size={12} />
+                      Set API Key
+                    </button>
                   </h3>
                   <p style={{ margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)' }}>
                     Auto-read invoice PDF, compute single unit costs, apply shop tiered markup, and add directly to inventory.
