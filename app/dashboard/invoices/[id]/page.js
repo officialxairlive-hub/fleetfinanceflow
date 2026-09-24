@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
 import { shopSettings } from '../../../lib/demoData';
-import { Mail, DollarSign, Printer, CheckCircle, X, ArrowLeft, RefreshCw, FileText, Wrench, Package, Send, Paperclip, RotateCcw, Edit } from 'lucide-react';
+import { Mail, DollarSign, Printer, Download, CheckCircle, X, ArrowLeft, RefreshCw, FileText, Wrench, Package, Send, Paperclip, RotateCcw, Edit } from 'lucide-react';
 import styles from '../invoices.module.css';
 
 export default function InvoiceDetail() {
@@ -545,188 +545,358 @@ Address: ${shop.address}`;
 
     loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js').then(() => {
       const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const W = 210; // A4 width mm
-      const margin = 14;
-      const col2 = W / 2 + 4;
-      let y = 0;
-
-      // ── Helpers ──────────────────────────────────────────────
-      const line = (x1, y1, x2, y2, w = 0.3) => { pdf.setLineWidth(w); pdf.line(x1, y1, x2, y2); };
-      const rect = (x, yy, w, h, fill = false) => { pdf.rect(x, yy, w, h, fill ? 'F' : 'S'); };
-      const text = (t, x, yy, opts = {}) => {
-        pdf.setFontSize(opts.size || 9);
-        pdf.setFont('helvetica', opts.bold ? 'bold' : opts.italic ? 'italic' : 'normal');
-        pdf.text(String(t ?? ''), x, yy, { align: opts.align || 'left', maxWidth: opts.maxWidth });
-      };
-      const fmt = (n) => `$${parseFloat(n || 0).toFixed(2)}`;
-      const dateStr = (d) => new Date(d || Date.now()).toLocaleDateString('en-CA');
-
-      // ── HEADER BAND ──────────────────────────────────────────
-      pdf.setFillColor(20, 20, 20);
-      rect(0, 0, W, 28, true);
-
-      // Company name
-      pdf.setTextColor(255, 255, 255);
-      text(shop.companyName || 'Road Ready', margin, 12, { size: 16, bold: true });
-      text(shop.address || '', margin, 17.5, { size: 7.5 });
-      text(`${shop.phone || ''} | ${shop.email || ''}`, margin, 21.5, { size: 7.5 });
-      text(shop.taxNumber || '', margin, 25, { size: 7.5 });
-
-      // INVOICE title (right)
-      pdf.setTextColor(255, 255, 255);
-      text('INVOICE', W - margin, 14, { size: 22, bold: true, align: 'right' });
-      text(`#${invoice?.id || ''}`, W - margin, 20.5, { size: 9, align: 'right' });
-
-      pdf.setTextColor(0, 0, 0);
-      y = 34;
-
-      // ── META ROW (Date / Due / Status) ───────────────────────
-      const metaBoxW = (W - margin * 2) / 3;
-      const metaLabels = ['DATE', 'DUE DATE', 'STATUS'];
-      const metaVals = [
-        dateStr(invoice?.issueDate),
-        dateStr(invoice?.dueDate),
-        (invoice?.status || 'draft').toUpperCase()
-      ];
-      metaLabels.forEach((lbl, i) => {
-        const x = margin + i * metaBoxW;
-        pdf.setFillColor(245, 245, 245);
-        rect(x, y, metaBoxW - 2, 14, true);
-        pdf.setFillColor(0,0,0);
-        rect(x, y, metaBoxW - 2, 14, false);
-        text(lbl, x + 3, y + 5.5, { size: 6.5, bold: true });
-        text(metaVals[i], x + 3, y + 11.5, { size: 9, bold: true });
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'pt',
+        format: 'a4',
+        compress: true
       });
-      y += 20;
 
-      // ── BILL TO / JOB REF ────────────────────────────────────
-      const halfW = (W - margin * 2 - 4) / 2;
-      text('BILL TO', margin, y, { size: 7, bold: true });
-      text('JOB / VEHICLE REFERENCE', margin + halfW + 4, y, { size: 7, bold: true });
-      y += 1;
-      line(margin, y, margin + halfW, y);
-      line(margin + halfW + 4, y, W - margin, y);
-      y += 4;
+      const PW = 595.28;
+      const PH = 841.89;
+      const ML = 38;
+      const MR = 38;
+      const CW = PW - ML - MR; // 519.28 pt
+
+      // Clean, executive grayscale & slate palette (sharp, high-contrast, zero tacky colors)
+      const C = {
+        title:      [15, 23, 42],    // Slate 900
+        body:       [51, 65, 85],    // Slate 700
+        muted:      [100, 116, 139], // Slate 500
+        lightText:  [148, 163, 184], // Slate 400
+        darkBorder: [71, 85, 105],   // Slate 600
+        border:     [203, 213, 225], // Slate 300
+        lightBorder:[226, 232, 240], // Slate 200
+        fillHeader: [241, 245, 249], // Slate 100
+        fillCard:   [248, 250, 252], // Slate 50
+        stripe:     [250, 250, 251], // Subtle off-white
+        white:      [255, 255, 255]
+      };
+
+      const setFill   = (c) => pdf.setFillColor(c[0], c[1], c[2]);
+      const setStroke = (c) => pdf.setDrawColor(c[0], c[1], c[2]);
+      const setCol    = (c) => pdf.setTextColor(c[0], c[1], c[2]);
+
+      const drawRect = (x, y, w, h, fillCol = null, strokeCol = null, lineWidth = 0.5) => {
+        if (fillCol) {
+          setFill(fillCol);
+          if (strokeCol) {
+            setStroke(strokeCol);
+            pdf.setLineWidth(lineWidth);
+            pdf.rect(x, y, w, h, 'FD');
+          } else {
+            pdf.rect(x, y, w, h, 'F');
+          }
+        } else if (strokeCol) {
+          setStroke(strokeCol);
+          pdf.setLineWidth(lineWidth);
+          pdf.rect(x, y, w, h, 'S');
+        }
+      };
+
+      const drawHLine = (x1, y, x2, strokeCol = C.border, lineWidth = 0.5) => {
+        setStroke(strokeCol);
+        pdf.setLineWidth(lineWidth);
+        pdf.line(x1, y, x2, y);
+      };
+
+      const writeText = (str, x, y, opts = {}) => {
+        const {
+          size = 9,
+          bold = false,
+          italic = false,
+          color = C.body,
+          align = 'left',
+          maxWidth = null
+        } = opts;
+        pdf.setFontSize(size);
+        pdf.setFont('helvetica', bold ? 'bold' : (italic ? 'italic' : 'normal'));
+        setCol(color);
+        const textOptions = { align };
+        if (maxWidth) textOptions.maxWidth = maxWidth;
+        pdf.text(String(str ?? ''), x, y, textOptions);
+      };
+
+      const fmt = (num) => `$${(parseFloat(num) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const dateFmt = (d) => {
+        if (!d) return new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        try {
+          return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch {
+          return String(d);
+        }
+      };
+
+      let y = 36;
+
+      // ─── 1. TOP HEADER ──────────────────────────────────────────
+      const shopName = (shop?.companyName || 'Road Ready').toUpperCase();
+      writeText(shopName, ML, y + 14, { size: 15, bold: true, color: C.title });
+      writeText('COMMERCIAL FLEET MAINTENANCE & REPAIR SERVICES', ML, y + 26, { size: 7, bold: true, color: C.muted });
+      writeText(shop?.address || '', ML, y + 38, { size: 8, color: C.body });
+      writeText(`Tel: ${shop?.phone || ''}  •  Email: ${shop?.email || ''}`, ML, y + 49, { size: 8, color: C.body });
+      if (shop?.taxNumber) {
+        writeText(shop.taxNumber, ML, y + 60, { size: 8, bold: true, color: C.body });
+      }
+
+      // Right: INVOICE Title & Metadata
+      const rightX = PW - MR;
+      writeText('INVOICE', rightX, y + 16, { size: 22, bold: true, color: C.title, align: 'right' });
+      writeText(`Invoice #: ${invoice?.id || '—'}`, rightX, y + 31, { size: 10, bold: true, color: C.title, align: 'right' });
+
+      // Status Badge
+      const statusStr = (invoice?.status || 'draft').toUpperCase();
+      const badgeW = 70;
+      const badgeH = 16;
+      const badgeX = rightX - badgeW;
+      const badgeY = y + 38;
+      drawRect(badgeX, badgeY, badgeW, badgeH, C.fillHeader, C.darkBorder, 0.75);
+      writeText(statusStr, badgeX + (badgeW / 2), badgeY + 11, { size: 7.5, bold: true, color: C.title, align: 'center' });
+
+      // Dates line under badge
+      writeText(`Issue Date: ${dateFmt(invoice?.issueDate)}`, rightX, y + 66, { size: 8, color: C.body, align: 'right' });
+      writeText(`Due Date: ${dateFmt(invoice?.dueDate)}`, rightX, y + 77, { size: 8, bold: true, color: C.title, align: 'right' });
+
+      y += 86;
+      drawHLine(ML, y, rightX, C.darkBorder, 1.25);
+      y += 10;
+
+      // ─── 2. BILL TO & VEHICLE / JOB REFERENCE CARDS ─────────────
+      const cardGap = 12;
+      const cardW = (CW - cardGap) / 2;
+      const cardH = 92;
+      const cardHeaderH = 18;
+
+      // Left Card: BILL TO
+      const card1X = ML;
+      drawRect(card1X, y, cardW, cardH, C.white, C.border, 0.75);
+      drawRect(card1X, y, cardW, cardHeaderH, C.fillHeader, C.border, 0.75);
+      writeText('BILL TO / CUSTOMER', card1X + 8, y + 12, { size: 7.5, bold: true, color: C.title });
 
       const custName = customer?.company || customer?.companyName || workOrder?.customer_name || 'Valued Fleet Customer';
-      text(custName, margin, y, { size: 9, bold: true });
-      text(`WO #${workOrder?.id || 'Direct Invoice'}`, margin + halfW + 4, y, { size: 9, bold: true });
-      y += 4.5;
-      text(customer?.contact || customer?.contactName || '', margin, y, { size: 8 });
-      text(`Unit: ${workOrder?.unit_display || '—'}`, margin + halfW + 4, y, { size: 8 });
-      y += 4;
-      text(customer?.address || '', margin, y, { size: 8 });
-      text(`Tech: ${workOrder?.tech_name || '—'}`, margin + halfW + 4, y, { size: 8 });
-      y += 4;
-      text(customer?.email || '', margin, y, { size: 8 });
-      if (workOrder?.trailer) { text(`Trailer: ${workOrder.trailer}`, margin + halfW + 4, y, { size: 8 }); }
-      y += 4;
-      text(customer?.phone || '', margin, y, { size: 8 });
-      y += 8;
+      let cy = y + cardHeaderH + 12;
+      writeText(custName, card1X + 8, cy, { size: 9.5, bold: true, color: C.title, maxWidth: cardW - 16 });
+      cy += 13;
+      if (customer?.contact || customer?.contactName) {
+        writeText(`Attn: ${customer.contact || customer.contactName}`, card1X + 8, cy, { size: 8, color: C.body, maxWidth: cardW - 16 });
+        cy += 11;
+      }
+      if (customer?.address) {
+        writeText(customer.address, card1X + 8, cy, { size: 8, color: C.body, maxWidth: cardW - 16 });
+        cy += 11;
+      }
+      const custContact = [customer?.phone, customer?.email].filter(Boolean).join('  •  ');
+      if (custContact) {
+        writeText(custContact, card1X + 8, cy, { size: 8, color: C.muted, maxWidth: cardW - 16 });
+        cy += 11;
+      }
+      if (customer?.tax_setting) {
+        writeText(`Tax / PST #: ${customer.tax_setting}`, card1X + 8, cy, { size: 7.5, bold: true, color: C.body });
+      }
 
-      // ── 3 C's DIAGNOSTIC REPORT ──────────────────────────────
-      if (report?.fault || report?.cause || report?.correction) {
-        pdf.setFillColor(245, 245, 245);
-        rect(margin, y, W - margin * 2, 6, true);
-        text('SERVICE & DIAGNOSTIC REPORT — Fault · Cause · Correction', margin + 2, y + 4.2, { size: 7.5, bold: true });
-        y += 8;
-        const cW = (W - margin * 2 - 4) / 3;
-        const labels3 = ['1. FAULT / CONCERN', '2. DIAGNOSTIC CAUSE', '3. CORRECTION / REPAIR'];
-        const vals3 = [
-          report.fault || 'Diagnostic evaluation and mechanical inspection.',
-          report.cause || 'Mechanical teardown & diagnostic root-cause.',
-          report.correction || 'Certified service completed and road tested OK.'
+      // Right Card: JOB / FLEET VEHICLE REFERENCE
+      const card2X = ML + cardW + cardGap;
+      drawRect(card2X, y, cardW, cardH, C.white, C.border, 0.75);
+      drawRect(card2X, y, cardW, cardHeaderH, C.fillHeader, C.border, 0.75);
+      writeText('FLEET & VEHICLE REFERENCE', card2X + 8, y + 12, { size: 7.5, bold: true, color: C.title });
+
+      cy = y + cardHeaderH + 12;
+      const woDisplay = workOrder?.id ? `Work Order #${workOrder.id}` : 'Direct Shop Invoice';
+      writeText(woDisplay, card2X + 8, cy, { size: 9.5, bold: true, color: C.title });
+      cy += 13;
+      writeText(`Unit / Truck: ${workOrder?.unit_display || 'Commercial Fleet Unit'}`, card2X + 8, cy, { size: 8, bold: true, color: C.body });
+      cy += 12;
+      if (workOrder?.trailer) {
+        writeText(`Trailer: ${workOrder.trailer}`, card2X + 8, cy, { size: 8, color: C.body });
+        cy += 11;
+      }
+      writeText(`Lead Technician: ${workOrder?.tech_name || 'Shop Tech'}`, card2X + 8, cy, { size: 8, color: C.body });
+      cy += 11;
+      if (workOrder?.vin) {
+        writeText(`VIN: ${workOrder.vin}`, card2X + 8, cy, { size: 7.5, color: C.muted });
+      } else if (invoice?.po_number || workOrder?.po_number) {
+        writeText(`PO #: ${invoice?.po_number || workOrder?.po_number}`, card2X + 8, cy, { size: 8, bold: true, color: C.body });
+      }
+
+      y += cardH + 12;
+
+      // ─── 3. 3 C's SERVICE & DIAGNOSTIC REPORT (if present) ───────
+      const hasReport = report?.fault || report?.cause || report?.correction;
+      if (hasReport) {
+        const diagBoxH = 62;
+        drawRect(ML, y, CW, diagBoxH, C.white, C.border, 0.75);
+        drawRect(ML, y, CW, 17, C.fillHeader, C.border, 0.75);
+        writeText('SERVICE & DIAGNOSTIC REPORT (THE 3 C\'S)', ML + 8, y + 11.5, { size: 7.5, bold: true, color: C.title });
+        writeText('Fault / Complaint  •  Root Cause  •  Correction Rendered', ML + 195, y + 11.5, { size: 7, italic: true, color: C.muted });
+
+        const subBoxW = (CW - 16) / 3;
+        const diagItems = [
+          { title: '1. FAULT / COMPLAINT', text: report.fault || 'Customer reported diagnostic concern.' },
+          { title: '2. ROOT CAUSE', text: report.cause || 'Teardown inspection and diagnostic testing.' },
+          { title: '3. CORRECTION RENDERED', text: report.correction || 'Certified service completed and road tested OK.' }
         ];
-        labels3.forEach((lbl, i) => {
-          const cx = margin + i * (cW + 2);
-          text(lbl, cx, y, { size: 6.5, bold: true });
-          const wrapped = pdf.splitTextToSize(vals3[i], cW - 2);
-          pdf.setFontSize(8);
-          pdf.setFont('helvetica', 'normal');
-          wrapped.slice(0, 4).forEach((ln, li) => { pdf.text(ln, cx, y + 4 + li * 3.8); });
+
+        diagItems.forEach((item, idx) => {
+          const bx = ML + 4 + idx * (subBoxW + 4);
+          const by = y + 21;
+          drawRect(bx, by, subBoxW, diagBoxH - 25, C.fillCard, C.lightBorder, 0.5);
+          writeText(item.title, bx + 5, by + 10, { size: 6.5, bold: true, color: C.muted });
+          const splitLines = pdf.splitTextToSize(item.text, subBoxW - 10);
+          splitLines.slice(0, 3).forEach((line, lIdx) => {
+            writeText(line, bx + 5, by + 19 + (lIdx * 9), { size: 7.5, color: C.body });
+          });
         });
-        y += 24;
+
+        y += diagBoxH + 10;
       }
 
-      // ── LINE ITEMS TABLE ─────────────────────────────────────
-      const colDesc = margin;
-      const colQty = W - margin - 68;
-      const colRate = W - margin - 38;
-      const colAmt = W - margin;
+      // ─── 4. LINE ITEMS TABLE ────────────────────────────────────
+      const colDescX = ML + 8;
+      const colTypeX = ML + 265;
+      const colQtyX  = ML + 345;
+      const colRateX = ML + 415;
+      const colAmtX  = rightX - 8;
 
-      // Table header
-      pdf.setFillColor(20, 20, 20);
-      rect(margin, y, W - margin * 2, 7, true);
-      pdf.setTextColor(255, 255, 255);
-      text('DESCRIPTION', colDesc + 2, y + 4.8, { size: 7.5, bold: true });
-      text('QTY / HRS', colQty, y + 4.8, { size: 7.5, bold: true, align: 'right' });
-      text('RATE / PRICE', colRate, y + 4.8, { size: 7.5, bold: true, align: 'right' });
-      text('AMOUNT', colAmt, y + 4.8, { size: 7.5, bold: true, align: 'right' });
-      pdf.setTextColor(0, 0, 0);
-      y += 9;
+      const thHeight = 20;
+      drawRect(ML, y, CW, thHeight, C.fillHeader, C.darkBorder, 0.75);
+      writeText('DESCRIPTION / SERVICE PERFORMED', colDescX, y + 13, { size: 7.5, bold: true, color: C.title });
+      writeText('TYPE', colTypeX, y + 13, { size: 7.5, bold: true, color: C.title });
+      writeText('QTY / HRS', colQtyX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
+      writeText('RATE', colRateX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
+      writeText('AMOUNT ($)', colAmtX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
+      y += thHeight;
 
-      const drawRow = (desc, sub, qty, rate, amt, shade) => {
-        const rowH = sub ? 10 : 7;
-        if (shade) { pdf.setFillColor(250, 250, 250); rect(margin, y, W - margin * 2, rowH, true); }
-        pdf.setFillColor(0,0,0);
-        rect(margin, y, W - margin * 2, rowH);
-        text(desc, colDesc + 2, y + 4.5, { size: 8, bold: true });
-        if (sub) text(sub, colDesc + 2, y + 8.2, { size: 7, italic: true });
-        text(qty, colQty, y + 4.5, { size: 8, align: 'right' });
-        text(rate, colRate, y + 4.5, { size: 8, align: 'right' });
-        text(amt, colAmt, y + 4.5, { size: 8, bold: true, align: 'right' });
-        y += rowH;
+      let rowIndex = 0;
+      const drawLineRow = (desc, subtext, typeLabel, qtyStr, rateStr, amtStr) => {
+        // Multi-page check
+        if (y > PH - 160) {
+          pdf.addPage();
+          y = 36;
+          writeText(`${shopName}  —  Invoice #${invoice?.id || ''} (Continued)`, ML, y + 10, { size: 8, bold: true, color: C.muted });
+          drawHLine(ML, y + 16, rightX, C.border, 0.5);
+          y += 24;
+
+          drawRect(ML, y, CW, thHeight, C.fillHeader, C.darkBorder, 0.75);
+          writeText('DESCRIPTION / SERVICE PERFORMED', colDescX, y + 13, { size: 7.5, bold: true, color: C.title });
+          writeText('TYPE', colTypeX, y + 13, { size: 7.5, bold: true, color: C.title });
+          writeText('QTY / HRS', colQtyX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
+          writeText('RATE', colRateX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
+          writeText('AMOUNT ($)', colAmtX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
+          y += thHeight;
+        }
+
+        const rowHeight = subtext ? 28 : 20;
+        const rowBg = (rowIndex % 2 === 0) ? C.white : C.stripe;
+        drawRect(ML, y, CW, rowHeight, rowBg, null);
+        drawHLine(ML, y + rowHeight, rightX, C.lightBorder, 0.5);
+
+        writeText(desc, colDescX, y + 12, { size: 8.5, bold: true, color: C.title, maxWidth: colTypeX - colDescX - 8 });
+        if (subtext) {
+          writeText(subtext, colDescX, y + 23, { size: 7.5, italic: true, color: C.muted, maxWidth: colTypeX - colDescX - 8 });
+        }
+
+        writeText(typeLabel, colTypeX, y + 12, { size: 7.5, color: C.muted });
+        writeText(qtyStr, colQtyX, y + 12, { size: 8.5, color: C.body, align: 'right' });
+        writeText(rateStr, colRateX, y + 12, { size: 8.5, color: C.body, align: 'right' });
+        writeText(amtStr, colAmtX, y + 12, { size: 8.5, bold: true, color: C.title, align: 'right' });
+
+        y += rowHeight;
+        rowIndex++;
       };
 
-      let rowIdx = 0;
-      breakdown.labourLines.forEach(l => {
-        drawRow(l.description, `Technician: ${l.technician}`, `${l.hours} hrs`, fmt(l.rate) + '/hr', fmt(l.total), rowIdx++ % 2 === 0);
+      // Draw Labour lines
+      (breakdown.labourLines || []).forEach(l => {
+        const sub = l.technician ? `Technician: ${l.technician}` : null;
+        drawLineRow(l.description || 'Labour Service', sub, 'Labour', `${l.hours} hrs`, fmt(l.rate), fmt(l.total));
       });
-      breakdown.partsLines.forEach(p => {
-        drawRow(p.description, p.partNumber ? `Part #: ${p.partNumber}` : null, String(p.quantity), fmt(p.unitPrice), fmt(p.total), rowIdx++ % 2 === 0);
+
+      // Draw Parts lines
+      (breakdown.partsLines || []).forEach(p => {
+        const sub = p.partNumber ? `Part SKU: ${p.partNumber}` : null;
+        drawLineRow(p.description || 'Replacement Part', sub, 'Part', String(p.quantity), fmt(p.unitPrice), fmt(p.total));
       });
+
+      // Draw Shop Supplies
       if (breakdown.shopSupplies > 0) {
-        drawRow('Shop Supplies & Environmental Recovery', 'Consumables, fluid disposal, safety & shop maintenance (5% capped)', '1', fmt(breakdown.shopSupplies), fmt(breakdown.shopSupplies), rowIdx++ % 2 === 0);
-      }
-      if (rowIdx === 0) {
-        drawRow('No billable items recorded on this work order.', null, '', '', '', false);
+        drawLineRow(
+          'Shop Supplies & Environmental Recovery',
+          'Consumables, fluid disposal, safety & shop maintenance (5% capped)',
+          'Supplies',
+          '1',
+          fmt(breakdown.shopSupplies),
+          fmt(breakdown.shopSupplies)
+        );
       }
 
-      y += 4;
+      if (rowIndex === 0) {
+        drawLineRow('No billable line items recorded on this work order.', null, '—', '—', '—', '$0.00');
+      }
 
-      // ── TOTALS ───────────────────────────────────────────────
-      const totX = W - margin - 68;
-      const totW = 68;
-      const drawTotalRow = (label, val, bold = false, shade = false) => {
-        if (shade) { pdf.setFillColor(20, 20, 20); rect(totX, y, totW, 7, true); pdf.setTextColor(255,255,255); }
-        else { pdf.setTextColor(0,0,0); }
-        text(label, totX + 2, y + 4.8, { size: bold && shade ? 9 : 8, bold });
-        text(val, W - margin, y + 4.8, { size: bold && shade ? 9 : 8, bold, align: 'right' });
-        pdf.setTextColor(0,0,0);
-        y += 7;
+      drawHLine(ML, y, rightX, C.darkBorder, 1);
+      y += 12;
+
+      // ─── 5. TOTALS & REMITTANCE SUMMARY ─────────────────────────
+      if (y > PH - 145) {
+        pdf.addPage();
+        y = 36;
+      }
+
+      const totalsW = 215;
+      const totalsX = rightX - totalsW;
+      const remW = CW - totalsW - 20;
+
+      // Left: Remittance Box
+      drawRect(ML, y, remW, 95, C.fillCard, C.border, 0.5);
+      writeText('PAYMENT TERMS & REMITTANCE', ML + 10, y + 13, { size: 7.5, bold: true, color: C.title });
+      writeText('Payment Terms: Net 30 Days from Invoice Date', ML + 10, y + 27, { size: 8, bold: true, color: C.body });
+      writeText(`Please make cheques payable to: ${shop?.companyName || 'Road Ready'}`, ML + 10, y + 40, { size: 8, color: C.body });
+      if (shop?.email) {
+        writeText(`Interac e-Transfer / Inquiries: ${shop.email}`, ML + 10, y + 53, { size: 8, color: C.body });
+      }
+      writeText('Late payments are subject to standard 2% monthly finance fee.', ML + 10, y + 66, { size: 7, italic: true, color: C.muted });
+      writeText('Thank you for trusting us with your commercial fleet repairs!', ML + 10, y + 81, { size: 8, bold: true, color: C.title });
+
+      // Right: Detailed Totals Block
+      let ty = y;
+      const drawTotalLine = (label, valStr, isBold = false) => {
+        writeText(label, totalsX, ty + 10, { size: 8.5, bold: isBold, color: isBold ? C.title : C.body });
+        writeText(valStr, rightX, ty + 10, { size: 8.5, bold: isBold, color: isBold ? C.title : C.body, align: 'right' });
+        ty += 16;
       };
 
-      if (breakdown.labourTotal > 0) drawTotalRow('Labour Total', fmt(breakdown.labourTotal));
-      if (breakdown.partsTotal > 0) drawTotalRow('Parts & Materials', fmt(breakdown.partsTotal));
-      if (breakdown.shopSupplies > 0) drawTotalRow('Shop Supplies', fmt(breakdown.shopSupplies));
-      drawTotalRow('Subtotal', fmt(breakdown.subtotal));
-      drawTotalRow(`GST (${breakdown.taxRate}%)`, fmt(breakdown.taxAmount));
-      if (invoice?.status === 'paid') drawTotalRow('Amount Paid', `-${fmt(breakdown.total)}`);
-      const balanceDue = invoice?.status === 'paid' ? '0.00' : breakdown.total.toFixed(2);
-      drawTotalRow(`BALANCE DUE  $${balanceDue}`, '', true, true);
+      if (breakdown.labourTotal > 0)  drawTotalLine('Labour Total:', fmt(breakdown.labourTotal));
+      if (breakdown.partsTotal > 0)   drawTotalLine('Parts & Materials Total:', fmt(breakdown.partsTotal));
+      if (breakdown.shopSupplies > 0) drawTotalLine('Shop Supplies & Disposal:', fmt(breakdown.shopSupplies));
 
-      y += 6;
+      drawHLine(totalsX, ty + 2, rightX, C.lightBorder, 0.5);
+      ty += 6;
+      drawTotalLine('Subtotal:', fmt(breakdown.subtotal), true);
+      drawTotalLine(`GST / Tax (${breakdown.taxRate || 5}%):`, fmt(breakdown.taxAmount));
 
-      // ── FOOTER ───────────────────────────────────────────────
-      line(margin, y, W - margin, y, 0.2);
-      y += 4;
-      text('Payment Terms: Net 30', margin, y, { size: 7.5, bold: true });
-      text(`Please make cheques payable to ${shop.companyName}. Thank you for your business!`, margin, y + 4, { size: 7.5 });
-      text(`Generated ${new Date().toLocaleString('en-CA')}`, W - margin, y, { size: 6.5, align: 'right' });
+      if (invoice?.status === 'paid') {
+        drawTotalLine('Amount Paid:', `-${fmt(breakdown.total)}`, true);
+      }
 
-      pdf.save(`Invoice_${invoice?.id || 'download'}.pdf`);
-    }).catch(() => alert('Failed to load PDF library. Please check your internet connection.'));
+      // Balance Due Card
+      ty += 4;
+      const balH = 26;
+      drawRect(totalsX, ty, totalsW, balH, C.fillHeader, C.darkBorder, 1);
+      const balanceDue = invoice?.status === 'paid' ? '0.00' : (breakdown.total || 0).toFixed(2);
+      writeText('BALANCE DUE:', totalsX + 8, ty + 17, { size: 9.5, bold: true, color: C.title });
+      writeText(`$${parseFloat(balanceDue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, rightX - 8, ty + 17, { size: 12, bold: true, color: C.title, align: 'right' });
+
+      // ─── 6. PINNED FOOTER ────────────────────────────────────────
+      const footY = PH - 42;
+      drawHLine(ML, footY, rightX, C.lightBorder, 0.75);
+      const footerShopStr = `${shop?.companyName || 'Road Ready'}  •  ${shop?.address || ''}  •  ${shop?.phone || ''}`;
+      writeText(footerShopStr, ML, footY + 14, { size: 7, color: C.muted });
+      writeText(`Page 1 of 1  •  Official Invoice Record  •  ${new Date().toLocaleDateString('en-CA')}`, rightX, footY + 14, { size: 7, color: C.muted, align: 'right' });
+
+      pdf.save(`Invoice_${invoice?.id || 'fleet_invoice'}.pdf`);
+    }).catch((err) => {
+      console.error('PDF error:', err);
+      alert('Failed to generate PDF: ' + (err?.message || err));
+    });
   };
 
   const handleRecordPayment = async (e) => {
@@ -1120,11 +1290,20 @@ Address: ${shop.address}`;
               <DollarSign size={18} /> Record Payment
             </button>
             <button 
+              className="btn btn-primary" 
+              style={{width: '100%', justifyContent: 'flex-start'}}
+              onClick={handleDownloadInvoicePdf}
+              title="Download clean, high-resolution vector PDF of this invoice only"
+            >
+              <Download size={18} /> Download Invoice PDF
+            </button>
+            <button 
               className="btn btn-outline" 
               style={{width: '100%', justifyContent: 'flex-start'}}
               onClick={() => window.print()}
+              title="Print invoice via browser printer"
             >
-              <Printer size={18} /> Print PDF
+              <Printer size={18} /> Print (Browser)
             </button>
 
             {/* Reversible Paid/Unpaid Action */}
