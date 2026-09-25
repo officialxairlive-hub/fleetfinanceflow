@@ -46,9 +46,9 @@ export default function WorkOrderDetailPage() {
     partNumber: '',
     description: '',
     quantity: '1',
-    cost: '45.00',
-    sellPrice: '65.00',
-    markup: '44'
+    cost: '0.00',
+    sellPrice: '0.00',
+    markup: '0'
   });
 
   // Delete Work Order State
@@ -415,9 +415,9 @@ export default function WorkOrderDetailPage() {
         partNumber: '',
         description: '',
         quantity: '1',
-        cost: '45.00',
-        sellPrice: '65.00',
-        markup: '44'
+        cost: '0.00',
+        sellPrice: '0.00',
+        markup: '0'
       });
     } catch (err) {
       alert(`Error adding part: ${err.message}`);
