@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
+import { getDefaultShopRateString, fetchShopSettings } from '../lib/shopConfig';
 import Logo from '../components/Logo';
 import {
   Play,
@@ -56,15 +57,16 @@ export default function TechBayPage() {
   const [savingEstimate, setSavingEstimate] = useState(false);
   const [savingWo, setSavingWo] = useState(false);
   
-  const [estimateForm, setEstimateForm] = useState({
+  const [defaultShopRate, setDefaultShopRate] = useState(() => getDefaultShopRateString());
+  const [estimateForm, setEstimateForm] = useState(() => ({
     customerId: '',
     unitId: '',
     description: '',
     labourHours: '2.5',
-    labourRate: '145.00',
+    labourRate: getDefaultShopRateString(),
     partsAmount: '0',
     notes: 'Valid for 14 days'
-  });
+  }));
 
   // Quick Customer & Unit in Bay
   const [showQuickCust, setShowQuickCust] = useState(false);
@@ -143,14 +145,24 @@ export default function TechBayPage() {
         return;
       }
 
-      const [profileRes, woRes, partsRes, techRes, custRes, unitRes] = await Promise.all([
+      const [profileRes, woRes, partsRes, techRes, custRes, unitRes, shopConfig] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', session.user.id).single(),
         supabase.from('work_orders').select('*').order('created_at', { ascending: false }),
         supabase.from('parts').select('*'),
         supabase.from('technicians').select('*'),
         supabase.from('customers').select('*').order('company'),
-        supabase.from('units').select('*').order('unit_number')
+        supabase.from('units').select('*').order('unit_number'),
+        fetchShopSettings()
       ]);
+
+      if (shopConfig?.defaultLabourRate) {
+        const rateStr = parseFloat(shopConfig.defaultLabourRate).toFixed(2);
+        setDefaultShopRate(rateStr);
+        setEstimateForm(prev => ({
+          ...prev,
+          labourRate: prev.labourRate === '145.00' ? rateStr : prev.labourRate
+        }));
+      }
 
       if (profileRes.error) throw profileRes.error;
       const userProfile = profileRes.data;
@@ -352,7 +364,7 @@ export default function TechBayPage() {
         unitId: '',
         description: '',
         labourHours: '2.5',
-        labourRate: '145.00',
+        labourRate: defaultShopRate || '145.00',
         partsAmount: '0',
         notes: 'Valid for 14 days'
       });

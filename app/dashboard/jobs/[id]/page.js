@@ -7,6 +7,7 @@ import { ArrowLeft, Clock, Printer, Mail, CheckCircle, Plus, ChevronRight, Recei
 import { supabase } from '../../../lib/supabaseClient';
 import { statusLabels } from '../../../lib/demoData';
 import { calculateMarkupAndSellPrice, formatTierBracket } from '../../../lib/markupUtils';
+import { getDefaultShopRateString, fetchShopSettings } from '../../../lib/shopConfig';
 import styles from '../jobs.module.css';
 
 const WORKFLOW_STEPS = ['new', 'diagnosing', 'waiting_parts', 'repairing', 'completed', 'ready_to_invoice', 'invoiced', 'paid'];
@@ -26,12 +27,16 @@ export default function WorkOrderDetailPage() {
   // Labour Modal State
   const [showAddLabourModal, setShowAddLabourModal] = useState(false);
   const [savingLabour, setSavingLabour] = useState(false);
-  const [labourForm, setLabourForm] = useState({
+  const [defaultRate, setDefaultRate] = useState(() => getDefaultShopRateString());
+  const [customerRate, setCustomerRate] = useState(null);
+  const [shopRateTypes, setShopRateTypes] = useState([]);
+  const [selectedRatePreset, setSelectedRatePreset] = useState('shop_default');
+  const [labourForm, setLabourForm] = useState(() => ({
     description: '',
     hours: '1.5',
-    rate: '145.00',
+    rate: getDefaultShopRateString(),
     technician: ''
-  });
+  }));
 
   // Parts Modal State
   const [showAddPartModal, setShowAddPartModal] = useState(false);
@@ -78,16 +83,62 @@ export default function WorkOrderDetailPage() {
     async function fetchJob() {
       setIsLoading(true);
       try {
-        const [woRes, techRes, partsRes] = await Promise.all([
+        const [woRes, techRes, partsRes, shopConfig] = await Promise.all([
           supabase.from('work_orders').select('*').eq('id', id).single(),
           supabase.from('technicians').select('*'),
-          supabase.from('parts').select('*').order('part_number')
+          supabase.from('parts').select('*').order('part_number'),
+          fetchShopSettings()
         ]);
 
         if (woRes.error) throw woRes.error;
         if (techRes.error) throw techRes.error;
 
         const data = woRes.data;
+
+        // Resolve authoritative labour rate:
+        // 1. Default Shop Rate from Settings
+        // 2. Customer negotiated rate (if specified in Customers table)
+        // 3. Fallback 145.00
+        const shopRateNum = parseFloat(shopConfig?.defaultLabourRate) || 145.00;
+        const shopRateStr = shopRateNum.toFixed(2);
+        setDefaultRate(shopRateStr);
+        setShopRateTypes(shopConfig?.labourRateTypes || []);
+
+        let custRate = null;
+        if (data.customer_id) {
+          try {
+            const { data: custData } = await supabase
+              .from('customers')
+              .select('labour_rate, custom_labour_rate')
+              .eq('id', data.customer_id)
+              .single();
+            const cr = parseFloat(custData?.labour_rate) || parseFloat(custData?.custom_labour_rate);
+            if (cr > 0) {
+              custRate = cr;
+            }
+          } catch (_) {}
+        } else if (data.customer_name) {
+          try {
+            const { data: custData } = await supabase
+              .from('customers')
+              .select('labour_rate, custom_labour_rate')
+              .ilike('company', data.customer_name)
+              .single();
+            const cr = parseFloat(custData?.labour_rate) || parseFloat(custData?.custom_labour_rate);
+            if (cr > 0) {
+              custRate = cr;
+            }
+          } catch (_) {}
+        }
+
+        setCustomerRate(custRate);
+        const effectiveRateStr = custRate ? custRate.toFixed(2) : shopRateStr;
+        setSelectedRatePreset(custRate ? 'customer_rate' : 'shop_default');
+        setLabourForm(prev => ({
+          ...prev,
+          rate: effectiveRateStr
+        }));
+
         // Map data to component state
         const hours = Math.floor((data.timer || 0) / 3600);
         const mins = Math.floor(((data.timer || 0) % 3600) / 60);
@@ -175,7 +226,7 @@ export default function WorkOrderDetailPage() {
     setSavingLabour(true);
     try {
       const hoursNum = parseFloat(labourForm.hours) || 0;
-      const rateNum = parseFloat(labourForm.rate) || 145.00;
+      const rateNum = parseFloat(labourForm.rate) || (customerRate || parseFloat(defaultRate) || 145.00);
       const newLine = {
         description: labourForm.description,
         hours: hoursNum,
@@ -211,12 +262,14 @@ export default function WorkOrderDetailPage() {
       }));
 
       setShowAddLabourModal(false);
+      const activeDefault = customerRate ? customerRate.toFixed(2) : (defaultRate || '145.00');
       setLabourForm({
         description: '',
         hours: '1.5',
-        rate: '145.00',
+        rate: activeDefault,
         technician: ''
       });
+      setSelectedRatePreset(customerRate ? 'customer_rate' : 'shop_default');
     } catch (err) {
       alert(`Error adding labour line: ${err.message}`);
     } finally {
@@ -617,7 +670,17 @@ export default function WorkOrderDetailPage() {
               <button 
                 type="button"
                 className="btn btn-outline" 
-                onClick={() => setShowAddLabourModal(true)}
+                onClick={() => {
+                  const activeDefault = customerRate ? customerRate.toFixed(2) : (defaultRate || '145.00');
+                  setLabourForm(prev => ({
+                    ...prev,
+                    rate: prev.rate || activeDefault
+                  }));
+                  if (!labourForm.rate || labourForm.rate === activeDefault) {
+                    setSelectedRatePreset(customerRate ? 'customer_rate' : 'shop_default');
+                  }
+                  setShowAddLabourModal(true);
+                }}
                 style={{ padding: '0.35rem 0.85rem', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
               >
                 <Plus size={15} /> + Add Labour
@@ -827,11 +890,53 @@ export default function WorkOrderDetailPage() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Front Axle Brake Pad & Rotor Overhaul"
+                    placeholder="e.g. Replace inlet NOx sensor"
                     value={labourForm.description}
                     onChange={(e) => setLabourForm({ ...labourForm, description: e.target.value })}
                     style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
                   />
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600' }}>Labour Rate Preset / Type</label>
+                    <span style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: '600' }}>
+                      Shop Default: ${defaultRate} CAD/hr
+                    </span>
+                  </div>
+                  <select
+                    value={selectedRatePreset}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelectedRatePreset(val);
+                      if (val === 'shop_default') {
+                        setLabourForm(prev => ({ ...prev, rate: defaultRate }));
+                      } else if (val === 'customer_rate' && customerRate) {
+                        setLabourForm(prev => ({ ...prev, rate: customerRate.toFixed(2) }));
+                      } else if (val === 'custom') {
+                        // Keep current typed rate
+                      } else {
+                        const matched = (shopRateTypes || []).find(t => t.id === val);
+                        if (matched) {
+                          setLabourForm(prev => ({ ...prev, rate: parseFloat(matched.rate).toFixed(2) }));
+                        }
+                      }
+                    }}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)', fontSize: '13px' }}
+                  >
+                    <option value="shop_default">Shop Default Rate (${defaultRate} CAD/hr — from Settings)</option>
+                    {customerRate && (
+                      <option value="customer_rate">Customer Negotiated Rate (${customerRate.toFixed(2)} CAD/hr)</option>
+                    )}
+                    {(shopRateTypes || [])
+                      .filter(t => t.id !== 'shop')
+                      .map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} (${parseFloat(t.rate).toFixed(2)} CAD/hr)
+                        </option>
+                      ))}
+                    <option value="custom">Custom / Manual Rate</option>
+                  </select>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -848,17 +953,104 @@ export default function WorkOrderDetailPage() {
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Rate ($ CAD/hr)</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600' }}>Rate ($ CAD/hr)</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLabourForm(prev => ({ ...prev, rate: defaultRate }));
+                          setSelectedRatePreset('shop_default');
+                        }}
+                        style={{ background: 'none', border: 'none', padding: 0, color: 'var(--color-primary)', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline' }}
+                      >
+                        Reset to ${defaultRate}
+                      </button>
+                    </div>
                     <input
                       type="number"
                       step="0.01"
                       required
-                      placeholder="145.00"
+                      placeholder={defaultRate || "145.00"}
                       value={labourForm.rate}
-                      onChange={(e) => setLabourForm({ ...labourForm, rate: e.target.value })}
+                      onChange={(e) => {
+                        setLabourForm({ ...labourForm, rate: e.target.value });
+                        setSelectedRatePreset('custom');
+                      }}
                       style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
                     />
                   </div>
+                </div>
+
+                {/* Quick Presets Pills */}
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '-4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLabourForm(prev => ({ ...prev, rate: defaultRate }));
+                      setSelectedRatePreset('shop_default');
+                    }}
+                    style={{
+                      fontSize: '11px',
+                      padding: '3px 8px',
+                      borderRadius: '4px',
+                      border: '1px solid var(--color-border)',
+                      backgroundColor: labourForm.rate === defaultRate ? 'var(--color-primary-light, #eff6ff)' : 'transparent',
+                      color: labourForm.rate === defaultRate ? 'var(--color-primary, #2563eb)' : 'var(--color-text-secondary)',
+                      cursor: 'pointer',
+                      fontWeight: labourForm.rate === defaultRate ? 600 : 400
+                    }}
+                  >
+                    Shop Default: ${defaultRate}
+                  </button>
+                  {customerRate && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLabourForm(prev => ({ ...prev, rate: customerRate.toFixed(2) }));
+                        setSelectedRatePreset('customer_rate');
+                      }}
+                      style={{
+                        fontSize: '11px',
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        border: '1px solid var(--color-border)',
+                        backgroundColor: labourForm.rate === customerRate.toFixed(2) ? 'var(--color-primary-light, #eff6ff)' : 'transparent',
+                        color: labourForm.rate === customerRate.toFixed(2) ? 'var(--color-primary, #2563eb)' : 'var(--color-text-secondary)',
+                        cursor: 'pointer',
+                        fontWeight: labourForm.rate === customerRate.toFixed(2) ? 600 : 400
+                      }}
+                    >
+                      Customer: ${customerRate.toFixed(2)}
+                    </button>
+                  )}
+                  {(shopRateTypes || [])
+                    .filter(t => t.id !== 'shop')
+                    .map(t => {
+                      const tRateStr = parseFloat(t.rate).toFixed(2);
+                      const isSelected = labourForm.rate === tRateStr;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            setLabourForm(prev => ({ ...prev, rate: tRateStr }));
+                            setSelectedRatePreset(t.id);
+                          }}
+                          style={{
+                            fontSize: '11px',
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            border: '1px solid var(--color-border)',
+                            backgroundColor: isSelected ? 'var(--color-primary-light, #eff6ff)' : 'transparent',
+                            color: isSelected ? 'var(--color-primary, #2563eb)' : 'var(--color-text-secondary)',
+                            cursor: 'pointer',
+                            fontWeight: isSelected ? 600 : 400
+                          }}
+                        >
+                          {t.name}: ${tRateStr}
+                        </button>
+                      );
+                    })}
                 </div>
 
                 <div>

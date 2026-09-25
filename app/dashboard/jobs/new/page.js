@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Upload, ArrowLeft, Save, Plus, X, Truck, UserPlus, Building2 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
+import { getDefaultShopRateString, fetchShopSettings } from '../../../lib/shopConfig';
 import styles from '../jobs.module.css';
 
 export default function CreateWorkOrderPage() {
@@ -31,16 +32,17 @@ export default function CreateWorkOrderPage() {
   // Quick Add Customer Modal
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [savingCustomer, setSavingCustomer] = useState(false);
-  const [customerForm, setCustomerForm] = useState({
+  const [defaultShopRate, setDefaultShopRate] = useState(() => getDefaultShopRateString());
+  const [customerForm, setCustomerForm] = useState(() => ({
     company: '',
     contact: '',
     phone: '',
     email: '',
     address: '',
     paymentTerms: 'Net 30',
-    labourRate: '145.00',
+    labourRate: getDefaultShopRateString(),
     pstNumber: ''
-  });
+  }));
 
   // Quick Add Unit Modal
   const [showAddUnitModal, setShowAddUnitModal] = useState(false);
@@ -59,15 +61,25 @@ export default function CreateWorkOrderPage() {
   useEffect(() => {
     async function loadFormData() {
       try {
-        const [cRes, uRes, tRes] = await Promise.all([
+        const [cRes, uRes, tRes, shopConfig] = await Promise.all([
           supabase.from('customers').select('*').order('company'),
           supabase.from('units').select('*'),
-          supabase.from('technicians').select('*')
+          supabase.from('technicians').select('*'),
+          fetchShopSettings()
         ]);
         
         setCustomers(cRes.data || []);
         setUnits(uRes.data || []);
         setTechnicians(tRes.data || []);
+
+        if (shopConfig?.defaultLabourRate) {
+          const rateStr = parseFloat(shopConfig.defaultLabourRate).toFixed(2);
+          setDefaultShopRate(rateStr);
+          setCustomerForm(prev => ({
+            ...prev,
+            labourRate: prev.labourRate === '145.00' ? rateStr : prev.labourRate
+          }));
+        }
       } catch (err) {
         console.error("Error loading dropdown data:", err);
       }
@@ -129,7 +141,7 @@ export default function CreateWorkOrderPage() {
         email: '',
         address: '',
         paymentTerms: 'Net 30',
-        labourRate: '145.00',
+        labourRate: defaultShopRate || '145.00',
         pstNumber: ''
       });
       alert(`✅ Customer "${createdCust.company}" added with Rate $${rateNum}/hr${pstVal ? ` and PST #${pstVal}` : ''}!`);
@@ -531,11 +543,18 @@ export default function CreateWorkOrderPage() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Customer Rate ($ CAD / hr)</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>
+                      Customer Rate ($ CAD / hr)
+                      {defaultShopRate && (
+                        <span style={{ fontSize: '11px', fontWeight: '400', color: 'var(--color-text-secondary)', marginLeft: '6px' }}>
+                          (Default: ${defaultShopRate})
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="number"
                       step="0.01"
-                      placeholder="e.g. 145.00"
+                      placeholder={`e.g. ${defaultShopRate || '145.00'}`}
                       value={customerForm.labourRate}
                       onChange={(e) => setCustomerForm({ ...customerForm, labourRate: e.target.value })}
                       style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}

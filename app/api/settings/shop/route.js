@@ -27,6 +27,13 @@ const DEFAULT_SHOP_INFO = {
   taxNumber: 'GST # 783920194 RT0001',
   defaultLabourRate: 145,
   defaultPartsMarkup: 35,
+  labourRateTypes: [
+    { id: 'shop', name: 'Standard Shop Labour', rate: 145.00 },
+    { id: 'roadside', name: 'Roadside Labour', rate: 185.00 },
+    { id: 'travel', name: 'Travel Time', rate: 95.00 },
+    { id: 'afterhours', name: 'After-Hours / Emergency', rate: 215.00 },
+    { id: 'weekend', name: 'Weekend Rate', rate: 200.00 }
+  ],
   partsMarkupTiers: [
     { id: 'tier-1', minCost: 0, maxCost: 25, markup: 60, label: 'Under $25.00' },
     { id: 'tier-2', minCost: 25.01, maxCost: 100, markup: 50, label: '$25.01 – $100.00' },

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
+import { getDefaultShopRateString, fetchShopSettings } from '../../lib/shopConfig';
 import { Plus, Search, Eye, Send, FilePlus, X, Calculator, CheckCircle2, ExternalLink, Clock, DollarSign, Wrench } from 'lucide-react';
 import styles from './estimates.module.css';
 
@@ -21,15 +22,16 @@ export default function EstimatesList() {
   // Create Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [savingEstimate, setSavingEstimate] = useState(false);
-  const [estimateForm, setEstimateForm] = useState({
+  const [defaultShopRate, setDefaultShopRate] = useState(() => getDefaultShopRateString());
+  const [estimateForm, setEstimateForm] = useState(() => ({
     customerId: '',
     unitId: '',
     description: '',
     labourHours: '2.5',
-    labourRate: '145.00',
+    labourRate: getDefaultShopRateString(),
     partsTotal: '350.00',
     notes: 'Valid for 14 days from date of issue.'
-  });
+  }));
 
   // Quick Customer Inline State
   const [showQuickCust, setShowQuickCust] = useState(false);
@@ -133,16 +135,26 @@ export default function EstimatesList() {
   const fetchEstimatesAndData = async () => {
     setIsLoading(true);
     try {
-      const [woRes, custRes, unitRes] = await Promise.all([
+      const [woRes, custRes, unitRes, shopConfig] = await Promise.all([
         supabase.from('work_orders').select('*').order('created_at', { ascending: false }),
         supabase.from('customers').select('*').order('company'),
-        supabase.from('units').select('*').order('unit_number')
+        supabase.from('units').select('*').order('unit_number'),
+        fetchShopSettings()
       ]);
 
       if (woRes.error) throw woRes.error;
       
       setCustomers(custRes.data || []);
       setUnits(unitRes.data || []);
+
+      if (shopConfig?.defaultLabourRate) {
+        const rateStr = parseFloat(shopConfig.defaultLabourRate).toFixed(2);
+        setDefaultShopRate(rateStr);
+        setEstimateForm(prev => ({
+          ...prev,
+          labourRate: prev.labourRate === '145.00' ? rateStr : prev.labourRate
+        }));
+      }
 
       const estList = (woRes.data || []).map(wo => {
         const labourList = wo.labour || [];

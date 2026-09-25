@@ -80,7 +80,14 @@ export default function SettingsPage() {
     defaultPartsMarkup: 35,
     shopSupplyRate: 5,
     envFee: 10,
-    partsMarkupTiers: DEFAULT_MARKUP_TIERS
+    partsMarkupTiers: DEFAULT_MARKUP_TIERS,
+    labourRateTypes: [
+      { id: 'shop', name: 'Standard Shop Labour', rate: 145.00 },
+      { id: 'roadside', name: 'Roadside Labour', rate: 185.00 },
+      { id: 'travel', name: 'Travel Time', rate: 95.00 },
+      { id: 'afterhours', name: 'After-Hours / Emergency', rate: 215.00 },
+      { id: 'weekend', name: 'Weekend Rate', rate: 200.00 }
+    ]
   });
 
   const [testCost, setTestCost] = useState('75.00');
@@ -496,6 +503,47 @@ export default function SettingsPage() {
     });
   };
 
+  const handleLabourRateTypeChange = (index, field, val) => {
+    setShopForm(prev => {
+      const updated = [...(prev.labourRateTypes || [])];
+      if (!updated[index]) return prev;
+      if (field === 'rate') {
+        const num = parseFloat(val) || 0;
+        updated[index] = { ...updated[index], rate: num };
+        if (updated[index].id === 'shop') {
+          return { ...prev, defaultLabourRate: num, labourRateTypes: updated };
+        }
+      } else {
+        updated[index] = { ...updated[index], [field]: val };
+      }
+      return { ...prev, labourRateTypes: updated };
+    });
+  };
+
+  const handleAddLabourRateType = () => {
+    setShopForm(prev => {
+      const current = prev.labourRateTypes || [];
+      const newType = {
+        id: `rate-${Date.now().toString().slice(-4)}`,
+        name: 'New Rate Type',
+        rate: 150.00
+      };
+      return { ...prev, labourRateTypes: [...current, newType] };
+    });
+  };
+
+  const handleRemoveLabourRateType = (index) => {
+    setShopForm(prev => {
+      const current = prev.labourRateTypes || [];
+      if (current[index]?.id === 'shop') {
+        alert('Standard Shop Rate is required as the default rate.');
+        return prev;
+      }
+      const filtered = current.filter((_, i) => i !== index);
+      return { ...prev, labourRateTypes: filtered };
+    });
+  };
+
   const handleApplyPreset = (key) => {
     const preset = PRESET_MATRICES[key];
     if (!preset) return;
@@ -782,7 +830,15 @@ export default function SettingsPage() {
                       type="number" 
                       className={styles.input} 
                       value={shopForm.defaultLabourRate || 145} 
-                      onChange={(e) => setShopForm({ ...shopForm, defaultLabourRate: parseFloat(e.target.value) || 0 })}
+                      onChange={(e) => {
+                        const newRate = parseFloat(e.target.value) || 0;
+                        setShopForm(prev => {
+                          const updatedTypes = (prev.labourRateTypes || []).map(t => 
+                            t.id === 'shop' ? { ...t, rate: newRate } : t
+                          );
+                          return { ...prev, defaultLabourRate: newRate, labourRateTypes: updatedTypes };
+                        });
+                      }}
                     />
                   </div>
                   <div className={styles.formGroup}>
@@ -1024,26 +1080,77 @@ export default function SettingsPage() {
               </div>
 
               <div className={styles.card}>
-                <h3>Labour Rate Types</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <div>
+                    <h3 style={{ margin: 0 }}>Labour Rate Types</h3>
+                    <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                      Configure standard rate types available when logging labour lines on work orders.
+                    </p>
+                  </div>
+                  <button type="button" className="btn btn-outline" onClick={handleAddLabourRateType} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', padding: '6px 12px' }}>
+                    <Plus size={15}/> Add Rate Type
+                  </button>
+                </div>
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th>Rate Name</th>
-                      <th>Amount ($/hr)</th>
-                      <th>Action</th>
+                      <th style={{ width: '50%' }}>Rate Name</th>
+                      <th style={{ width: '30%' }}>Amount ($ CAD/hr)</th>
+                      <th style={{ width: '20%', textAlign: 'center' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {labourRateTypes.map(rate => (
-                      <tr key={rate.id}>
-                        <td><input type="text" className={styles.input} defaultValue={rate.name} style={{ padding: '4px 8px' }} /></td>
-                        <td><input type="number" className={styles.input} defaultValue={rate.rate} style={{ padding: '4px 8px', width: '100px' }} /></td>
-                        <td><button className="btn btn-outline" style={{ padding: '4px 8px' }}>Remove</button></td>
+                    {(shopForm.labourRateTypes || [
+                      { id: 'shop', name: 'Standard Shop Labour', rate: shopForm.defaultLabourRate || 145.00 },
+                      { id: 'roadside', name: 'Roadside Labour', rate: 185.00 },
+                      { id: 'travel', name: 'Travel Time', rate: 95.00 },
+                      { id: 'afterhours', name: 'After-Hours / Emergency', rate: 215.00 },
+                      { id: 'weekend', name: 'Weekend Rate', rate: 200.00 }
+                    ]).map((rate, idx) => (
+                      <tr key={rate.id || idx}>
+                        <td>
+                          <input 
+                            type="text" 
+                            className={styles.input} 
+                            value={rate.name || ''} 
+                            onChange={(e) => handleLabourRateTypeChange(idx, 'name', e.target.value)}
+                            style={{ padding: '6px 10px', width: '100%' }} 
+                          />
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>$</span>
+                            <input 
+                              type="number" 
+                              step="0.01" 
+                              className={styles.input} 
+                              value={rate.rate ?? ''} 
+                              onChange={(e) => handleLabourRateTypeChange(idx, 'rate', e.target.value)}
+                              style={{ padding: '6px 10px', width: '110px' }} 
+                            />
+                            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>/hr</span>
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          {rate.id === 'shop' ? (
+                            <span style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 600, padding: '2px 8px', backgroundColor: '#EFF6FF', borderRadius: '4px' }}>
+                              Primary Default
+                            </span>
+                          ) : (
+                            <button 
+                              type="button" 
+                              className="btn btn-outline" 
+                              onClick={() => handleRemoveLabourRateType(idx)}
+                              style={{ padding: '4px 8px', color: '#dc2626', borderColor: '#fca5a5', fontSize: '12px' }}
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                <button className="btn btn-outline" style={{ marginTop: '1rem' }}><Plus size={16}/> Add Rate Type</button>
                 <div className={styles.cardFooter}>
                   <button className="btn btn-primary" onClick={handleSave} disabled={shopSaveLoading}>
                     <Save size={16} /> Save Changes
