@@ -356,17 +356,18 @@ export default function WorkOrderDetailPage() {
 
   const handleAddPartLine = async (e) => {
     e.preventDefault();
-    if (!partForm.partNumber.trim() || !partForm.description.trim()) return;
+    if (!partForm.description.trim()) return;
 
     setSavingPart(true);
     try {
       const qtyNum = parseInt(partForm.quantity) || 1;
       const costNum = parseFloat(partForm.cost) || 0;
       const sellPriceNum = parseFloat(partForm.sellPrice) || 0;
+      const finalPartNumber = partForm.partNumber.trim() || 'N/A';
 
       const newPartItem = {
-        partNumber: partForm.partNumber,
-        part_number: partForm.partNumber,
+        partNumber: finalPartNumber,
+        part_number: finalPartNumber,
         description: partForm.description,
         quantity: qtyNum,
         cost: costNum,
@@ -1115,10 +1116,9 @@ export default function WorkOrderDetailPage() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Part # *</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Part # (Optional)</label>
                     <input
                       type="text"
-                      required
                       placeholder="e.g. FL-2040-BRK"
                       value={partForm.partNumber}
                       onChange={(e) => setPartForm({ ...partForm, partNumber: e.target.value })}
