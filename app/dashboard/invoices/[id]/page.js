@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
 import { shopSettings } from '../../../lib/demoData';
-import { Mail, DollarSign, Printer, Download, CheckCircle, X, ArrowLeft, RefreshCw, FileText, Wrench, Package, Send, Paperclip, RotateCcw, Edit } from 'lucide-react';
+import { Mail, DollarSign, Printer, Download, CheckCircle, X, ArrowLeft, RefreshCw, FileText, Wrench, Package, Send, Paperclip, RotateCcw, Edit, ExternalLink } from 'lucide-react';
 import styles from '../invoices.module.css';
 
 export default function InvoiceDetail() {
@@ -953,19 +953,77 @@ Address: ${shop.address}`;
     );
   }
 
+  const linkedWoId = workOrder?.id || invoice?.work_order_id || (typeof invoiceId === 'string' && invoiceId.startsWith('INV-') ? `WO-${invoiceId.replace('INV-', '')}` : null);
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <Link href="/dashboard/invoices" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-secondary)', textDecoration: 'none', marginBottom: '8px' }}>
-          <ArrowLeft size={16} /> Back to Invoices
-        </Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
+          {linkedWoId && (
+            <Link 
+              href={`/dashboard/jobs/${linkedWoId}`} 
+              className="no-print"
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '6px', 
+                padding: '6px 14px', 
+                fontSize: '13px', 
+                fontWeight: 600, 
+                color: '#fff', 
+                backgroundColor: 'var(--color-primary, #2563eb)', 
+                borderRadius: '8px', 
+                textDecoration: 'none',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.06)'
+              }}
+            >
+              <ArrowLeft size={15} /> Back to Work Order #{linkedWoId}
+            </Link>
+          )}
+          <Link 
+            href="/dashboard/invoices" 
+            className="no-print"
+            style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              padding: '6px 12px', 
+              fontSize: '13px', 
+              fontWeight: 500, 
+              color: 'var(--color-text-secondary, #64748b)', 
+              backgroundColor: 'var(--color-surface, #f8fafc)', 
+              border: '1px solid var(--color-border, #e2e8f0)', 
+              borderRadius: '8px', 
+              textDecoration: 'none' 
+            }}
+          >
+            ← Back to Invoices
+          </Link>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           <h1 className={styles.title}>Invoice {invoice.id}</h1>
           <span style={{fontSize:'10px', background:'var(--color-primary)', color:'white', padding:'3px 6px', borderRadius:'10px', alignSelf: 'center'}}>SUPABASE</span>
-          {workOrder && (
-            <span style={{fontSize:'11px', background:'#EEF2FF', color:'#4F46E5', padding:'3px 8px', borderRadius:'10px', fontWeight: 600}}>
-              Source: WO #{workOrder.id}
-            </span>
+          {linkedWoId && (
+            <Link
+              href={`/dashboard/jobs/${linkedWoId}`}
+              className="no-print"
+              title="Click to go to linked Work Order"
+              style={{
+                fontSize: '12px',
+                background: '#EEF2FF',
+                color: '#4F46E5',
+                padding: '4px 10px',
+                borderRadius: '10px',
+                fontWeight: 600,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                border: '1px solid #C7D2FE'
+              }}
+            >
+              Source: WO #{linkedWoId} ↗
+            </Link>
           )}
         </div>
       </div>
@@ -1018,7 +1076,30 @@ Address: ${shop.address}`;
                   </select>
                 </div>
                 <div className={styles.metaLabel}>Actions:</div>
-                <div className={styles.metaValue} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div className={styles.metaValue} style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  {linkedWoId && (
+                    <Link
+                      href={`/dashboard/jobs/${linkedWoId}`}
+                      className={`${styles.iconBtn} no-print`}
+                      title={`Open Work Order #${linkedWoId}`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 10px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        textDecoration: 'none',
+                        color: 'var(--color-primary)',
+                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                        border: '1px solid var(--color-primary)',
+                        borderRadius: '6px',
+                        fontWeight: 600
+                      }}
+                    >
+                      <ArrowLeft size={13} /> Work Order #{linkedWoId}
+                    </Link>
+                  )}
                   <button
                     className={`${styles.iconBtn} no-print`}
                     title="Print Invoice"
@@ -1058,10 +1139,20 @@ Address: ${shop.address}`;
 
             <div className={styles.billTo} style={{ borderLeft: '1px solid var(--color-border)', paddingLeft: '20px' }}>
               <h3>JOB / VEHICLE REFERENCE</h3>
-              {workOrder ? (
+              {linkedWoId ? (
                 <p style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 4px 0' }}>
-                  <Link href={`/dashboard/jobs/${workOrder.id}`} style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>
-                    Work Order #{workOrder.id} ↗
+                  <Link 
+                    href={`/dashboard/jobs/${linkedWoId}`} 
+                    style={{ 
+                      color: 'var(--color-primary)', 
+                      textDecoration: 'none', 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '4px' 
+                    }}
+                    title={`Open Work Order #${linkedWoId}`}
+                  >
+                    Work Order #{linkedWoId} <ExternalLink size={14} />
                   </Link>
                 </p>
               ) : (
