@@ -58,8 +58,8 @@ export default function PartsPage() {
   const [receiveForm, setReceiveForm] = useState({
     neededQty: 1,
     receivedQty: 1,
-    cost: '45.00',
-    sellPrice: '65.00',
+    cost: '0',
+    sellPrice: '0.00',
     category: 'Engine',
     binLocation: 'A-01',
     supplier: 'FleetPride'
@@ -348,8 +348,8 @@ export default function PartsPage() {
 
   const openReceiveModal = (req) => {
     setSelectedRequest(req);
-    const costNum = 45.00;
-    const sellNum = (costNum * 1.35).toFixed(2);
+    const costNum = 0.00;
+    const sellNum = '0.00';
     setReceiveForm({
       neededQty: req.quantity || 1,
       receivedQty: req.quantity || 1,
@@ -711,7 +711,7 @@ Total Invoice: $690.00
   const handleAiAddItem = () => {
     if (!aiInvoiceData) return;
     const { tiers, fallbackMarkup } = getSavedMarkupSettings();
-    const defaultCost = 45.00;
+    const defaultCost = 0.00;
     const calc = calculateMarkupAndSellPrice(defaultCost, tiers, fallbackMarkup);
     const newItem = {
       id: `new-${Date.now()}`,
@@ -1341,9 +1341,10 @@ Total Invoice: $690.00
                       step="0.01"
                       className={styles.input}
                       value={partForm.cost}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => handlePartCostChange(e.target.value)}
                       required
-                      placeholder="45.00"
+                      placeholder="0"
                     />
                     {partForm.appliedTierLabel && (
                       <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, marginTop: '3px' }}>
@@ -1365,8 +1366,9 @@ Total Invoice: $690.00
                       step="0.01"
                       className={styles.input}
                       value={partForm.sellPrice}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => handlePartSellPriceChange(e.target.value)}
-                      placeholder="65.00"
+                      placeholder="0.00"
                     />
                   </div>
                   <div className={styles.formGroup}>

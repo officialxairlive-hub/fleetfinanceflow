@@ -46,9 +46,9 @@ export default function WorkOrderDetailPage() {
     partNumber: '',
     description: '',
     quantity: '1',
-    cost: '0.00',
+    cost: '0',
     sellPrice: '0.00',
-    markup: '0'
+    markup: ''
   });
 
   // Delete Work Order State
@@ -341,7 +341,7 @@ export default function WorkOrderDetailPage() {
   const handleJobPartCostChange = (costVal) => {
     const c = parseFloat(costVal) || 0;
     if (costVal === '' || c <= 0) {
-      setPartForm(prev => ({ ...prev, cost: costVal, sellPrice: '', markup: '', tierLabel: '' }));
+      setPartForm(prev => ({ ...prev, cost: costVal, sellPrice: '0.00', markup: '', tierLabel: '' }));
       return;
     }
     const calc = calculateMarkupAndSellPrice(c);
@@ -416,9 +416,10 @@ export default function WorkOrderDetailPage() {
         partNumber: '',
         description: '',
         quantity: '1',
-        cost: '0.00',
+        cost: '0',
         sellPrice: '0.00',
-        markup: '0'
+        markup: '',
+        tierLabel: ''
       });
     } catch (err) {
       alert(`Error adding part: ${err.message}`);
@@ -736,7 +737,19 @@ export default function WorkOrderDetailPage() {
               <button 
                 type="button"
                 className="btn btn-outline" 
-                onClick={() => setShowAddPartModal(true)}
+                onClick={() => {
+                  setPartForm({
+                    partNumber: '',
+                    description: '',
+                    quantity: '1',
+                    cost: '0',
+                    sellPrice: '0.00',
+                    markup: '',
+                    tierLabel: ''
+                  });
+                  setSelectedInventoryPartId('');
+                  setShowAddPartModal(true);
+                }}
                 style={{ padding: '0.35rem 0.85rem', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
               >
                 <Plus size={15} /> + Add Part
@@ -1157,8 +1170,9 @@ export default function WorkOrderDetailPage() {
                     <input
                       type="number"
                       step="0.01"
-                      placeholder="45.00"
+                      placeholder="0"
                       value={partForm.cost}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => handleJobPartCostChange(e.target.value)}
                       style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
                     />
@@ -1181,8 +1195,9 @@ export default function WorkOrderDetailPage() {
                       type="number"
                       step="0.01"
                       required
-                      placeholder="65.00"
+                      placeholder="0.00"
                       value={partForm.sellPrice}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => {
                         const sVal = e.target.value;
                         const sNum = parseFloat(sVal) || 0;
