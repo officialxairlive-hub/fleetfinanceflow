@@ -590,47 +590,6 @@ export default function ApprovalPage() {
           </div>
         </div>
 
-        {/* 4. Diagnostics & Reported Complaints (The 3 C's) */}
-        <div className={styles.card}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px' }}>
-            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: 'var(--color-text)' }}>
-              Service & Diagnostic Report
-            </h3>
-            <span style={{ fontSize: '11px', fontWeight: 700, backgroundColor: '#E0F2FE', color: '#0369A1', padding: '3px 8px', borderRadius: '12px' }}>
-              Fault • Cause • Correction
-            </span>
-          </div>
-
-          <div className={styles.section} style={{ marginBottom: '12px' }}>
-            <h4 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ backgroundColor: '#FEE2E2', color: '#991B1B', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                1. FAULT
-              </span>
-              <span>Reported Concern / Complaint</span>
-            </h4>
-            <p className={styles.sectionText}>{order.complaint || 'Diagnostic inspection and mechanical evaluation.'}</p>
-          </div>
-
-          <div className={styles.section} style={{ marginBottom: '12px' }}>
-            <h4 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                2. CAUSE
-              </span>
-              <span>Diagnostic Cause & Teardown Findings</span>
-            </h4>
-            <p className={styles.sectionText}>{order.cause || 'Mechanical inspection and component testing completed.'}</p>
-          </div>
-
-          <div className={styles.section}>
-            <h4 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ backgroundColor: '#DCFCE7', color: '#166534', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                3. CORRECTION
-              </span>
-              <span>Correction & Services Rendered</span>
-            </h4>
-            <p className={styles.sectionText}>{order.correction || 'Certified service completed and road tested OK.'}</p>
-          </div>
-        </div>
 
         {/* 5. Online Invoicing & Instant Payment (If Invoiced or Paid) */}
         {(order.status === 'invoiced' || order.status === 'paid' || invoice || paySuccess) && (
@@ -653,17 +612,15 @@ export default function ApprovalPage() {
 
             <div style={{ backgroundColor: '#F8FAFC', padding: '12px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', marginBottom: '14px' }}>
               <div className={styles.costRow}>
-                <span>Certified Labour Services:</span>
-                <strong>${labourTotal.toFixed(2)} CAD</strong>
+                <span>Subtotal:</span>
+                <strong>${(labourTotal + partsTotal).toFixed(2)} CAD</strong>
               </div>
-              <div className={styles.costRow}>
-                <span>Replacement Parts & Fluids:</span>
-                <strong>${partsTotal.toFixed(2)} CAD</strong>
-              </div>
-              <div className={styles.costRow}>
-                <span>Shop Supplies & Eco Fee:</span>
-                <strong>${shopSupplies.toFixed(2)} CAD</strong>
-              </div>
+              {shopSupplies > 0 && (
+                <div className={styles.costRow}>
+                  <span>Shop Supplies & Eco Fee:</span>
+                  <strong>${shopSupplies.toFixed(2)} CAD</strong>
+                </div>
+              )}
               <div className={styles.costRow}>
                 <span>Tax (5% GST):</span>
                 <strong>${tax.toFixed(2)} CAD</strong>
@@ -757,26 +714,23 @@ export default function ApprovalPage() {
 
         {/* 6. Itemized Estimate Breakdown ($ CAD) */}
         <div className={styles.card}>
-          <h3 className={styles.cardTitle} style={{ marginBottom: '12px' }}>Itemized Estimate Breakdown ($ CAD)</h3>
+          <h3 className={styles.cardTitle} style={{ marginBottom: '12px' }}>Estimate Breakdown ($ CAD)</h3>
           
           <div className={styles.costRow}>
-            <span>Certified Journeyman Labour ({labourList.reduce((s,l) => s + (l.hours || 0), 0) || 2.5} hrs @ $145.00/hr CAD)</span>
-            <strong>${labourTotal.toFixed(2)}</strong>
+            <span>Subtotal (Services & Materials):</span>
+            <strong>${(labourTotal + partsTotal).toFixed(2)} CAD</strong>
           </div>
           
-          <div className={styles.costRow}>
-            <span>Heavy Duty Parts & Fluids ({partsList.length || 'Direct OE'} line items)</span>
-            <strong>${partsTotal.toFixed(2)}</strong>
-          </div>
-          
-          <div className={styles.costRow}>
-            <span>Shop Supplies & Environmental Eco Disposal (5% capped at $50)</span>
-            <strong>${shopSupplies.toFixed(2)}</strong>
-          </div>
+          {shopSupplies > 0 && (
+            <div className={styles.costRow}>
+              <span>Shop Supplies & Environmental Eco Disposal (5% capped at $50)</span>
+              <strong>${shopSupplies.toFixed(2)} CAD</strong>
+            </div>
+          )}
           
           <div className={styles.costRow}>
             <span>Applicable Taxes (5% GST)</span>
-            <strong>${tax.toFixed(2)}</strong>
+            <strong>${tax.toFixed(2)} CAD</strong>
           </div>
           
           <div className={styles.costTotal}>

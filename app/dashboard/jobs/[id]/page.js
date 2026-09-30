@@ -35,7 +35,8 @@ export default function WorkOrderDetailPage() {
     description: '',
     hours: '1.5',
     rate: getDefaultShopRateString(),
-    technician: ''
+    technician: '',
+    jobGroup: ''
   }));
 
   // Parts Modal State
@@ -48,7 +49,8 @@ export default function WorkOrderDetailPage() {
     quantity: '1',
     cost: '0',
     sellPrice: '0.00',
-    markup: ''
+    markup: '',
+    jobGroup: ''
   });
 
   // Delete Work Order State
@@ -231,7 +233,8 @@ export default function WorkOrderDetailPage() {
         description: labourForm.description,
         hours: hoursNum,
         rate: rateNum,
-        technician: labourForm.technician || wo.techName || 'Shop Tech'
+        technician: labourForm.technician || wo.techName || 'Shop Tech',
+        jobGroup: labourForm.jobGroup || ''
       };
 
       const updatedLabour = [...(wo.labour || []), newLine];
@@ -267,7 +270,8 @@ export default function WorkOrderDetailPage() {
         description: '',
         hours: '1.5',
         rate: activeDefault,
-        technician: ''
+        technician: '',
+        jobGroup: ''
       });
       setSelectedRatePreset(customerRate ? 'customer_rate' : 'shop_default');
     } catch (err) {
@@ -372,7 +376,8 @@ export default function WorkOrderDetailPage() {
         quantity: qtyNum,
         cost: costNum,
         sellPrice: sellPriceNum,
-        price: sellPriceNum
+        price: sellPriceNum,
+        jobGroup: partForm.jobGroup || ''
       };
 
       const updatedParts = [...(wo.parts || []), newPartItem];
@@ -419,7 +424,8 @@ export default function WorkOrderDetailPage() {
         cost: '0',
         sellPrice: '0.00',
         markup: '',
-        tierLabel: ''
+        tierLabel: '',
+        jobGroup: ''
       });
     } catch (err) {
       alert(`Error adding part: ${err.message}`);
@@ -460,6 +466,85 @@ export default function WorkOrderDetailPage() {
     } catch (err) {
       alert(`Error removing part: ${err.message}`);
     }
+  };
+
+  const handleOpenAddLabourModal = (targetJob = '') => {
+    const activeDefault = customerRate ? customerRate.toFixed(2) : (defaultRate || '145.00');
+    setLabourForm({
+      description: '',
+      hours: '1.5',
+      rate: activeDefault,
+      technician: '',
+      jobGroup: targetJob
+    });
+    setSelectedRatePreset(customerRate ? 'customer_rate' : 'shop_default');
+    setShowAddLabourModal(true);
+  };
+
+  const handleOpenAddPartModal = (targetJob = '') => {
+    setPartForm({
+      partNumber: '',
+      description: '',
+      quantity: '1',
+      cost: '0',
+      sellPrice: '0.00',
+      markup: '',
+      tierLabel: '',
+      jobGroup: targetJob
+    });
+    setSelectedInventoryPartId('');
+    setShowAddPartModal(true);
+  };
+
+  const getJobSections = () => {
+    if (!wo) return [];
+    const allLabour = wo.labour || [];
+    const allParts = wo.parts || [];
+
+    const groupNames = [];
+    const addGrp = (name) => {
+      const trimmed = (name || '').trim();
+      if (!trimmed) return;
+      if (!groupNames.includes(trimmed)) groupNames.push(trimmed);
+    };
+
+    allLabour.forEach(l => addGrp(l.jobGroup));
+    allParts.forEach(p => addGrp(p.jobGroup));
+
+    if (groupNames.length === 0) {
+      return [{
+        name: 'Job 1',
+        labour: allLabour.map((l, originalIndex) => ({ ...l, originalIndex })),
+        parts: allParts.map((p, originalIndex) => ({ ...p, originalIndex }))
+      }];
+    }
+
+    const sections = groupNames.map((gName) => ({
+      name: gName,
+      labour: allLabour
+        .map((l, originalIndex) => ({ ...l, originalIndex }))
+        .filter(l => (l.jobGroup || '').trim().toLowerCase() === gName.toLowerCase()),
+      parts: allParts
+        .map((p, originalIndex) => ({ ...p, originalIndex }))
+        .filter(p => (p.jobGroup || '').trim().toLowerCase() === gName.toLowerCase())
+    }));
+
+    const unassignedLabour = allLabour
+      .map((l, originalIndex) => ({ ...l, originalIndex }))
+      .filter(l => !groupNames.some(g => g.toLowerCase() === (l.jobGroup || '').trim().toLowerCase()));
+    const unassignedParts = allParts
+      .map((p, originalIndex) => ({ ...p, originalIndex }))
+      .filter(p => !groupNames.some(g => g.toLowerCase() === (p.jobGroup || '').trim().toLowerCase()));
+
+    if (unassignedLabour.length > 0 || unassignedParts.length > 0) {
+      sections.push({
+        name: 'General / Additional Services',
+        labour: unassignedLabour,
+        parts: unassignedParts
+      });
+    }
+
+    return sections;
   };
 
   const getStatusClass = (status) => {
@@ -646,155 +731,161 @@ export default function WorkOrderDetailPage() {
             </div>
           </div>
 
-          {/* Complaint / Cause / Correction */}
-          <div className={styles.card}>
-            <h2 className={styles.cardTitle}>Service Details</h2>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Customer Complaint</label>
-              <p style={{ margin: 0, padding: '0.75rem', backgroundColor: 'var(--color-bg)', borderRadius: 'var(--radius-md)' }}>
-                {wo.complaint || 'No complaint details recorded.'}
-              </p>
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Cause</label>
-              <textarea className={styles.textarea} placeholder="Enter diagnosed cause..." defaultValue={wo.cause || ''}></textarea>
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Correction</label>
-              <textarea className={styles.textarea} placeholder="Enter repairs performed..." defaultValue={wo.correction || ''}></textarea>
-            </div>
-          </div>
+          {/* Job Sections (Each Job has Labour Lines then Parts) */}
+          {getJobSections().map((sec, secIdx) => (
+            <div key={secIdx} className={styles.card} style={{ borderLeft: '4px solid var(--color-primary)' }}>
+              {/* Job Section Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.75rem' }}>
+                <div>
+                  <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-primary)', fontWeight: 700 }}>
+                    Job {secIdx + 1}
+                  </span>
+                  <h2 className={styles.cardTitle} style={{ margin: '2px 0 0', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '17px' }}>
+                    <Wrench size={18} color="var(--color-primary)" />
+                    {sec.name}
+                  </h2>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => handleOpenAddLabourModal(sec.name)}
+                    style={{ padding: '0.35rem 0.75rem', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
+                  >
+                    <Plus size={14} /> + Add Labour
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => handleOpenAddPartModal(sec.name)}
+                    style={{ padding: '0.35rem 0.75rem', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
+                  >
+                    <Plus size={14} /> + Add Part
+                  </button>
+                </div>
+              </div>
 
-          {/* Labour */}
-          <div className={styles.card}>
-            <div className={styles.cardHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 className={styles.cardTitle} style={{ margin: 0 }}>Labour Lines</h2>
-              <button 
-                type="button"
-                className="btn btn-outline" 
-                onClick={() => {
-                  const activeDefault = customerRate ? customerRate.toFixed(2) : (defaultRate || '145.00');
-                  setLabourForm(prev => ({
-                    ...prev,
-                    rate: prev.rate || activeDefault
-                  }));
-                  if (!labourForm.rate || labourForm.rate === activeDefault) {
-                    setSelectedRatePreset(customerRate ? 'customer_rate' : 'shop_default');
-                  }
-                  setShowAddLabourModal(true);
-                }}
-                style={{ padding: '0.35rem 0.85rem', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
-              >
-                <Plus size={15} /> + Add Labour
-              </button>
-            </div>
-            <div className={styles.tableContainer}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Description</th>
-                    <th>Hours</th>
-                    <th>Rate ($/hr)</th>
-                    <th>Total ($ CAD)</th>
-                    <th style={{ width: '40px' }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {wo.labour && wo.labour.length > 0 ? (
-                    wo.labour.map((l, i) => (
-                      <tr key={i}>
-                        <td>
-                          <strong>{l.description}</strong>
-                          {l.technician && <span style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-secondary)' }}>Tech: {l.technician}</span>}
-                        </td>
-                        <td>{l.hours} hrs</td>
-                        <td>${parseFloat(l.rate || 0).toFixed(2)}</td>
-                        <td><strong>${((parseFloat(l.hours || 0)) * (parseFloat(l.rate || 0))).toFixed(2)}</strong></td>
-                        <td>
-                          <button 
-                            type="button"
-                            onClick={() => handleRemoveLabourLine(i)}
-                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
-                            title="Remove Labour Line"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </td>
+              {/* 1. Labour Lines for this Job */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Labour Services
+                  </span>
+                </div>
+                <div className={styles.tableContainer}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Description</th>
+                        <th style={{ width: '100px' }}>Hours</th>
+                        <th style={{ width: '120px' }}>Rate ($/hr)</th>
+                        <th style={{ width: '130px' }}>Total ($ CAD)</th>
+                        <th style={{ width: '40px' }}></th>
                       </tr>
-                    ))
-                  ) : (
-                    <tr><td colSpan="5" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--color-text-secondary)' }}>No labour lines added. Click "+ Add Labour" to record technician time.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                    </thead>
+                    <tbody>
+                      {sec.labour && sec.labour.length > 0 ? (
+                        sec.labour.map((l) => (
+                          <tr key={l.originalIndex}>
+                            <td>
+                              <div style={{ fontWeight: 600, whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{l.description}</div>
+                              {l.technician && <span style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>Tech: {l.technician}</span>}
+                            </td>
+                            <td>{l.hours} hrs</td>
+                            <td>${parseFloat(l.rate || 0).toFixed(2)}</td>
+                            <td><strong>${((parseFloat(l.hours || 0)) * (parseFloat(l.rate || 0))).toFixed(2)}</strong></td>
+                            <td>
+                              <button 
+                                type="button"
+                                onClick={() => handleRemoveLabourLine(l.originalIndex)}
+                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                                title="Remove Labour Line"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr><td colSpan="5" style={{ textAlign: 'center', padding: '1rem', color: 'var(--color-text-secondary)', fontSize: '13px' }}>No labour lines in this job section. Click &quot;+ Add Labour&quot; above.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
 
-          {/* Parts */}
-          <div className={styles.card}>
-            <div className={styles.cardHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 className={styles.cardTitle} style={{ margin: 0 }}>Parts & Materials</h2>
-              <button 
-                type="button"
-                className="btn btn-outline" 
-                onClick={() => {
-                  setPartForm({
-                    partNumber: '',
-                    description: '',
-                    quantity: '1',
-                    cost: '0',
-                    sellPrice: '0.00',
-                    markup: '',
-                    tierLabel: ''
-                  });
-                  setSelectedInventoryPartId('');
-                  setShowAddPartModal(true);
-                }}
-                style={{ padding: '0.35rem 0.85rem', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
-              >
-                <Plus size={15} /> + Add Part
-              </button>
-            </div>
-            <div className={styles.tableContainer}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Part #</th>
-                    <th>Description</th>
-                    <th>Qty</th>
-                    <th>Price ($ CAD)</th>
-                    <th>Total ($ CAD)</th>
-                    <th style={{ width: '40px' }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {wo.parts && wo.parts.length > 0 ? (
-                    wo.parts.map((p, i) => (
-                      <tr key={i}>
-                        <td><strong>{p.partNumber || p.part_number}</strong></td>
-                        <td>{p.description}</td>
-                        <td>{p.quantity}</td>
-                        <td>${parseFloat(p.sellPrice || p.price || 0).toFixed(2)}</td>
-                        <td><strong>${((parseFloat(p.quantity || 0)) * (parseFloat(p.sellPrice || p.price || 0))).toFixed(2)}</strong></td>
-                        <td>
-                          <button 
-                            type="button"
-                            onClick={() => handleRemovePartLine(i)}
-                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
-                            title="Remove Part Line"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </td>
+              {/* 2. Parts for this Job */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Parts & Materials
+                  </span>
+                </div>
+                <div className={styles.tableContainer}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '130px' }}>Part #</th>
+                        <th>Description</th>
+                        <th style={{ width: '70px' }}>Qty</th>
+                        <th style={{ width: '120px' }}>Price ($ CAD)</th>
+                        <th style={{ width: '130px' }}>Total ($ CAD)</th>
+                        <th style={{ width: '40px' }}></th>
                       </tr>
-                    ))
-                  ) : (
-                    <tr><td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--color-text-secondary)' }}>No parts added. Click "+ Add Part" to add parts from inventory or manual entry.</td></tr>
-                  )}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody>
+                      {sec.parts && sec.parts.length > 0 ? (
+                        sec.parts.map((p) => (
+                          <tr key={p.originalIndex}>
+                            <td><strong>{p.partNumber || p.part_number || 'N/A'}</strong></td>
+                            <td>{p.description}</td>
+                            <td>{p.quantity}</td>
+                            <td>${parseFloat(p.sellPrice || p.price || 0).toFixed(2)}</td>
+                            <td><strong>${((parseFloat(p.quantity || 0)) * (parseFloat(p.sellPrice || p.price || 0))).toFixed(2)}</strong></td>
+                            <td>
+                              <button 
+                                type="button"
+                                onClick={() => handleRemovePartLine(p.originalIndex)}
+                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                                title="Remove Part Line"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr><td colSpan="6" style={{ textAlign: 'center', padding: '1rem', color: 'var(--color-text-secondary)', fontSize: '13px' }}>No parts added to this job section. Click &quot;+ Add Part&quot; above.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
-          </div>
+          ))}
+
+          {/* Add Another Job Section Button */}
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => handleOpenAddLabourModal(`Job ${getJobSections().length + 1}`)}
+            style={{
+              padding: '0.9rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              border: '2px dashed var(--color-border)',
+              borderRadius: '10px',
+              backgroundColor: 'var(--color-surface)',
+              fontWeight: 600,
+              fontSize: '14px',
+              cursor: 'pointer'
+            }}
+          >
+            <Plus size={18} color="var(--color-primary)" />
+            + Add Another Job Section on this Truck (Job {getJobSections().length + 1})
+          </button>
 
         </div>
 
@@ -830,21 +921,15 @@ export default function WorkOrderDetailPage() {
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Financial Summary</h2>
             <div className={styles.summaryRow}>
-              <span>Labour</span>
-              <span>${totals.labourTotal.toFixed(2)}</span>
-            </div>
-            <div className={styles.summaryRow}>
-              <span>Parts</span>
-              <span>${totals.partsTotal.toFixed(2)}</span>
-            </div>
-            <div className={styles.summaryRow}>
-              <span>Shop Supplies (5% max $50)</span>
-              <span>${totals.shopSupplies.toFixed(2)}</span>
-            </div>
-            <div className={styles.summaryRow} style={{ borderTop: '1px solid var(--color-border)', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
               <span>Subtotal</span>
               <span>${totals.subtotal.toFixed(2)}</span>
             </div>
+            {totals.shopSupplies > 0 && (
+              <div className={styles.summaryRow}>
+                <span>Shop Supplies (5% max $50)</span>
+                <span>${totals.shopSupplies.toFixed(2)}</span>
+              </div>
+            )}
             <div className={styles.summaryRow}>
               <span>Tax (5% GST)</span>
               <span>${totals.tax.toFixed(2)}</span>
@@ -900,14 +985,33 @@ export default function WorkOrderDetailPage() {
             <form onSubmit={handleAddLabourLine}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginBottom: '20px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Labour Description *</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>
+                    Job / Section Name <span style={{ color: 'var(--color-text-secondary)', fontWeight: 'normal' }}>(e.g. Job 1 - Brakes, Job 2 - Engine)</span>
+                  </label>
                   <input
                     type="text"
+                    list="existing-job-groups"
+                    placeholder="e.g. Job 1 - Front Brakes"
+                    value={labourForm.jobGroup}
+                    onChange={(e) => setLabourForm({ ...labourForm, jobGroup: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  />
+                  <datalist id="existing-job-groups">
+                    {Array.from(new Set([...(wo?.labour || []).map(l => l.jobGroup), ...(wo?.parts || []).map(p => p.jobGroup)].filter(Boolean))).map((g, idx) => (
+                      <option key={idx} value={g} />
+                    ))}
+                  </datalist>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Detailed Labour Description *</label>
+                  <textarea
+                    rows={3}
                     required
-                    placeholder="e.g. Replace inlet NOx sensor"
+                    placeholder="e.g. Detailed description of service, diagnosis, repairs performed and road testing..."
                     value={labourForm.description}
                     onChange={(e) => setLabourForm({ ...labourForm, description: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)', resize: 'vertical' }}
                   />
                 </div>
 
@@ -1126,6 +1230,25 @@ export default function WorkOrderDetailPage() {
                     </select>
                   </div>
                 )}
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>
+                    Assign to Job / Section <span style={{ color: 'var(--color-text-secondary)', fontWeight: 'normal' }}>(e.g. Job 1 - Brakes, Job 2 - Engine)</span>
+                  </label>
+                  <input
+                    type="text"
+                    list="existing-job-groups-part"
+                    placeholder="e.g. Job 1 - Front Brakes"
+                    value={partForm.jobGroup}
+                    onChange={(e) => setPartForm({ ...partForm, jobGroup: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                  />
+                  <datalist id="existing-job-groups-part">
+                    {Array.from(new Set([...(wo?.labour || []).map(l => l.jobGroup), ...(wo?.parts || []).map(p => p.jobGroup)].filter(Boolean))).map((g, idx) => (
+                      <option key={idx} value={g} />
+                    ))}
+                  </datalist>
+                </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
                   <div>

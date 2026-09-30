@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
@@ -33,6 +33,7 @@ export default function InvoiceDetail() {
   const [breakdown, setBreakdown] = useState({
     labourLines: [],
     partsLines: [],
+    jobSections: [],
     labourTotal: 0,
     partsTotal: 0,
     shopSupplies: 0,
@@ -87,6 +88,7 @@ export default function InvoiceDetail() {
   function computeFromWO(wo, cust, inv) {
     let labourLines = [];
     let partsLines = [];
+    let jobSections = [];
     let labourTotal = 0;
     let partsTotal = 0;
 
@@ -99,7 +101,8 @@ export default function InvoiceDetail() {
           technician: l.technician || wo.tech_name || 'Shop Tech',
           hours,
           rate,
-          total: hours * rate
+          total: hours * rate,
+          jobGroup: l.jobGroup || ''
         };
       });
       labourTotal = labourLines.reduce((sum, l) => sum + l.total, 0);
@@ -112,13 +115,54 @@ export default function InvoiceDetail() {
           description: p.description || 'Replacement Part',
           quantity: qty,
           unitPrice,
-          total: qty * unitPrice
+          total: qty * unitPrice,
+          jobGroup: p.jobGroup || ''
         };
       });
       partsTotal = partsLines.reduce((sum, p) => sum + p.total, 0);
+
+      // Group into Job Sections (Job 1: Labour + Parts, Job 2: Labour + Parts)
+      const jobGroupOrder = [];
+      const addGrp = (name) => {
+        const trimmed = (name || '').trim();
+        if (!trimmed) return;
+        if (!jobGroupOrder.includes(trimmed)) jobGroupOrder.push(trimmed);
+      };
+
+      labourLines.forEach(l => addGrp(l.jobGroup));
+      partsLines.forEach(p => addGrp(p.jobGroup));
+
+      if (jobGroupOrder.length === 0) {
+        jobSections = [{
+          name: 'Job 1',
+          labour: labourLines,
+          parts: partsLines
+        }];
+      } else {
+        jobSections = jobGroupOrder.map(gName => ({
+          name: gName,
+          labour: labourLines.filter(l => (l.jobGroup || '').trim().toLowerCase() === gName.toLowerCase()),
+          parts: partsLines.filter(p => (p.jobGroup || '').trim().toLowerCase() === gName.toLowerCase())
+        }));
+
+        const unassignedLabour = labourLines.filter(l => !jobGroupOrder.some(g => g.toLowerCase() === (l.jobGroup || '').trim().toLowerCase()));
+        const unassignedParts = partsLines.filter(p => !jobGroupOrder.some(g => g.toLowerCase() === (p.jobGroup || '').trim().toLowerCase()));
+        if (unassignedLabour.length > 0 || unassignedParts.length > 0) {
+          jobSections.push({
+            name: 'General / Additional Services',
+            labour: unassignedLabour,
+            parts: unassignedParts
+          });
+        }
+      }
     } else if (inv) {
       labourTotal = parseFloat(inv.labour_total) || 0;
       partsTotal = parseFloat(inv.parts_total) || 0;
+      jobSections = [{
+        name: 'Job 1',
+        labour: labourLines,
+        parts: partsLines
+      }];
     }
 
     // Shop Supplies: 5% of (Labour + Parts), capped at $50.00
@@ -137,6 +181,7 @@ export default function InvoiceDetail() {
     return {
       labourLines,
       partsLines,
+      jobSections,
       labourTotal,
       partsTotal,
       shopSupplies: calculatedSupplies,
@@ -720,37 +765,7 @@ Address: ${shop.address}`;
 
       y += cardH + 12;
 
-      // ─── 3. 3 C's SERVICE & DIAGNOSTIC REPORT (if present) ───────
-      const hasReport = report?.fault || report?.cause || report?.correction;
-      if (hasReport) {
-        const diagBoxH = 62;
-        drawRect(ML, y, CW, diagBoxH, C.white, C.border, 0.75);
-        drawRect(ML, y, CW, 17, C.fillHeader, C.border, 0.75);
-        writeText('SERVICE & DIAGNOSTIC REPORT (THE 3 C\'S)', ML + 8, y + 11.5, { size: 7.5, bold: true, color: C.title });
-        writeText('Fault / Complaint  •  Root Cause  •  Correction Rendered', ML + 195, y + 11.5, { size: 7, italic: true, color: C.muted });
-
-        const subBoxW = (CW - 16) / 3;
-        const diagItems = [
-          { title: '1. FAULT / COMPLAINT', text: report.fault || 'Customer reported diagnostic concern.' },
-          { title: '2. ROOT CAUSE', text: report.cause || 'Teardown inspection and diagnostic testing.' },
-          { title: '3. CORRECTION RENDERED', text: report.correction || 'Certified service completed and road tested OK.' }
-        ];
-
-        diagItems.forEach((item, idx) => {
-          const bx = ML + 4 + idx * (subBoxW + 4);
-          const by = y + 21;
-          drawRect(bx, by, subBoxW, diagBoxH - 25, C.fillCard, C.lightBorder, 0.5);
-          writeText(item.title, bx + 5, by + 10, { size: 6.5, bold: true, color: C.muted });
-          const splitLines = pdf.splitTextToSize(item.text, subBoxW - 10);
-          splitLines.slice(0, 3).forEach((line, lIdx) => {
-            writeText(line, bx + 5, by + 19 + (lIdx * 9), { size: 7.5, color: C.body });
-          });
-        });
-
-        y += diagBoxH + 10;
-      }
-
-      // ─── 4. LINE ITEMS TABLE ────────────────────────────────────
+      // ─── 4. LINE ITEMS TABLE (Grouped by Job Section) ───────────
       const colDescX = ML + 8;
       const colTypeX = ML + 265;
       const colQtyX  = ML + 345;
@@ -804,16 +819,47 @@ Address: ${shop.address}`;
         rowIndex++;
       };
 
-      // Draw Labour lines
-      (breakdown.labourLines || []).forEach(l => {
-        const sub = l.technician ? `Technician: ${l.technician}` : null;
-        drawLineRow(l.description || 'Labour Service', sub, 'Labour', `${l.hours} hrs`, fmt(l.rate), fmt(l.total));
-      });
+      const drawJobHeader = (secTitle) => {
+        if (y > PH - 160) {
+          pdf.addPage();
+          y = 36;
+          writeText(`${shopName}  —  Invoice #${invoice?.id || ''} (Continued)`, ML, y + 10, { size: 8, bold: true, color: C.muted });
+          drawHLine(ML, y + 16, rightX, C.border, 0.5);
+          y += 24;
 
-      // Draw Parts lines
-      (breakdown.partsLines || []).forEach(p => {
-        const sub = p.partNumber ? `Part SKU: ${p.partNumber}` : null;
-        drawLineRow(p.description || 'Replacement Part', sub, 'Part', String(p.quantity), fmt(p.unitPrice), fmt(p.total));
+          drawRect(ML, y, CW, thHeight, C.fillHeader, C.darkBorder, 0.75);
+          writeText('DESCRIPTION / SERVICE PERFORMED', colDescX, y + 13, { size: 7.5, bold: true, color: C.title });
+          writeText('TYPE', colTypeX, y + 13, { size: 7.5, bold: true, color: C.title });
+          writeText('QTY / HRS', colQtyX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
+          writeText('RATE', colRateX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
+          writeText('AMOUNT ($)', colAmtX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
+          y += thHeight;
+        }
+
+        const secH = 18;
+        drawRect(ML, y, CW, secH, [241, 245, 249], C.border, 0.5);
+        writeText(secTitle.toUpperCase(), ML + 8, y + 12, { size: 8, bold: true, color: C.title });
+        y += secH;
+      };
+
+      const sections = (breakdown.jobSections && breakdown.jobSections.length > 0)
+        ? breakdown.jobSections
+        : [{ name: 'Job 1', labour: breakdown.labourLines, parts: breakdown.partsLines }];
+
+      sections.forEach((sec, sIdx) => {
+        drawJobHeader(`JOB ${sIdx + 1}: ${sec.name || `Job ${sIdx + 1}`}`);
+
+        // Draw Labour lines for this job
+        (sec.labour || []).forEach(l => {
+          const sub = l.technician ? `Technician: ${l.technician}` : null;
+          drawLineRow(l.description || 'Labour Service', sub, 'Labour', `${l.hours} hrs`, fmt(l.rate), fmt(l.total));
+        });
+
+        // Draw Parts lines for this job
+        (sec.parts || []).forEach(p => {
+          const sub = p.partNumber ? `Part SKU: ${p.partNumber}` : null;
+          drawLineRow(p.description || 'Replacement Part', sub, 'Part', String(p.quantity), fmt(p.unitPrice), fmt(p.total));
+        });
       });
 
       // Draw Shop Supplies
@@ -864,8 +910,6 @@ Address: ${shop.address}`;
         ty += 16;
       };
 
-      if (breakdown.labourTotal > 0)  drawTotalLine('Labour Total:', fmt(breakdown.labourTotal));
-      if (breakdown.partsTotal > 0)   drawTotalLine('Parts & Materials Total:', fmt(breakdown.partsTotal));
       if (breakdown.shopSupplies > 0) drawTotalLine('Shop Supplies & Disposal:', fmt(breakdown.shopSupplies));
 
       drawHLine(totalsX, ty + 2, rightX, C.lightBorder, 0.5);
@@ -1164,64 +1208,7 @@ Address: ${shop.address}`;
             </div>
           </div>
 
-          {/* Service & Diagnostic Report: Fault, Cause & Correction (The 3 C's) */}
-          <div className={styles.diagnosticCard}>
-            <div className={styles.diagnosticHeader}>
-              <div className={styles.diagnosticTitleGroup}>
-                <FileText size={17} color="var(--color-primary)" />
-                <h3 className={styles.diagnosticTitle}>Service & Diagnostic Report</h3>
-                <span className={styles.threeCsBadge}>The 3 C's: Fault • Cause • Correction</span>
-              </div>
-              <button 
-                type="button" 
-                className={`${styles.editReportBtn} no-print`}
-                onClick={() => {
-                  setReportForm({ ...report });
-                  setShowReportModal(true);
-                }}
-                title="Edit Fault, Cause, and Correction for this invoice"
-              >
-                <Edit size={13} /> Edit 3 C's
-              </button>
-            </div>
-
-            <div className={styles.threeCsGrid}>
-              {/* 1. FAULT / COMPLAINT */}
-              <div className={`${styles.cBlock} ${styles.cBlockFault}`}>
-                <div className={styles.cBlockHeader}>
-                  <span className={`${styles.cBadge} ${styles.cBadgeFault}`}>1. FAULT / CONCERN</span>
-                  <span className={styles.cSub}>Customer Symptom</span>
-                </div>
-                <p className={styles.cContent}>
-                  {report.fault || 'Diagnostic evaluation and mechanical inspection.'}
-                </p>
-              </div>
-
-              {/* 2. CAUSE */}
-              <div className={`${styles.cBlock} ${styles.cBlockCause}`}>
-                <div className={styles.cBlockHeader}>
-                  <span className={`${styles.cBadge} ${styles.cBadgeCause}`}>2. DIAGNOSTIC CAUSE</span>
-                  <span className={styles.cSub}>Technician Finding</span>
-                </div>
-                <p className={styles.cContent}>
-                  {report.cause || 'Mechanical teardown & diagnostic root-cause inspection.'}
-                </p>
-              </div>
-
-              {/* 3. CORRECTION */}
-              <div className={`${styles.cBlock} ${styles.cBlockCorrection}`}>
-                <div className={styles.cBlockHeader}>
-                  <span className={`${styles.cBadge} ${styles.cBadgeCorrection}`}>3. CORRECTION / REPAIR</span>
-                  <span className={styles.cSub}>Services Rendered</span>
-                </div>
-                <p className={styles.cContent}>
-                  {report.correction || 'Certified service completed and road tested OK.'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Line Items Table (Authoritative Work Order Items) */}
+          {/* Line Items Table (Structured by Job Section) */}
           <table className={styles.itemsTable}>
             <thead>
               <tr>
@@ -1232,43 +1219,75 @@ Address: ${shop.address}`;
               </tr>
             </thead>
             <tbody>
-              {/* 1. Labour Lines from Work Order */}
-              {breakdown.labourLines.length > 0 && breakdown.labourLines.map((l, idx) => (
-                <tr key={`labour-${idx}`}>
-                  <td>
-                    <strong>{l.description}</strong>
-                    {l.technician && (
-                      <span style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                        Technician: {l.technician}
-                      </span>
-                    )}
-                  </td>
-                  <td className={styles.right}>{l.hours} hrs</td>
-                  <td className={styles.right}>${l.rate.toFixed(2)}</td>
-                  <td className={styles.right}><strong>${l.total.toFixed(2)}</strong></td>
-                </tr>
-              ))}
+              {(breakdown.jobSections && breakdown.jobSections.length > 0) ? (
+                breakdown.jobSections.map((sec, secIdx) => (
+                  <React.Fragment key={`sec-${secIdx}`}>
+                    {/* Job Section Header Row */}
+                    <tr style={{ backgroundColor: '#f1f5f9', borderTop: secIdx > 0 ? '2px solid #cbd5e1' : 'none' }}>
+                      <td colSpan="4" style={{ padding: '8px 12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-light, #eff6ff)', padding: '2px 8px', borderRadius: '4px' }}>
+                            Job {secIdx + 1}
+                          </span>
+                          <strong style={{ fontSize: '13px', color: '#1e293b' }}>{sec.name}</strong>
+                        </div>
+                      </td>
+                    </tr>
 
-              {/* 2. Parts Lines from Work Order */}
-              {breakdown.partsLines.length > 0 && breakdown.partsLines.map((p, idx) => (
-                <tr key={`part-${idx}`}>
-                  <td>
-                    <strong>{p.description}</strong>
-                    {p.partNumber && (
-                      <span style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                        Part #: {p.partNumber}
-                      </span>
-                    )}
-                  </td>
-                  <td className={styles.right}>{p.quantity}</td>
-                  <td className={styles.right}>${p.unitPrice.toFixed(2)}</td>
-                  <td className={styles.right}><strong>${p.total.toFixed(2)}</strong></td>
-                </tr>
-              ))}
+                    {/* Labour lines for this job */}
+                    {sec.labour && sec.labour.length > 0 && sec.labour.map((l, lIdx) => (
+                      <tr key={`sec-${secIdx}-labour-${lIdx}`}>
+                        <td style={{ paddingLeft: '1.25rem' }}>
+                          <div style={{ fontWeight: 600, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{l.description}</div>
+                          {l.technician && (
+                            <span style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
+                              Technician: {l.technician}
+                            </span>
+                          )}
+                        </td>
+                        <td className={styles.right}>{l.hours} hrs</td>
+                        <td className={styles.right}>${l.rate.toFixed(2)}</td>
+                        <td className={styles.right}><strong>${l.total.toFixed(2)}</strong></td>
+                      </tr>
+                    ))}
 
-              {/* 3. Shop Supplies & Environmental Fees */}
-              {breakdown.shopSupplies > 0 && (
+                    {/* Parts lines for this job */}
+                    {sec.parts && sec.parts.length > 0 && sec.parts.map((p, pIdx) => (
+                      <tr key={`sec-${secIdx}-part-${pIdx}`}>
+                        <td style={{ paddingLeft: '1.25rem' }}>
+                          <div style={{ fontWeight: 600 }}>{p.description}</div>
+                          {p.partNumber && (
+                            <span style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
+                              Part #: {p.partNumber}
+                            </span>
+                          )}
+                        </td>
+                        <td className={styles.right}>{p.quantity}</td>
+                        <td className={styles.right}>${p.unitPrice.toFixed(2)}</td>
+                        <td className={styles.right}><strong>${p.total.toFixed(2)}</strong></td>
+                      </tr>
+                    ))}
+
+                    {(!sec.labour || sec.labour.length === 0) && (!sec.parts || sec.parts.length === 0) && (
+                      <tr>
+                        <td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                          No line items recorded in this job section.
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))
+              ) : (
                 <tr>
+                  <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>
+                    No billable items recorded on this work order.
+                  </td>
+                </tr>
+              )}
+
+              {/* Shop Supplies & Environmental Fees */}
+              {breakdown.shopSupplies > 0 && (
+                <tr style={{ borderTop: '1px solid #e2e8f0' }}>
                   <td>
                     <strong>Shop Supplies & Environmental Recovery</strong>
                     <span style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
@@ -1280,40 +1299,21 @@ Address: ${shop.address}`;
                   <td className={styles.right}><strong>${breakdown.shopSupplies.toFixed(2)}</strong></td>
                 </tr>
               )}
-
-              {/* Empty state if WO has no lines */}
-              {breakdown.labourLines.length === 0 && breakdown.partsLines.length === 0 && breakdown.shopSupplies === 0 && (
-                <tr>
-                  <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>
-                    No billable items recorded on this work order.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
 
-          {/* Totals Strictly Recalculated from Line Items */}
+          {/* Totals Strictly Recalculated from Line Items (Simplified: Subtotal, Tax, Total) */}
           <div className={styles.totals}>
             <div className={styles.totalRow}>
-              <span>Labour Total</span>
-              <span>${breakdown.labourTotal.toFixed(2)}</span>
+              <span>Subtotal</span>
+              <span>${breakdown.subtotal.toFixed(2)}</span>
             </div>
-            {breakdown.partsTotal > 0 && (
-              <div className={styles.totalRow}>
-                <span>Parts & Materials</span>
-                <span>${breakdown.partsTotal.toFixed(2)}</span>
-              </div>
-            )}
             {breakdown.shopSupplies > 0 && (
               <div className={styles.totalRow}>
                 <span>Shop Supplies</span>
                 <span>${breakdown.shopSupplies.toFixed(2)}</span>
               </div>
             )}
-            <div className={styles.totalRow} style={{ fontWeight: 600, borderTop: '1px solid var(--color-border)', paddingTop: '8px' }}>
-              <span>Subtotal</span>
-              <span>${breakdown.subtotal.toFixed(2)}</span>
-            </div>
             <div className={styles.totalRow}>
               <span>GST ({breakdown.taxRate}%)</span>
               <span>${breakdown.taxAmount.toFixed(2)}</span>
@@ -1355,17 +1355,6 @@ Address: ${shop.address}`;
                 <RefreshCw size={18} /> {isSyncing ? 'Syncing...' : 'Sync from Work Order'}
               </button>
             )}
-            <button 
-              className="btn btn-outline" 
-              style={{ width: '100%', justifyContent: 'flex-start' }}
-              onClick={() => {
-                setReportForm({ ...report });
-                setShowReportModal(true);
-              }}
-              title="Edit Fault, Cause, and Correction"
-            >
-              <Edit size={18} /> Edit 3 C's Report
-            </button>
             <button 
               className="btn btn-outline" 
               style={{width: '100%', justifyContent: 'flex-start'}}
@@ -1549,83 +1538,6 @@ Address: ${shop.address}`;
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={sendingEmail} style={{ gap: '6px' }}>
                   <Send size={16} /> {sendingEmail ? 'Sending Email...' : 'Send Invoice Email'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Diagnostic Report (3 C's: Fault, Cause, Correction) Modal */}
-      {showReportModal && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent} style={{ maxWidth: '640px' }}>
-            <div className={styles.modalHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FileText size={20} color="var(--color-primary)" />
-                <h3 style={{ margin: 0 }}>Edit Service & Diagnostic Report (The 3 C's)</h3>
-              </div>
-              <button className={styles.closeBtn} onClick={() => setShowReportModal(false)}>
-                <X size={22} />
-              </button>
-            </div>
-            
-            <p style={{ margin: '0 0 16px', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-              Update the customer-facing <strong>Fault</strong>, <strong>Cause</strong>, and <strong>Correction</strong> for Invoice #{invoiceId}. Changes will also automatically synchronize with the linked Work Order.
-            </p>
-
-            <form onSubmit={handleSaveReport}>
-              <div className={styles.formGroup}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                  <span className={`${styles.cBadge} ${styles.cBadgeFault}`}>1. FAULT / COMPLAINT</span>
-                  <span>Customer or Driver Reported Symptom *</span>
-                </label>
-                <textarea 
-                  value={reportForm.fault}
-                  onChange={e => setReportForm({ ...reportForm, fault: e.target.value })}
-                  rows={3}
-                  required
-                  placeholder="e.g. Driver reports spongy brake pedal and grinding noise from front axle during braking."
-                  style={{ width: '100%', padding: '8px 12px', fontSize: '13px' }}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                  <span className={`${styles.cBadge} ${styles.cBadgeCause}`}>2. DIAGNOSTIC CAUSE</span>
-                  <span>Technician Diagnostic Findings & Root Problem *</span>
-                </label>
-                <textarea 
-                  value={reportForm.cause}
-                  onChange={e => setReportForm({ ...reportForm, cause: e.target.value })}
-                  rows={3}
-                  required
-                  placeholder="e.g. Front brake rotors worn below minimum thickness. Left caliper seized. Brake pads at 5% remaining."
-                  style={{ width: '100%', padding: '8px 12px', fontSize: '13px' }}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                  <span className={`${styles.cBadge} ${styles.cBadgeCorrection}`}>3. CORRECTION / REPAIR</span>
-                  <span>Repairs Performed, Parts Replaced & Road Test *</span>
-                </label>
-                <textarea 
-                  value={reportForm.correction}
-                  onChange={e => setReportForm({ ...reportForm, correction: e.target.value })}
-                  rows={3}
-                  required
-                  placeholder="e.g. Replaced both front rotors, all brake pads, rebuilt left caliper, adjusted slack adjusters. Road tested OK."
-                  style={{ width: '100%', padding: '8px 12px', fontSize: '13px' }}
-                />
-              </div>
-
-              <div className={styles.modalActions} style={{ marginTop: '20px' }}>
-                <button type="button" className="btn btn-outline" onClick={() => setShowReportModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={savingReport}>
-                  {savingReport ? 'Saving Report...' : 'Save Diagnostic Report'}
                 </button>
               </div>
             </form>

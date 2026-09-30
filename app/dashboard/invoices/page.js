@@ -253,7 +253,7 @@ Email: ${shop.email}`;
           status: 'draft',
           issue_date: today,
           due_date: dueDate,
-          notes: `[Diagnostic Report] Fault: ${wo.complaint || 'N/A'} | Cause: ${wo.cause || 'N/A'} | Correction: ${wo.correction || 'N/A'}`
+          notes: `Invoice for Work Order #${wo.id}`
         }]);
 
       if (insertErr) throw insertErr;
@@ -583,26 +583,35 @@ Email: ${shop.email}`;
                 {(() => {
                   const selWo = workOrders.find(w => w.id === selectedWoId);
                   if (!selWo) return null;
+                  const labourCount = (selWo.labour || []).length;
+                  const partsCount = (selWo.parts || []).length;
+                  const uniqueJobs = Array.from(new Set([
+                    ...(selWo.labour || []).map(l => l.jobGroup),
+                    ...(selWo.parts || []).map(p => p.jobGroup)
+                  ].filter(Boolean)));
+
                   return (
                     <div style={{ marginTop: '12px', padding: '12px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }}>
                       <div style={{ fontWeight: 700, marginBottom: '6px', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span>📋 Included Diagnostic Report (The 3 C's):</span>
+                        <span>📋 Work Order Job Sections ({uniqueJobs.length > 0 ? `${uniqueJobs.length} Jobs` : 'Standard Job'}):</span>
                       </div>
                       <div style={{ marginBottom: '4px' }}>
-                        <strong style={{ color: '#ef4444' }}>Fault:</strong> {selWo.complaint || 'Diagnostic service evaluation'}
+                        <strong>Services & Lines:</strong> {labourCount} Labour line(s), {partsCount} Part(s)
                       </div>
-                      <div style={{ marginBottom: '4px' }}>
-                        <strong style={{ color: '#f59e0b' }}>Cause:</strong> {selWo.cause || 'Mechanical wear and teardown diagnostics'}
-                      </div>
+                      {uniqueJobs.length > 0 && (
+                        <div style={{ marginBottom: '4px' }}>
+                          <strong>Sections:</strong> {uniqueJobs.join(' • ')}
+                        </div>
+                      )}
                       <div>
-                        <strong style={{ color: '#10b981' }}>Correction:</strong> {selWo.correction || 'Parts replaced, labor performed, road tested OK'}
+                        <strong>Unit / Truck:</strong> {selWo.unit_display || selWo.unit_number || 'Fleet Truck'}
                       </div>
                     </div>
                   );
                 })()}
 
                 <p style={{ margin: '8px 0 0', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                  This will generate a formal invoice matching the labor lines, parts, shop supplies, taxes, and diagnostic report (Fault, Cause, Correction).
+                  This will generate an itemized invoice organized by job sections with technician labour, parts & materials, and final CAD totals.
                 </p>
               </div>
 
