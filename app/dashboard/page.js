@@ -111,10 +111,12 @@ export default function DashboardPage() {
   const activeTechsCount = technicians.filter(t => (t.status || '').toLowerCase() === 'active').length;
 
   // Live Sections Filtered Data
-  const activeBayJobs = jobs.filter(j => ['repairing', 'diagnosing', 'waiting_parts', 'new'].includes(j.status));
+  const activeBayJobs = jobs.filter(j => ['repairing', 'diagnosing'].includes(j.status));
   const pendingEstimates = jobs.filter(j => !j.authorized || j.status === 'estimate' || j.status === 'new');
   const lowStockParts = parts.filter(p => (p.qty_on_hand || p.qtyOnHand || 0) <= (p.min_stock || p.minStock || 5));
   const unbilledInvoices = invoices.filter(inv => inv.status !== 'paid');
+  const readyToInvoiceJobs = jobs.filter(j => j.status === 'ready_to_invoice');
+  const waitingPartsJobs = jobs.filter(j => j.status === 'waiting_parts');
 
   // Dynamic Live Activity derived from real data
   const liveActivities = jobs.slice(0, 3).map((job, idx) => ({
@@ -250,38 +252,38 @@ export default function DashboardPage() {
                 </div>
               </Link>
 
-              {/* Window 2: Dispatch & Bays Live Grid */}
-              <Link href="/dashboard/dispatch" className={styles.windowCard}>
+              {/* Window 2: Waiting on Parts */}
+              <Link href="/dashboard/jobs" className={styles.windowCard}>
                 <div className={styles.windowTitleBar}>
                   <span className={styles.windowTitle}>
-                    <Truck size={14} color="#059669" />
-                    Dispatch & Bays
+                    <AlertTriangle size={14} color="#D97706" />
+                    Waiting on Parts
                   </span>
-                  <span className={`${styles.windowBadge} ${styles.badgeGreen}`}>
-                    {activeBayJobs.length}/6 Bays Active
+                  <span className={`${styles.windowBadge} ${waitingPartsJobs.length > 0 ? styles.badgeOrange : styles.badgeGreen}`}>
+                    {waitingPartsJobs.length} Jobs Blocked
                   </span>
                 </div>
                 <div className={styles.windowBody}>
-                  {activeBayJobs.length === 0 ? (
+                  {waitingPartsJobs.length === 0 ? (
                     <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.74rem' }}>
-                      All bays available · No active dispatches
+                      No jobs waiting on parts
                     </div>
                   ) : (
-                    activeBayJobs.slice(0, 2).map((b, i) => (
+                    waitingPartsJobs.slice(0, 2).map((b, i) => (
                       <div key={i} className={styles.windowRow}>
                         <div>
-                          <div className={styles.windowRowMain}>Bay {i + 1}: {b.unit}</div>
-                          <div className={styles.windowRowSub}>Tech: {b.tech || 'Unassigned'}</div>
+                          <div className={styles.windowRowMain}>{b.unit}</div>
+                          <div className={styles.windowRowSub}>{b.customer || 'Customer'}</div>
                         </div>
-                        <span className={`${styles.windowPill} ${styles.badgeGreen}`}>
-                          {b.status === 'repairing' ? 'In Bay' : 'Active'}
+                        <span className={`${styles.windowPill} ${styles.badgeOrange}`}>
+                          Parts
                         </span>
                       </div>
                     ))
                   )}
                 </div>
                 <div className={styles.windowFooter}>
-                  <span>Open Dispatch Board</span>
+                  <span>View Blocked Jobs</span>
                   <ChevronRight size={13} />
                 </div>
               </Link>
@@ -320,24 +322,24 @@ export default function DashboardPage() {
                 </div>
               </Link>
 
-              {/* Window 4: Estimates & Approvals */}
-              <Link href="/dashboard/estimates" className={styles.windowCard}>
+              {/* Window 4: Ready to Invoice */}
+              <Link href="/dashboard/jobs" className={styles.windowCard}>
                 <div className={styles.windowTitleBar}>
                   <span className={styles.windowTitle}>
-                    <FileText size={14} color="#7C3AED" />
-                    Estimates & Approvals
+                    <CheckCircle2 size={14} color="#7C3AED" />
+                    Ready to Invoice
                   </span>
                   <span className={`${styles.windowBadge} ${styles.badgePurple}`}>
-                    {pendingEstimates.length} Pending
+                    {readyToInvoiceJobs.length} Ready
                   </span>
                 </div>
                 <div className={styles.windowBody}>
-                  {pendingEstimates.length === 0 ? (
+                  {readyToInvoiceJobs.length === 0 ? (
                     <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.74rem' }}>
-                      No pending estimates
+                      No jobs ready to invoice
                     </div>
                   ) : (
-                    pendingEstimates.slice(0, 2).map((est, i) => (
+                    readyToInvoiceJobs.slice(0, 2).map((est, i) => (
                       <div key={i} className={styles.windowRow}>
                         <div>
                           <div className={styles.windowRowMain}>{est.id} · {est.customer}</div>
@@ -349,7 +351,7 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <div className={styles.windowFooter}>
-                  <span>View Estimates & Approvals</span>
+                  <span>Process Invoices</span>
                   <ChevronRight size={13} />
                 </div>
               </Link>

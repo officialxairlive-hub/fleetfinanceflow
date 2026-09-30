@@ -104,9 +104,16 @@ export default function WorkOrdersPage() {
     return map[priority] || '';
   };
 
-  const activeJobsCount = workOrders.filter(wo => !['invoiced', 'paid'].includes(wo.status)).length;
-  const waitingPartsCount = workOrders.filter(wo => wo.status === 'waiting_parts').length;
+  const activeJobsCount = workOrders.filter(wo => !['invoiced', 'paid', 'completed'].includes(wo.status)).length;
+  const inProgressCount = workOrders.filter(wo => ['diagnosing', 'repairing'].includes(wo.status)).length;
   const readyToInvoiceCount = workOrders.filter(wo => wo.status === 'ready_to_invoice').length;
+  
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const thisMonthCount = workOrders.filter(wo => {
+    const d = new Date(wo.created_at);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }).length;
 
   return (
     <div className={styles.pageContainer}>
@@ -125,16 +132,20 @@ export default function WorkOrdersPage() {
 
       <div className={styles.statsRow}>
         <div className={styles.statCard}>
-          <span className={styles.statLabel}>Active Jobs</span>
+          <span className={styles.statLabel}>Open Jobs</span>
           <span className={styles.statValue}>{isLoading ? '...' : activeJobsCount}</span>
         </div>
         <div className={styles.statCard}>
-          <span className={styles.statLabel}>Waiting on Parts</span>
-          <span className={styles.statValue}>{isLoading ? '...' : waitingPartsCount}</span>
+          <span className={styles.statLabel}>In Progress</span>
+          <span className={styles.statValue}>{isLoading ? '...' : inProgressCount}</span>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Ready to Invoice</span>
           <span className={styles.statValue}>{isLoading ? '...' : readyToInvoiceCount}</span>
+        </div>
+        <div className={styles.statCard}>
+          <span className={styles.statLabel}>Total This Month</span>
+          <span className={styles.statValue}>{isLoading ? '...' : thisMonthCount}</span>
         </div>
       </div>
 

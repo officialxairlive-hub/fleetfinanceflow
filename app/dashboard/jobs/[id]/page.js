@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Clock, Printer, Mail, CheckCircle, Plus, ChevronRight, Receipt, X, Wrench, Package, Trash2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Clock, Printer, Mail, CheckCircle, Plus, ChevronRight, Receipt, X, Wrench, Package, Trash2, ExternalLink, Play, Pause, Save, TrendingUp, Copy, CheckSquare } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { statusLabels } from '../../../lib/demoData';
 import { calculateMarkupAndSellPrice, formatTierBracket } from '../../../lib/markupUtils';
@@ -60,6 +60,28 @@ export default function WorkOrderDetailPage() {
   // Delete Work Order State
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Live Timer State
+  const [liveTimer, setLiveTimer] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const timerIntervalRef = useRef(null);
+  const timerStartRef = useRef(null);
+
+  // Complaint / Cause / Correction
+  const [complaint, setComplaint] = useState('');
+  const [cause, setCause] = useState('');
+  const [correction, setCorrection] = useState('');
+  const [savingCCC, setSavingCCC] = useState(false);
+
+  // Notes
+  const [internalNotes, setInternalNotes] = useState('');
+  const [customerNotes, setCustomerNotes] = useState('');
+  const [savingNotes, setSavingNotes] = useState(false);
+
+  // Send Link Modal
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
 
   const confirmDeleteJob = async () => {
     setIsDeleting(true);
@@ -159,6 +181,13 @@ export default function WorkOrderDetailPage() {
           parts: data.parts || []
         });
 
+        setComplaint(data.complaint || '');
+        setCause(data.cause || '');
+        setCorrection(data.correction || '');
+        setInternalNotes(data.internal_notes || '');
+        setCustomerNotes(data.customer_notes || '');
+        setLiveTimer(data.timer || 0);
+
         setTechnicians(techRes.data || []);
         setInventoryParts(partsRes.data || []);
 
@@ -196,6 +225,82 @@ export default function WorkOrderDetailPage() {
       fetchJob();
     }
   }, [id]);
+
+  // Live Timer Logic
+  useEffect(() => {
+    if (timerRunning) {
+      timerStartRef.current = Date.now() - liveTimer * 1000;
+      timerIntervalRef.current = setInterval(() => {
+        setLiveTimer(Math.floor((Date.now() - timerStartRef.current) / 1000));
+      }, 1000);
+    } else {
+      clearInterval(timerIntervalRef.current);
+    }
+    return () => clearInterval(timerIntervalRef.current);
+  }, [timerRunning]);
+
+  const toggleTimer = async () => {
+    const newState = !timerRunning;
+    setTimerRunning(newState);
+    
+    // Save to DB when pausing
+    if (!newState && wo) {
+      try {
+        await supabase.from('work_orders').update({ timer: liveTimer }).eq('id', id);
+        setWo(prev => ({ ...prev, timer: liveTimer }));
+      } catch (err) {
+        console.error('Error saving timer:', err);
+      }
+    }
+  };
+
+  const formatTimer = (seconds) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  // CCC Save
+  const handleSaveCCC = async () => {
+    setSavingCCC(true);
+    try {
+      const { error } = await supabase
+        .from('work_orders')
+        .update({
+          complaint,
+          cause,
+          correction
+        })
+        .eq('id', id);
+      if (error) throw error;
+      setWo(prev => ({ ...prev, complaint, cause, correction }));
+    } catch (err) {
+      alert(`Error saving Complaint/Cause/Correction: ${err.message}`);
+    } finally {
+      setSavingCCC(false);
+    }
+  };
+
+  // Notes Save
+  const handleSaveNotes = async () => {
+    setSavingNotes(true);
+    try {
+      const { error } = await supabase
+        .from('work_orders')
+        .update({
+          internal_notes: internalNotes,
+          customer_notes: customerNotes
+        })
+        .eq('id', id);
+      if (error) throw error;
+      setWo(prev => ({ ...prev, internal_notes: internalNotes, customer_notes: customerNotes }));
+    } catch (err) {
+      alert(`Error saving notes: ${err.message}`);
+    } finally {
+      setSavingNotes(false);
+    }
+  };
 
   const handleStatusAdvance = async (step) => {
     setWo(prev => ({ ...prev, status: step }));
@@ -732,11 +837,7 @@ export default function WorkOrderDetailPage() {
           <button 
             className="btn btn-outline" 
             style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}
-            onClick={() => {
-              const liveLink = `${window.location.origin}/approve/${wo.id}`;
-              navigator.clipboard?.writeText(liveLink);
-              alert(`📋 Live Customer Tracking & Approval Link copied to clipboard:\n${liveLink}`);
-            }}
+            onClick={() => setShowLinkModal(true)}
             title="Copy live customer tracking and payment link"
           >
             <ExternalLink size={18} /> Copy Customer Link
@@ -803,6 +904,57 @@ export default function WorkOrderDetailPage() {
               <div>
                 <span className={styles.label}>Priority</span>
                 <p style={{ textTransform: 'capitalize' }}>{wo.priority || 'Normal'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Complaint / Cause / Correction */}
+          <div className={styles.card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 className={styles.cardTitle} style={{ margin: 0 }}>Complaint, Cause & Correction</h2>
+              <button 
+                type="button" 
+                className="btn btn-outline"
+                onClick={handleSaveCCC}
+                disabled={savingCCC}
+                style={{ padding: '0.4rem 0.75rem', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Save size={14} />
+                {savingCCC ? 'Saving...' : 'Save Info'}
+              </button>
+            </div>
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <div>
+                <label className={styles.label}>Customer Complaint (3 C's)</label>
+                <textarea 
+                  className={styles.textarea} 
+                  rows={2} 
+                  value={complaint} 
+                  onChange={(e) => setComplaint(e.target.value)} 
+                  placeholder="e.g. Customer states brakes are squeaking..." 
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label className={styles.label}>Cause (Diagnosis)</label>
+                  <textarea 
+                    className={styles.textarea} 
+                    rows={2} 
+                    value={cause} 
+                    onChange={(e) => setCause(e.target.value)} 
+                    placeholder="e.g. Found front brake pads worn down to 2mm..." 
+                  />
+                </div>
+                <div>
+                  <label className={styles.label}>Correction (Repair)</label>
+                  <textarea 
+                    className={styles.textarea} 
+                    rows={2} 
+                    value={correction} 
+                    onChange={(e) => setCorrection(e.target.value)} 
+                    placeholder="e.g. Replaced front brake pads and machined rotors..." 
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -987,9 +1139,35 @@ export default function WorkOrderDetailPage() {
           {/* Assignment & Timer */}
           <div className={styles.card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 className={styles.cardTitle}>Assignment</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}>
-                <Clock size={18} /> {wo.timerDisplay || '0:00'}
+              <h2 className={styles.cardTitle} style={{ margin: 0 }}>Assignment</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ 
+                  display: 'flex', alignItems: 'center', gap: '6px', 
+                  fontFamily: 'monospace', fontSize: '18px', fontWeight: 'bold',
+                  color: timerRunning ? '#10B981' : 'var(--color-text)'
+                }}>
+                  <Clock size={18} /> 
+                  {formatTimer(liveTimer)}
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleTimer}
+                  style={{
+                    background: timerRunning ? '#FEF2F2' : '#ECFDF5',
+                    color: timerRunning ? '#EF4444' : '#10B981',
+                    border: `1px solid ${timerRunning ? '#FECACA' : '#A7F3D0'}`,
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '13px'
+                  }}
+                >
+                  {timerRunning ? <><Pause size={14} /> Pause</> : <><Play size={14} /> Start</>}
+                </button>
               </div>
             </div>
             <div className={styles.formGroup}>
@@ -1012,14 +1190,33 @@ export default function WorkOrderDetailPage() {
 
           {/* Financial Summary */}
           <div className={styles.card}>
-            <h2 className={styles.cardTitle}>Financial Summary</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 className={styles.cardTitle} style={{ margin: 0 }}>Financial Summary</h2>
+              {(() => {
+                const totalCost = (wo.parts || []).reduce((sum, p) => sum + ((parseFloat(p.quantity) || 0) * (parseFloat(p.cost) || 0)), 0);
+                const revenue = totals.labourTotal + totals.partsTotal;
+                const margin = revenue > 0 ? ((revenue - totalCost) / revenue) * 100 : 0;
+                return (
+                  <span style={{ 
+                    fontSize: '12px', fontWeight: 700, 
+                    display: 'flex', alignItems: 'center', gap: '4px',
+                    color: margin > 40 ? '#10B981' : margin > 20 ? '#F59E0B' : '#EF4444',
+                    backgroundColor: margin > 40 ? '#ECFDF5' : margin > 20 ? '#FEF3C7' : '#FEF2F2',
+                    padding: '4px 8px', borderRadius: '12px'
+                  }}>
+                    <TrendingUp size={14} />
+                    {margin.toFixed(0)}% Margin
+                  </span>
+                );
+              })()}
+            </div>
             <div className={styles.summaryRow}>
               <span>Labor</span>
-              <span>${totals.labour.toFixed(2)}</span>
+              <span>${totals.labourTotal.toFixed(2)}</span>
             </div>
             <div className={styles.summaryRow}>
               <span>Parts</span>
-              <span>${totals.parts.toFixed(2)}</span>
+              <span>${totals.partsTotal.toFixed(2)}</span>
             </div>
             <div className={styles.summaryRow} style={{ alignItems: 'center' }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1074,26 +1271,46 @@ export default function WorkOrderDetailPage() {
 
           {/* Notes */}
           <div className={styles.card}>
-            <div className={styles.tabs} style={{ paddingBottom: 0, marginBottom: '1rem', borderBottom: '1px solid var(--color-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)' }}>
+              <div className={styles.tabs} style={{ paddingBottom: 0, borderBottom: 'none', marginBottom: 0 }}>
+                <button 
+                  className={`${styles.tab} ${activeNotesTab === 'internal' ? styles.activeTab : ''}`}
+                  onClick={() => setActiveNotesTab('internal')}
+                  style={{ borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }}
+                >
+                  Internal
+                </button>
+                <button 
+                  className={`${styles.tab} ${activeNotesTab === 'customer' ? styles.activeTab : ''}`}
+                  onClick={() => setActiveNotesTab('customer')}
+                  style={{ borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }}
+                >
+                  Customer
+                </button>
+              </div>
               <button 
-                className={`${styles.tab} ${activeNotesTab === 'internal' ? styles.activeTab : ''}`}
-                onClick={() => setActiveNotesTab('internal')}
-                style={{ borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }}
+                type="button" 
+                className="btn btn-outline"
+                onClick={handleSaveNotes}
+                disabled={savingNotes}
+                style={{ padding: '0.35rem 0.6rem', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}
               >
-                Internal
-              </button>
-              <button 
-                className={`${styles.tab} ${activeNotesTab === 'customer' ? styles.activeTab : ''}`}
-                onClick={() => setActiveNotesTab('customer')}
-                style={{ borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }}
-              >
-                Customer
+                <Save size={14} />
+                {savingNotes ? 'Saving...' : 'Save Notes'}
               </button>
             </div>
             <textarea 
               className={styles.textarea} 
               placeholder={activeNotesTab === 'internal' ? "Shop notes (not printed)..." : "Notes to appear on invoice..."}
-              defaultValue={activeNotesTab === 'internal' ? wo.internal_notes : wo.customer_notes}
+              value={activeNotesTab === 'internal' ? internalNotes : customerNotes}
+              onChange={(e) => {
+                if (activeNotesTab === 'internal') {
+                  setInternalNotes(e.target.value);
+                } else {
+                  setCustomerNotes(e.target.value);
+                }
+              }}
+              rows={4}
             ></textarea>
           </div>
 
@@ -1572,6 +1789,127 @@ export default function WorkOrderDetailPage() {
                     <Trash2 size={16} /> Delete Work Order
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send Link Modal */}
+      {showLinkModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          backdropFilter: 'blur(4px)',
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            border: '1px solid var(--color-border)',
+            borderRadius: '16px',
+            maxWidth: '500px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  backgroundColor: '#EFF6FF',
+                  color: '#3B82F6',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <ExternalLink size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--color-text)' }}>
+                    Share Customer Portal Link
+                  </h3>
+                  <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                    Work Order #{id}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowLinkModal(false);
+                  setLinkCopied(false);
+                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '14px', color: '#64748B', lineHeight: '1.5', margin: '0 0 20px 0' }}>
+              Send this link to the customer so they can view the work order details, live progress, and approve or pay for the job.
+            </p>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '8px', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                Customer Portal URL
+              </label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={`${typeof window !== 'undefined' ? window.location.origin : ''}/approve/${id}`}
+                  style={{
+                    flex: 1,
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #E2E8F0',
+                    backgroundColor: '#F8FAFC',
+                    color: '#334155',
+                    fontSize: '13px',
+                    fontFamily: 'monospace'
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    backgroundColor: linkCopied ? '#10B981' : 'var(--color-primary)',
+                    border: 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onClick={() => {
+                    const liveLink = `${window.location.origin}/approve/${id}`;
+                    navigator.clipboard?.writeText(liveLink);
+                    setLinkCopied(true);
+                    setTimeout(() => setLinkCopied(false), 3000);
+                  }}
+                >
+                  {linkCopied ? <><CheckSquare size={16} /> Copied!</> : <><Copy size={16} /> Copy Link</>}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => {
+                  setShowLinkModal(false);
+                  setLinkCopied(false);
+                }}
+              >
+                Close
               </button>
             </div>
           </div>
