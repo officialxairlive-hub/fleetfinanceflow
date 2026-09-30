@@ -411,12 +411,42 @@ export default function InvoiceDetail() {
         work_order_id: freshWo.id
       }).eq('id', invoiceId);
 
-      alert(`✅ Invoice synchronized with Work Order #${freshWo.id} line items & diagnostic report!`);
+      alert(`✅ Invoice synchronized with Work Order #${freshWo.id} line items!`);
     } catch (err) {
       alert(`Error syncing: ${err.message}`);
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const handleInvoiceShopSuppliesChange = async (valStr) => {
+    const parsed = parseFloat(valStr);
+    const newSupplies = isNaN(parsed) ? 0 : Math.max(0, parsed);
+
+    const subtotal = (breakdown.labourTotal || 0) + (breakdown.partsTotal || 0) + newSupplies;
+    const isExempt = (customer?.tax_setting || '').toLowerCase() === 'exempt';
+    const taxRate = isExempt ? 0 : 5;
+    const taxAmount = isExempt ? 0 : (subtotal * 0.05);
+    const total = subtotal + taxAmount;
+
+    setBreakdown(prev => ({
+      ...prev,
+      shopSupplies: newSupplies,
+      subtotal,
+      taxAmount,
+      total
+    }));
+
+    try {
+      await supabase
+        .from('invoices')
+        .update({
+          shop_supplies: newSupplies,
+          tax_amount: taxAmount,
+          total: total
+        })
+        .eq('id', invoiceId);
+    } catch (_) {}
   };
 
   const handleSaveReport = async (e) => {
@@ -1308,12 +1338,40 @@ Address: ${shop.address}`;
               <span>Subtotal</span>
               <span>${breakdown.subtotal.toFixed(2)}</span>
             </div>
-            {breakdown.shopSupplies > 0 && (
-              <div className={styles.totalRow}>
-                <span>Shop Supplies</span>
-                <span>${breakdown.shopSupplies.toFixed(2)}</span>
+            <div className={styles.totalRow} style={{ alignItems: 'center' }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontWeight: 600 }}>Shop Supplies</span>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+                  {invoice?.status !== 'paid' ? 'Click amount to edit' : 'Environmental & Supplies'}
+                </span>
               </div>
-            )}
+              {invoice?.status !== 'paid' ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontWeight: 600 }}>$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={breakdown.shopSupplies.toFixed(2)}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => handleInvoiceShopSuppliesChange(e.target.value)}
+                    style={{
+                      width: '85px',
+                      padding: '3px 6px',
+                      textAlign: 'right',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      borderRadius: '4px',
+                      border: '1px solid var(--color-border)',
+                      backgroundColor: 'var(--color-surface)',
+                      color: 'var(--color-text)'
+                    }}
+                  />
+                </div>
+              ) : (
+                <span>${breakdown.shopSupplies.toFixed(2)}</span>
+              )}
+            </div>
             <div className={styles.totalRow}>
               <span>GST ({breakdown.taxRate}%)</span>
               <span>${breakdown.taxAmount.toFixed(2)}</span>

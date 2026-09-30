@@ -53,6 +53,10 @@ export default function WorkOrderDetailPage() {
     jobGroup: ''
   });
 
+  // Custom Shop Supplies State (Editable)
+  const [customSupplies, setCustomSupplies] = useState(null);
+  const [suppliesInput, setSuppliesInput] = useState('');
+
   // Delete Work Order State
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -157,6 +161,29 @@ export default function WorkOrderDetailPage() {
 
         setTechnicians(techRes.data || []);
         setInventoryParts(partsRes.data || []);
+
+        // Check for saved custom shop supplies
+        try {
+          const { data: invData } = await supabase
+            .from('invoices')
+            .select('shop_supplies')
+            .or(`id.eq.INV-${id.replace('WO-', '')},work_order_id.eq.${id}`)
+            .limit(1)
+            .maybeSingle();
+
+          if (invData && invData.shop_supplies !== null && invData.shop_supplies !== undefined) {
+            const val = parseFloat(invData.shop_supplies);
+            setCustomSupplies(val);
+            setSuppliesInput(val.toFixed(2));
+          } else if (typeof window !== 'undefined') {
+            const local = localStorage.getItem(`wo_supplies_${id}`);
+            if (local !== null) {
+              const val = parseFloat(local);
+              setCustomSupplies(val);
+              setSuppliesInput(val.toFixed(2));
+            }
+          }
+        } catch (_) {}
       } catch (err) {
         console.error("Error fetching job details:", err);
         setError(err.message || 'Failed to load work order from Supabase.');
@@ -241,7 +268,8 @@ export default function WorkOrderDetailPage() {
       
       const labourTotal = updatedLabour.reduce((sum, l) => sum + ((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)), 0);
       const partsTotal = (wo.parts || []).reduce((sum, p) => sum + ((parseFloat(p.quantity || p.qty) || 0) * (parseFloat(p.sellPrice || p.price || p.sell) || 0)), 0);
-      const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
+      const autoSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
+      const shopSupplies = customSupplies !== null ? customSupplies : autoSupplies;
       const subtotal = labourTotal + partsTotal + shopSupplies;
       const tax = subtotal * 0.05;
       const newEstimatedCost = subtotal + tax;
@@ -287,7 +315,8 @@ export default function WorkOrderDetailPage() {
     const updatedLabour = (wo.labour || []).filter((_, i) => i !== indexToRemove);
     const labourTotal = updatedLabour.reduce((sum, l) => sum + ((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)), 0);
     const partsTotal = (wo.parts || []).reduce((sum, p) => sum + ((parseFloat(p.quantity || p.qty) || 0) * (parseFloat(p.sellPrice || p.price || p.sell) || 0)), 0);
-    const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
+    const autoSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
+    const shopSupplies = customSupplies !== null ? customSupplies : autoSupplies;
     const subtotal = labourTotal + partsTotal + shopSupplies;
     const tax = subtotal * 0.05;
     const newEstimatedCost = subtotal + tax;
@@ -384,7 +413,8 @@ export default function WorkOrderDetailPage() {
       
       const labourTotal = (wo.labour || []).reduce((sum, l) => sum + ((l.hours || 0) * (l.rate || 0)), 0);
       const partsTotal = updatedParts.reduce((sum, p) => sum + ((p.quantity || 0) * (p.sellPrice || p.price || 0)), 0);
-      const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
+      const autoSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
+      const shopSupplies = customSupplies !== null ? customSupplies : autoSupplies;
       const subtotal = labourTotal + partsTotal + shopSupplies;
       const tax = subtotal * 0.05;
       const newEstimatedCost = subtotal + tax;
@@ -440,7 +470,8 @@ export default function WorkOrderDetailPage() {
     const updatedParts = (wo.parts || []).filter((_, i) => i !== indexToRemove);
     const labourTotal = (wo.labour || []).reduce((sum, l) => sum + ((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)), 0);
     const partsTotal = updatedParts.reduce((sum, p) => sum + ((parseFloat(p.quantity || p.qty) || 0) * (parseFloat(p.sellPrice || p.price || p.sell) || 0)), 0);
-    const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
+    const autoSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
+    const shopSupplies = customSupplies !== null ? customSupplies : autoSupplies;
     const subtotal = labourTotal + partsTotal + shopSupplies;
     const tax = subtotal * 0.05;
     const newEstimatedCost = subtotal + tax;
@@ -562,11 +593,12 @@ export default function WorkOrderDetailPage() {
   };
 
   const calculateTotals = () => {
-    if (!wo) return { labourTotal: 0, partsTotal: 0, shopSupplies: 0, subtotal: 0, tax: 0, total: 0 };
+    if (!wo) return { labourTotal: 0, partsTotal: 0, shopSupplies: 0, autoSupplies: 0, subtotal: 0, tax: 0, total: 0 };
     
     const labourTotal = (wo.labour || []).reduce((sum, l) => sum + ((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)), 0);
     const partsTotal = (wo.parts || []).reduce((sum, p) => sum + ((parseFloat(p.quantity || p.qty) || 0) * (parseFloat(p.sellPrice || p.price || p.sell) || 0)), 0);
-    const shopSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50); 
+    const autoSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
+    const shopSupplies = customSupplies !== null ? customSupplies : autoSupplies;
     const subtotal = labourTotal + partsTotal + shopSupplies;
     const tax = subtotal * 0.05; 
     
@@ -574,10 +606,54 @@ export default function WorkOrderDetailPage() {
       labourTotal,
       partsTotal,
       shopSupplies,
+      autoSupplies,
       subtotal,
       tax,
       total: subtotal + tax
     };
+  };
+
+  const handleShopSuppliesChange = async (valStr) => {
+    setSuppliesInput(valStr);
+    const parsed = parseFloat(valStr);
+    const newSupplies = isNaN(parsed) ? 0 : Math.max(0, parsed);
+    setCustomSupplies(newSupplies);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`wo_supplies_${id}`, String(newSupplies));
+    }
+
+    const labourTotal = (wo?.labour || []).reduce((sum, l) => sum + ((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)), 0);
+    const partsTotal = (wo?.parts || []).reduce((sum, p) => sum + ((parseFloat(p.quantity || p.qty) || 0) * (parseFloat(p.sellPrice || p.price || p.sell) || 0)), 0);
+    const subtotal = labourTotal + partsTotal + newSupplies;
+    const tax = subtotal * 0.05;
+    const newTotal = subtotal + tax;
+
+    await syncExistingInvoice(labourTotal, partsTotal, newSupplies, tax, newTotal);
+    try {
+      await supabase.from('work_orders').update({ estimated_cost: newTotal }).eq('id', id);
+    } catch (_) {}
+    setWo(prev => ({ ...prev, estimated_cost: newTotal }));
+  };
+
+  const handleResetShopSupplies = async () => {
+    setCustomSupplies(null);
+    setSuppliesInput('');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(`wo_supplies_${id}`);
+    }
+
+    const labourTotal = (wo?.labour || []).reduce((sum, l) => sum + ((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)), 0);
+    const partsTotal = (wo?.parts || []).reduce((sum, p) => sum + ((parseFloat(p.quantity || p.qty) || 0) * (parseFloat(p.sellPrice || p.price || p.sell) || 0)), 0);
+    const autoSupplies = Math.min((labourTotal + partsTotal) * 0.05, 50);
+    const subtotal = labourTotal + partsTotal + autoSupplies;
+    const tax = subtotal * 0.05;
+    const newTotal = subtotal + tax;
+
+    await syncExistingInvoice(labourTotal, partsTotal, autoSupplies, tax, newTotal);
+    try {
+      await supabase.from('work_orders').update({ estimated_cost: newTotal }).eq('id', id);
+    } catch (_) {}
+    setWo(prev => ({ ...prev, estimated_cost: newTotal }));
   };
 
   if (isLoading) {
@@ -924,12 +1000,43 @@ export default function WorkOrderDetailPage() {
               <span>Subtotal</span>
               <span>${totals.subtotal.toFixed(2)}</span>
             </div>
-            {totals.shopSupplies > 0 && (
-              <div className={styles.summaryRow}>
-                <span>Shop Supplies (5% max $50)</span>
-                <span>${totals.shopSupplies.toFixed(2)}</span>
+            <div className={styles.summaryRow} style={{ alignItems: 'center' }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontWeight: 600 }}>Shop Supplies</span>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+                  {customSupplies !== null ? (
+                    <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
+                      Custom • <button type="button" onClick={handleResetShopSupplies} style={{ background: 'none', border: 'none', color: 'var(--color-primary)', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: '11px' }}>Auto (5% max $50)</button>
+                    </span>
+                  ) : (
+                    'Auto (5% max $50)'
+                  )}
+                </span>
               </div>
-            )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontWeight: 600 }}>$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder={totals.autoSupplies.toFixed(2)}
+                  value={suppliesInput !== '' ? suppliesInput : (customSupplies !== null ? customSupplies.toFixed(2) : totals.shopSupplies.toFixed(2))}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => handleShopSuppliesChange(e.target.value)}
+                  style={{
+                    width: '90px',
+                    padding: '4px 8px',
+                    textAlign: 'right',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-surface)',
+                    color: 'var(--color-text)'
+                  }}
+                />
+              </div>
+            </div>
             <div className={styles.summaryRow}>
               <span>Tax (5% GST)</span>
               <span>${totals.tax.toFixed(2)}</span>
