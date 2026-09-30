@@ -796,23 +796,23 @@ Address: ${shop.address}`;
       y += cardH + 12;
 
       // ─── 4. LINE ITEMS TABLE (Grouped by Job Section) ───────────
-      const colDescX = ML + 8;
-      const colTypeX = ML + 265;
-      const colQtyX  = ML + 345;
-      const colRateX = ML + 415;
+      const colItemX = ML + 8;
+      const colDescX = ML + 65;
+      const colQtyX  = ML + 355;
+      const colRateX = ML + 420;
       const colAmtX  = rightX - 8;
 
       const thHeight = 20;
       drawRect(ML, y, CW, thHeight, C.fillHeader, C.darkBorder, 0.75);
-      writeText('DESCRIPTION / SERVICE PERFORMED', colDescX, y + 13, { size: 7.5, bold: true, color: C.title });
-      writeText('TYPE', colTypeX, y + 13, { size: 7.5, bold: true, color: C.title });
-      writeText('QTY / HRS', colQtyX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
+      writeText('ITEM', colItemX, y + 13, { size: 7.5, bold: true, color: C.title });
+      writeText('DESCRIPTION', colDescX, y + 13, { size: 7.5, bold: true, color: C.title });
+      writeText('QTY', colQtyX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
       writeText('RATE', colRateX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
-      writeText('AMOUNT ($)', colAmtX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
+      writeText('TOTAL', colAmtX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
       y += thHeight;
 
       let rowIndex = 0;
-      const drawLineRow = (desc, subtext, typeLabel, qtyStr, rateStr, amtStr) => {
+      const drawLineRow = (itemLabel, desc, subtext, qtyStr, rateStr, amtStr, isItalicDesc = false) => {
         // Multi-page check
         if (y > PH - 160) {
           pdf.addPage();
@@ -822,11 +822,11 @@ Address: ${shop.address}`;
           y += 24;
 
           drawRect(ML, y, CW, thHeight, C.fillHeader, C.darkBorder, 0.75);
-          writeText('DESCRIPTION / SERVICE PERFORMED', colDescX, y + 13, { size: 7.5, bold: true, color: C.title });
-          writeText('TYPE', colTypeX, y + 13, { size: 7.5, bold: true, color: C.title });
-          writeText('QTY / HRS', colQtyX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
+          writeText('ITEM', colItemX, y + 13, { size: 7.5, bold: true, color: C.title });
+          writeText('DESCRIPTION', colDescX, y + 13, { size: 7.5, bold: true, color: C.title });
+          writeText('QTY', colQtyX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
           writeText('RATE', colRateX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
-          writeText('AMOUNT ($)', colAmtX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
+          writeText('TOTAL', colAmtX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
           y += thHeight;
         }
 
@@ -835,12 +835,12 @@ Address: ${shop.address}`;
         drawRect(ML, y, CW, rowHeight, rowBg, null);
         drawHLine(ML, y + rowHeight, rightX, C.lightBorder, 0.5);
 
-        writeText(desc, colDescX, y + 12, { size: 8.5, bold: true, color: C.title, maxWidth: colTypeX - colDescX - 8 });
+        writeText(itemLabel, colItemX, y + 12, { size: 8, bold: true, color: C.title });
+        writeText(desc, colDescX, y + 12, { size: 8.5, bold: !isItalicDesc, italic: isItalicDesc, color: C.title, maxWidth: colQtyX - colDescX - 16 });
         if (subtext) {
-          writeText(subtext, colDescX, y + 23, { size: 7.5, italic: true, color: C.muted, maxWidth: colTypeX - colDescX - 8 });
+          writeText(subtext, colDescX, y + 23, { size: 7.5, italic: true, color: C.muted, maxWidth: colQtyX - colDescX - 16 });
         }
 
-        writeText(typeLabel, colTypeX, y + 12, { size: 7.5, color: C.muted });
         writeText(qtyStr, colQtyX, y + 12, { size: 8.5, color: C.body, align: 'right' });
         writeText(rateStr, colRateX, y + 12, { size: 8.5, color: C.body, align: 'right' });
         writeText(amtStr, colAmtX, y + 12, { size: 8.5, bold: true, color: C.title, align: 'right' });
@@ -858,18 +858,27 @@ Address: ${shop.address}`;
           y += 24;
 
           drawRect(ML, y, CW, thHeight, C.fillHeader, C.darkBorder, 0.75);
-          writeText('DESCRIPTION / SERVICE PERFORMED', colDescX, y + 13, { size: 7.5, bold: true, color: C.title });
-          writeText('TYPE', colTypeX, y + 13, { size: 7.5, bold: true, color: C.title });
-          writeText('QTY / HRS', colQtyX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
+          writeText('ITEM', colItemX, y + 13, { size: 7.5, bold: true, color: C.title });
+          writeText('DESCRIPTION', colDescX, y + 13, { size: 7.5, bold: true, color: C.title });
+          writeText('QTY', colQtyX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
           writeText('RATE', colRateX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
-          writeText('AMOUNT ($)', colAmtX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
+          writeText('TOTAL', colAmtX, y + 13, { size: 7.5, bold: true, color: C.title, align: 'right' });
           y += thHeight;
         }
 
         const secH = 18;
         drawRect(ML, y, CW, secH, [241, 245, 249], C.border, 0.5);
-        writeText(secTitle.toUpperCase(), ML + 8, y + 12, { size: 8, bold: true, color: C.title });
+        writeText(secTitle.toUpperCase(), ML + 8, y + 12, { size: 8.5, bold: true, color: C.title });
         y += secH;
+      };
+
+      const drawJobSubtotal = (subtotalVal) => {
+        const subH = 18;
+        drawRect(ML, y, CW, subH, C.white, null);
+        drawHLine(ML, y + subH, rightX, C.darkBorder, 0.75);
+        writeText('Line items subtotal:', colRateX, y + 12, { size: 8, bold: true, color: C.body, align: 'right' });
+        writeText(fmt(subtotalVal), colAmtX, y + 12, { size: 8.5, bold: true, color: C.title, align: 'right' });
+        y += subH;
       };
 
       const sections = (breakdown.jobSections && breakdown.jobSections.length > 0)
@@ -877,42 +886,36 @@ Address: ${shop.address}`;
         : [{ name: 'Job 1', labour: breakdown.labourLines, parts: breakdown.partsLines }];
 
       sections.forEach((sec, sIdx) => {
-        drawJobHeader(`JOB ${sIdx + 1}: ${sec.name || `Job ${sIdx + 1}`}`);
+        drawJobHeader(sec.name?.toUpperCase().startsWith('JOB') ? sec.name : `JOB ${sIdx + 1}: ${sec.name || `Job ${sIdx + 1}`}`);
+
+        let secTotal = 0;
 
         // Draw Labour lines for this job
         (sec.labour || []).forEach(l => {
           const sub = l.technician ? `Technician: ${l.technician}` : null;
-          drawLineRow(l.description || 'Labour Service', sub, 'Labour', `${l.hours} hrs`, fmt(l.rate), fmt(l.total));
+          drawLineRow('Labor', l.description || 'Labour Service', sub, `${l.hours.toFixed(2)}`, fmt(l.rate), fmt(l.total), true);
+          secTotal += (parseFloat(l.total) || 0);
         });
 
         // Draw Parts lines for this job
         (sec.parts || []).forEach(p => {
-          const sub = p.partNumber ? `Part SKU: ${p.partNumber}` : null;
-          drawLineRow(p.description || 'Replacement Part', sub, 'Part', String(p.quantity), fmt(p.unitPrice), fmt(p.total));
+          const descStr = p.partNumber ? `${p.partNumber} ${p.description}` : (p.description || 'Replacement Part');
+          drawLineRow('Parts', descStr, null, `${p.quantity.toFixed(2)}`, fmt(p.unitPrice), fmt(p.total), false);
+          secTotal += (parseFloat(p.total) || 0);
         });
+
+        drawJobSubtotal(secTotal);
       });
 
-      // Draw Shop Supplies
-      if (breakdown.shopSupplies > 0) {
-        drawLineRow(
-          'Shop Supplies & Environmental Recovery',
-          'Consumables, fluid disposal, safety & shop maintenance (5% capped)',
-          'Supplies',
-          '1',
-          fmt(breakdown.shopSupplies),
-          fmt(breakdown.shopSupplies)
-        );
-      }
-
       if (rowIndex === 0) {
-        drawLineRow('No billable line items recorded on this work order.', null, '—', '—', '—', '$0.00');
+        drawLineRow('—', 'No billable line items recorded on this work order.', null, '—', '—', '$0.00');
       }
 
       drawHLine(ML, y, rightX, C.darkBorder, 1);
       y += 12;
 
       // ─── 5. TOTALS & REMITTANCE SUMMARY ─────────────────────────
-      if (y > PH - 145) {
+      if (y > PH - 150) {
         pdf.addPage();
         y = 36;
       }
@@ -922,30 +925,37 @@ Address: ${shop.address}`;
       const remW = CW - totalsW - 20;
 
       // Left: Remittance Box
-      drawRect(ML, y, remW, 95, C.fillCard, C.border, 0.5);
+      drawRect(ML, y, remW, 105, C.fillCard, C.border, 0.5);
       writeText('PAYMENT TERMS & REMITTANCE', ML + 10, y + 13, { size: 7.5, bold: true, color: C.title });
       writeText('Payment Terms: Net 30 Days from Invoice Date', ML + 10, y + 27, { size: 8, bold: true, color: C.body });
       writeText(`Please make cheques payable to: ${shop?.companyName || 'Road Ready'}`, ML + 10, y + 40, { size: 8, color: C.body });
       if (shop?.email) {
         writeText(`Interac e-Transfer / Inquiries: ${shop.email}`, ML + 10, y + 53, { size: 8, color: C.body });
       }
-      writeText('Late payments are subject to standard 2% monthly finance fee.', ML + 10, y + 66, { size: 7, italic: true, color: C.muted });
-      writeText('Thank you for trusting us with your commercial fleet repairs!', ML + 10, y + 81, { size: 8, bold: true, color: C.title });
+      writeText('Warranty: 90 Days / 10,000 km on labor and certified parts.', ML + 10, y + 66, { size: 7, italic: true, color: C.muted });
+      writeText('Late payments are subject to standard 2% monthly finance fee.', ML + 10, y + 78, { size: 7, italic: true, color: C.muted });
+      writeText('Thank you for trusting us with your commercial fleet repairs!', ML + 10, y + 93, { size: 8, bold: true, color: C.title });
 
       // Right: Detailed Totals Block
       let ty = y;
       const drawTotalLine = (label, valStr, isBold = false) => {
         writeText(label, totalsX, ty + 10, { size: 8.5, bold: isBold, color: isBold ? C.title : C.body });
         writeText(valStr, rightX, ty + 10, { size: 8.5, bold: isBold, color: isBold ? C.title : C.body, align: 'right' });
-        ty += 16;
+        ty += 15;
       };
 
-      if (breakdown.shopSupplies > 0) drawTotalLine('Shop Supplies & Disposal:', fmt(breakdown.shopSupplies));
+      drawTotalLine('Labor:', fmt(breakdown.labourTotal));
+      drawTotalLine('Parts:', fmt(breakdown.partsTotal));
+      if (breakdown.shopSupplies > 0) drawTotalLine('Shop Supplies:', fmt(breakdown.shopSupplies));
 
       drawHLine(totalsX, ty + 2, rightX, C.lightBorder, 0.5);
-      ty += 6;
+      ty += 5;
       drawTotalLine('Subtotal:', fmt(breakdown.subtotal), true);
-      drawTotalLine(`GST / Tax (${breakdown.taxRate || 5}%):`, fmt(breakdown.taxAmount));
+      drawTotalLine(`Sales Tax (${breakdown.taxRate || 5}%):`, fmt(breakdown.taxAmount));
+
+      if (invoice?.status === 'paid') {
+        drawTotalLine('Amount Paid:', `-${fmt(breakdown.total)}`, true);
+      }
 
       if (invoice?.status === 'paid') {
         drawTotalLine('Amount Paid:', `-${fmt(breakdown.total)}`, true);
@@ -1242,101 +1252,106 @@ Address: ${shop.address}`;
           <table className={styles.itemsTable}>
             <thead>
               <tr>
+                <th style={{ width: '90px' }}>Item</th>
                 <th>Description</th>
-                <th className={styles.right} style={{ width: '110px' }}>Qty / Hours</th>
-                <th className={styles.right} style={{ width: '130px' }}>Rate / Price</th>
-                <th className={styles.right} style={{ width: '140px' }}>Amount ($ CAD)</th>
+                <th className={styles.right} style={{ width: '100px' }}>Qty</th>
+                <th className={styles.right} style={{ width: '120px' }}>Rate</th>
+                <th className={styles.right} style={{ width: '130px' }}>Total</th>
               </tr>
             </thead>
             <tbody>
               {(breakdown.jobSections && breakdown.jobSections.length > 0) ? (
-                breakdown.jobSections.map((sec, secIdx) => (
-                  <React.Fragment key={`sec-${secIdx}`}>
-                    {/* Job Section Header Row */}
-                    <tr style={{ backgroundColor: '#f1f5f9', borderTop: secIdx > 0 ? '2px solid #cbd5e1' : 'none' }}>
-                      <td colSpan="4" style={{ padding: '8px 12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-light, #eff6ff)', padding: '2px 8px', borderRadius: '4px' }}>
-                            Job {secIdx + 1}
-                          </span>
-                          <strong style={{ fontSize: '13px', color: '#1e293b' }}>{sec.name}</strong>
-                        </div>
-                      </td>
-                    </tr>
+                breakdown.jobSections.map((sec, secIdx) => {
+                  const secLabourTotal = (sec.labour || []).reduce((s, l) => s + (parseFloat(l.total) || 0), 0);
+                  const secPartsTotal = (sec.parts || []).reduce((s, p) => s + (parseFloat(p.total) || 0), 0);
+                  const secSubtotal = secLabourTotal + secPartsTotal;
 
-                    {/* Labour lines for this job */}
-                    {sec.labour && sec.labour.length > 0 && sec.labour.map((l, lIdx) => (
-                      <tr key={`sec-${secIdx}-labour-${lIdx}`}>
-                        <td style={{ paddingLeft: '1.25rem' }}>
-                          <div style={{ fontWeight: 600, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{l.description}</div>
-                          {l.technician && (
-                            <span style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
-                              Technician: {l.technician}
-                            </span>
-                          )}
-                        </td>
-                        <td className={styles.right}>{l.hours} hrs</td>
-                        <td className={styles.right}>${l.rate.toFixed(2)}</td>
-                        <td className={styles.right}><strong>${l.total.toFixed(2)}</strong></td>
-                      </tr>
-                    ))}
-
-                    {/* Parts lines for this job */}
-                    {sec.parts && sec.parts.length > 0 && sec.parts.map((p, pIdx) => (
-                      <tr key={`sec-${secIdx}-part-${pIdx}`}>
-                        <td style={{ paddingLeft: '1.25rem' }}>
-                          <div style={{ fontWeight: 600 }}>{p.description}</div>
-                          {p.partNumber && (
-                            <span style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
-                              Part #: {p.partNumber}
-                            </span>
-                          )}
-                        </td>
-                        <td className={styles.right}>{p.quantity}</td>
-                        <td className={styles.right}>${p.unitPrice.toFixed(2)}</td>
-                        <td className={styles.right}><strong>${p.total.toFixed(2)}</strong></td>
-                      </tr>
-                    ))}
-
-                    {(!sec.labour || sec.labour.length === 0) && (!sec.parts || sec.parts.length === 0) && (
-                      <tr>
-                        <td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-                          No line items recorded in this job section.
+                  return (
+                    <React.Fragment key={`sec-${secIdx}`}>
+                      {/* Job Section Header Row */}
+                      <tr style={{ backgroundColor: '#f8fafc', borderTop: secIdx > 0 ? '2px solid #cbd5e1' : 'none' }}>
+                        <td colSpan="5" style={{ padding: '10px 14px', borderBottom: '1px solid #cbd5e1' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <strong style={{ fontSize: '14px', color: '#0f172a', fontWeight: 800 }}>
+                              {sec.name?.toUpperCase().startsWith('JOB') ? sec.name : `Job ${secIdx + 1}: ${sec.name}`}
+                            </strong>
+                          </div>
                         </td>
                       </tr>
-                    )}
-                  </React.Fragment>
-                ))
+
+                      {/* Labour lines for this job */}
+                      {sec.labour && sec.labour.length > 0 && sec.labour.map((l, lIdx) => (
+                        <tr key={`sec-${secIdx}-labour-${lIdx}`}>
+                          <td style={{ fontWeight: 600, color: '#475569' }}>Labor</td>
+                          <td>
+                            <div style={{ fontStyle: 'italic', color: '#1e293b', whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{l.description}</div>
+                            {l.technician && (
+                              <span style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '2px', fontStyle: 'normal' }}>
+                                Technician: {l.technician}
+                              </span>
+                            )}
+                          </td>
+                          <td className={styles.right}>{l.hours.toFixed(2)}</td>
+                          <td className={styles.right}>${l.rate.toFixed(2)}</td>
+                          <td className={styles.right}><strong>${l.total.toFixed(2)}</strong></td>
+                        </tr>
+                      ))}
+
+                      {/* Parts lines for this job */}
+                      {sec.parts && sec.parts.length > 0 && sec.parts.map((p, pIdx) => (
+                        <tr key={`sec-${secIdx}-part-${pIdx}`}>
+                          <td style={{ fontWeight: 600, color: '#475569' }}>Parts</td>
+                          <td>
+                            <div style={{ fontWeight: 600, color: '#0f172a' }}>
+                              {p.partNumber ? `${p.partNumber} ${p.description}` : p.description}
+                            </div>
+                          </td>
+                          <td className={styles.right}>{p.quantity.toFixed(2)}</td>
+                          <td className={styles.right}>${p.unitPrice.toFixed(2)}</td>
+                          <td className={styles.right}><strong>${p.total.toFixed(2)}</strong></td>
+                        </tr>
+                      ))}
+
+                      {(!sec.labour || sec.labour.length === 0) && (!sec.parts || sec.parts.length === 0) && (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'center', padding: '1rem', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+                            No line items recorded in this job section.
+                          </td>
+                        </tr>
+                      )}
+
+                      {/* Job Section Subtotal Row */}
+                      <tr style={{ backgroundColor: '#ffffff', borderBottom: '2px solid #e2e8f0' }}>
+                        <td colSpan="3" style={{ borderBottom: 'none' }}></td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, fontSize: '13px', color: '#334155', padding: '10px 12px' }}>
+                          Line items subtotal:
+                        </td>
+                        <td className={styles.right} style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a', padding: '10px 12px' }}>
+                          ${secSubtotal.toFixed(2)}
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>
                     No billable items recorded on this work order.
                   </td>
-                </tr>
-              )}
-
-              {/* Shop Supplies & Environmental Fees */}
-              {breakdown.shopSupplies > 0 && (
-                <tr style={{ borderTop: '1px solid #e2e8f0' }}>
-                  <td>
-                    <strong>Shop Supplies & Environmental Recovery</strong>
-                    <span style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                      Consumables, fluid disposal, safety & shop maintenance (5% capped)
-                    </span>
-                  </td>
-                  <td className={styles.right}>1</td>
-                  <td className={styles.right}>${breakdown.shopSupplies.toFixed(2)}</td>
-                  <td className={styles.right}><strong>${breakdown.shopSupplies.toFixed(2)}</strong></td>
                 </tr>
               )}
             </tbody>
           </table>
 
-          {/* Totals Strictly Recalculated from Line Items (Simplified: Subtotal, Tax, Total) */}
+          {/* Totals Strictly Recalculated from Line Items */}
           <div className={styles.totals}>
             <div className={styles.totalRow}>
-              <span>Subtotal</span>
-              <span>${breakdown.subtotal.toFixed(2)}</span>
+              <span>Labor</span>
+              <span>${breakdown.labourTotal.toFixed(2)}</span>
+            </div>
+            <div className={styles.totalRow}>
+              <span>Parts</span>
+              <span>${breakdown.partsTotal.toFixed(2)}</span>
             </div>
             <div className={styles.totalRow} style={{ alignItems: 'center' }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1372,8 +1387,12 @@ Address: ${shop.address}`;
                 <span>${breakdown.shopSupplies.toFixed(2)}</span>
               )}
             </div>
+            <div className={styles.totalRow} style={{ borderTop: '1px solid var(--color-border)', paddingTop: '6px' }}>
+              <span style={{ fontWeight: 600 }}>Subtotal</span>
+              <span style={{ fontWeight: 600 }}>${breakdown.subtotal.toFixed(2)}</span>
+            </div>
             <div className={styles.totalRow}>
-              <span>GST ({breakdown.taxRate}%)</span>
+              <span>Sales Tax ({breakdown.taxRate}%)</span>
               <span>${breakdown.taxAmount.toFixed(2)}</span>
             </div>
             <div className={`${styles.totalRow} ${styles.grand}`}>
@@ -1386,7 +1405,7 @@ Address: ${shop.address}`;
                 <span>-${breakdown.total.toFixed(2)}</span>
               </div>
             )}
-            <div className={styles.totalRow} style={{ fontWeight: 700, fontSize: '16px', color: invoice.status === 'paid' ? '#166534' : 'var(--color-text)' }}>
+            <div className={styles.totalRow} style={{ fontWeight: 800, fontSize: '16px', color: invoice.status === 'paid' ? '#166534' : '#0f172a', borderTop: '2px solid #0f172a', paddingTop: '8px' }}>
               <span>Balance Due</span>
               <span>${invoice.status === 'paid' ? '0.00' : breakdown.total.toFixed(2)}</span>
             </div>

@@ -937,6 +937,23 @@ export default function WorkOrderDetailPage() {
                   </table>
                 </div>
               </div>
+
+              {/* Job Section Line Items Subtotal */}
+              {(() => {
+                const lTot = (sec.labour || []).reduce((sum, l) => sum + ((parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0)), 0);
+                const pTot = (sec.parts || []).reduce((sum, p) => sum + ((parseFloat(p.quantity) || 0) * (parseFloat(p.sellPrice || p.price) || 0)), 0);
+                const secSubtotal = lTot + pTot;
+                return (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid var(--color-border)' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                      Line items subtotal:
+                    </span>
+                    <strong style={{ fontSize: '15px', color: 'var(--color-text)' }}>
+                      ${secSubtotal.toFixed(2)}
+                    </strong>
+                  </div>
+                );
+              })()}
             </div>
           ))}
 
@@ -997,8 +1014,12 @@ export default function WorkOrderDetailPage() {
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Financial Summary</h2>
             <div className={styles.summaryRow}>
-              <span>Subtotal</span>
-              <span>${totals.subtotal.toFixed(2)}</span>
+              <span>Labor</span>
+              <span>${totals.labour.toFixed(2)}</span>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>Parts</span>
+              <span>${totals.parts.toFixed(2)}</span>
             </div>
             <div className={styles.summaryRow} style={{ alignItems: 'center' }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1036,6 +1057,10 @@ export default function WorkOrderDetailPage() {
                   }}
                 />
               </div>
+            </div>
+            <div className={styles.summaryRow} style={{ borderTop: '1px solid var(--color-border)', paddingTop: '6px' }}>
+              <span style={{ fontWeight: 600 }}>Subtotal</span>
+              <span style={{ fontWeight: 600 }}>${totals.subtotal.toFixed(2)}</span>
             </div>
             <div className={styles.summaryRow}>
               <span>Tax (5% GST)</span>
