@@ -4,9 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Upload, ArrowLeft, Save, Plus, X, Building2,
+  Upload, ArrowLeft, Save, Plus, X, Truck, Building2, User, MapPin,
   Search, Send, Copy, Check, ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
-  Link2, Loader2, AlertTriangle
+  Wrench, Link2, Loader2, Info, AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { getDefaultShopRateString, fetchShopSettings } from '../../../lib/shopConfig';
@@ -120,6 +120,9 @@ export default function CreateWorkOrderPage() {
   const [error, setError] = useState(null);
   const [defaultShopRate, setDefaultShopRate] = useState(() => getDefaultShopRateString());
 
+  // quick add unit
+  const [showAddUnitModal, setShowAddUnitModal] = useState(false);
+  const [savingUnit, setSavingUnit] = useState(false);
   // vehicle (new-vehicle form on the Vehicle step)
   const [unitForm, setUnitForm] = useState({
     unitNumber: '', vin: '', make: '', model: '', year: '',
@@ -779,7 +782,7 @@ export default function CreateWorkOrderPage() {
                     {vinLoading ? <Loader2 size={14} className={wz.spin} /> : null} Lookup
                   </button>
                 </div>
-                <div className={wz.helper}>
+                <div className={vinMsg ? wz.helper : wz.helper}>
                   {vinMsg || 'Enter the 17-character VIN — lookup can fill year, make, and model.'}
                 </div>
               </div>
@@ -999,6 +1002,71 @@ export default function CreateWorkOrderPage() {
         </div>
       )}
 
+      {/* ---- Quick Add Unit modal (unchanged) ---- */}
+      {showAddUnitModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: '12px', width: '100%', maxWidth: '560px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Truck size={20} color="var(--color-primary)" /> Quick Add Unit / Truck
+              </h2>
+              <button onClick={() => setShowAddUnitModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)' }}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleQuickAddUnit}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Unit / Fleet # *</label>
+                    <input type="text" required placeholder="e.g. Unit 2049" value={unitForm.unitNumber}
+                      onChange={(e) => setUnitForm({ ...unitForm, unitNumber: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>License Plate</label>
+                    <input type="text" placeholder="e.g. AB-8921" value={unitForm.plate}
+                      onChange={(e) => setUnitForm({ ...unitForm, plate: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }} />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                  {[['Year', 'year', '2023'], ['Make', 'make', 'Freightliner'], ['Model', 'model', 'Cascadia']].map(([lbl, key, ph]) => (
+                    <div key={key}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>{lbl}</label>
+                      <input type="text" placeholder={ph} value={unitForm[key]}
+                        onChange={(e) => setUnitForm({ ...unitForm, [key]: e.target.value })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }} />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>VIN (17 Digits)</label>
+                    <input type="text" placeholder="e.g. 1FUJGLDR5NLAA9821" value={unitForm.vin}
+                      onChange={(e) => setUnitForm({ ...unitForm, vin: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Mileage (km)</label>
+                    <input type="number" placeholder="185000" value={unitForm.mileage}
+                      onChange={(e) => setUnitForm({ ...unitForm, mileage: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Engine Type</label>
+                  <input type="text" placeholder="e.g. Detroit DD15 / Cummins X15" value={unitForm.engine}
+                    onChange={(e) => setUnitForm({ ...unitForm, engine: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowAddUnitModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={savingUnit}>{savingUnit ? 'Adding...' : 'Save & Select Unit'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -11,8 +11,6 @@ const CATEGORIES = ['All', 'Brakes', 'Engine', 'Drivetrain', 'Air System', 'Susp
 export default function PartsPage() {
   const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' | 'requests'
 
-  const [shopId, setShopId] = useState(null);
-
   const [parts, setParts] = useState([]);
   const [partRequests, setPartRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -121,16 +119,6 @@ export default function PartsPage() {
 
   useEffect(() => {
     fetchPartsAndRequests();
-    // best-effort: current shop for linking new rows
-    try {
-      supabase.auth.getUser().then(({ data: auth }) => {
-        if (auth?.user) {
-          supabase.from('profiles').select('shop_id').eq('id', auth.user.id).maybeSingle().then(({ data: profile }) => {
-            if (profile?.shop_id) setShopId(profile.shop_id);
-          });
-        }
-      });
-    } catch { /* profile lookup optional */ }
   }, []);
 
   const handleSort = (key) => {
@@ -226,8 +214,7 @@ export default function PartsPage() {
         phone: supplierForm.phone.trim(),
         email: supplierForm.email.trim(),
         address: supplierForm.address.trim(),
-        notes: supplierForm.notes.trim(),
-        ...(shopId ? { shop_id: shopId } : {})
+        notes: supplierForm.notes.trim()
       };
 
       if (editingSupplier) {
@@ -247,10 +234,7 @@ export default function PartsPage() {
       const supRes = await supabase.from('suppliers').select('*').order('name', { ascending: true });
       if (!supRes.error) setSuppliers(supRes.data || []);
     } catch (err) {
-      const msg = `${err.message || ''} ${err.details || ''}`;
-      alert(/schema cache|does not exist/i.test(msg)
-        ? 'The suppliers table is not set up yet. Run supabase/migrations/20261003090000_intake_flow.sql in your Supabase SQL editor.'
-        : `Error saving supplier: ${err.message}`);
+      alert(`Error saving supplier: ${err.message}`);
     } finally {
       setSavingSupplier(false);
     }
@@ -263,10 +247,7 @@ export default function PartsPage() {
       if (error) throw error;
       setSuppliers((prev) => prev.filter(x => x.id !== s.id));
     } catch (err) {
-      const msg = `${err.message || ''} ${err.details || ''}`;
-      alert(/schema cache|does not exist/i.test(msg)
-        ? 'The suppliers table is not set up yet. Run supabase/migrations/20261003090000_intake_flow.sql in your Supabase SQL editor.'
-        : `Error deleting supplier: ${err.message}`);
+      alert(`Error deleting supplier: ${err.message}`);
     }
   };
 
@@ -381,49 +362,51 @@ export default function PartsPage() {
       const partNumber = partForm.partNumber?.trim() || `PART-${Date.now().toString().slice(-6)}`;
       const binLocation = partForm.binLocation?.trim() || '-';
 
-      // Link to a supplier record when the typed name matches one; text stays as fallback.
-      const typedSupplier = (partForm.supplier || '').trim();
-      const matchedSupplier = suppliers.find(
-        (s) => (s.name || '').trim().toLowerCase() === typedSupplier.toLowerCase()
-      );
-      const supplierId = matchedSupplier?.id;
+      if (isEditModalOpen && selectedPart) {
+        // Update part
+        const { error } = await supabase
+          .from('parts')
+          .update({
+            part_number: partNumber,
+            category: partForm.category,
+            description: partForm.description,
+            supplier: partForm.supplier,
+            bin_location: binLocation,
+            cost: cost,
+            sell: sell,
+            markup: markup,
+            min_stock: parseInt(partForm.minStock) || 0,
+            max_stock: parseInt(partForm.maxStock) || 0,
+            core_charge: parseFloat(partForm.coreCharge) || 0
+          })
+          .eq('id', selectedPart.id);
 
-      const basePayload = {
-        part_number: partNumber,
-        category: partForm.category,
-        description: partForm.description,
-        supplier: typedSupplier,
-        bin_location: binLocation,
-        cost: cost,
-        sell: sell,
-        markup: markup,
-        min_stock: parseInt(partForm.minStock) || 0,
-        max_stock: parseInt(partForm.maxStock) || 0,
-        core_charge: parseFloat(partForm.coreCharge) || 0
-      };
+        if (error) throw error;
+        alert('Part updated successfully!');
+      } else {
+        // Add new part
+        const newId = `PART-${Date.now().toString().slice(-6)}`;
+        const { error } = await supabase
+          .from('parts')
+          .insert([{
+            id: newId,
+            part_number: partNumber,
+            category: partForm.category,
+            description: partForm.description,
+            supplier: partForm.supplier,
+            bin_location: binLocation,
+            cost: cost,
+            sell: sell,
+            markup: markup,
+            qty_on_hand: parseInt(partForm.initialQty) || 0,
+            min_stock: parseInt(partForm.minStock) || 0,
+            max_stock: parseInt(partForm.maxStock) || 0,
+            core_charge: parseFloat(partForm.coreCharge) || 0
+          }]);
 
-      // supplier_id only exists once the suppliers migration has been applied — retry without it.
-      const runWithFallback = async (withId) => {
-        const payload = { ...basePayload };
-        if (withId) payload.supplier_id = supplierId;
-        if (isEditModalOpen && selectedPart) {
-          return supabase.from('parts').update(payload).eq('id', selectedPart.id);
-        }
-        return supabase.from('parts').insert([{
-          id: `PART-${Date.now().toString().slice(-6)}`,
-          ...payload,
-          qty_on_hand: parseInt(partForm.initialQty) || 0
-        }]);
-      };
-
-      let { error } = await runWithFallback(!!supplierId);
-      if (error && /supplier_id/i.test(`${error.message || ''} ${error.details || ''}`)) {
-        console.warn('parts.supplier_id missing — run the suppliers migration.');
-        ({ error } = await runWithFallback(false));
+        if (error) throw error;
+        alert(`Part ${partNumber} added to inventory!`);
       }
-      if (error) throw error;
-
-      alert(isEditModalOpen && selectedPart ? 'Part updated successfully!' : `Part ${partNumber} added to inventory!`);
 
       setIsAddModalOpen(false);
       setIsEditModalOpen(false);
@@ -1171,7 +1154,7 @@ Total Invoice: $690.00
             )}
           </div>
         </>
-      ) : activeTab === 'requests' ? (
+      ) : (
         /* Mechanic Part Requests Tab */
         <div className={styles.tableCard}>
           <table className={styles.table}>
@@ -1255,77 +1238,6 @@ Total Invoice: $690.00
               )}
             </tbody>
           </table>
-        </div>
-      ) : (
-        /* Suppliers / Vendors Tab */
-        <div className={styles.tableCard} style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>Vendors ({filteredSuppliers.length})</h3>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative' }}>
-                <Search size={15} style={{ position: 'absolute', left: 12, top: 11, color: 'var(--color-text-muted)' }} />
-                <input
-                  className={styles.input}
-                  style={{ paddingLeft: 34, width: 240, borderRadius: 999 }}
-                  placeholder="Search suppliers..."
-                  value={supplierSearch}
-                  onChange={(e) => setSupplierSearch(e.target.value)}
-                />
-              </div>
-              <button className="btn btn-primary" onClick={openAddSupplier} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Plus size={16} /> Add Supplier
-              </button>
-            </div>
-          </div>
-
-          {filteredSuppliers.length === 0 ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
-              {suppliers.length === 0
-                ? 'No suppliers yet. Click "Add Supplier" to create your first vendor.'
-                : 'No suppliers match your search.'}
-            </div>
-          ) : (
-            <div className={styles.supplierGrid}>
-              {filteredSuppliers.map((s) => (
-                <div key={s.id} className={styles.supplierCard}>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '2px' }}>
-                      <h4 className={styles.supplierName} title={s.name}>{s.name}</h4>
-                      <span className={styles.supplierBadge} style={supplierTypeStyle(s.type)}>{s.type || 'Both'}</span>
-                    </div>
-
-                    {(s.phone || s.contact || s.email) && (
-                      <div className={styles.supplierMeta}>
-                        {s.phone || s.contact || s.email}
-                      </div>
-                    )}
-
-                    {(s.address || s.notes) && (
-                      <div className={styles.supplierNotes}>
-                        <strong>Notes:</strong> {s.notes || `Address: ${s.address}`}
-                      </div>
-                    )}
-
-                    <div className={styles.supplierAdded}>
-                      Added: {s.created_at ? new Date(s.created_at).toLocaleDateString('en-GB') : '—'}
-                    </div>
-                  </div>
-
-                  <div className={styles.supplierActions}>
-                    <button type="button" title="View" className={styles.supplierIconBtn} onClick={() => { setViewingSupplier(s); setIsSupplierViewOpen(true); }}>
-                      <Eye size={15} />
-                    </button>
-                    <button type="button" title="Edit" className={styles.supplierIconBtn} onClick={() => openEditSupplier(s)}>
-                      <Edit size={15} />
-                    </button>
-                    <button type="button" title="Delete" className={`${styles.supplierIconBtn} ${styles.supplierIconDanger}`} onClick={() => handleDeleteSupplier(s)}>
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
@@ -1534,19 +1446,10 @@ Total Invoice: $690.00
                     <input
                       type="text"
                       className={styles.input}
-                      list="supplier-options"
                       value={partForm.supplier}
                       onChange={(e) => setPartForm({ ...partForm, supplier: e.target.value })}
                       placeholder="e.g. Alliance Truck Parts"
                     />
-                    <datalist id="supplier-options">
-                      {suppliers.map((s) => <option key={s.id} value={s.name} />)}
-                    </datalist>
-                    {suppliers.length > 0 && (
-                      <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                        Pick a saved vendor to link this part, or type any name.
-                      </div>
-                    )}
                   </div>
                   <div className={styles.formGroup}>
                     <label className={styles.label}>Bin / Shelf Location <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(Optional)</span></label>
@@ -1970,153 +1873,6 @@ Total Invoice: $690.00
                   {isAiImporting ? 'Importing Parts...' : `Confirm & Import ${aiInvoiceData.items.length} Parts to Inventory`}
                 </button>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add / Edit Supplier Modal */}
-      {isSupplierModalOpen && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            <div className={styles.modalHeader}>
-              <h2 className={styles.modalTitle}>
-                {editingSupplier ? `Edit Supplier: ${editingSupplier.name}` : 'Add Supplier'}
-              </h2>
-              <button className={styles.closeBtn} onClick={() => { setIsSupplierModalOpen(false); setEditingSupplier(null); }}>
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={handleSaveSupplier}>
-              <div className={styles.modalBody}>
-                <div className={styles.formGrid}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Supplier Name *</label>
-                    <input
-                      type="text"
-                      className={styles.input}
-                      required
-                      value={supplierForm.name}
-                      onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
-                      placeholder="e.g. CBS PARTS LTD."
-                    />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Type</label>
-                    <select
-                      className={styles.input}
-                      value={supplierForm.type}
-                      onChange={(e) => setSupplierForm({ ...supplierForm, type: e.target.value })}
-                    >
-                      <option value="Both">Both</option>
-                      <option value="Parts">Parts</option>
-                      <option value="Labor">Labor</option>
-                    </select>
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Contact Name</label>
-                    <input
-                      type="text"
-                      className={styles.input}
-                      value={supplierForm.contact}
-                      onChange={(e) => setSupplierForm({ ...supplierForm, contact: e.target.value })}
-                      placeholder="e.g. MITCH"
-                    />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Phone</label>
-                    <input
-                      type="tel"
-                      className={styles.input}
-                      value={supplierForm.phone}
-                      onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
-                      placeholder="e.g. (604)-888-1944"
-                    />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Email</label>
-                    <input
-                      type="email"
-                      className={styles.input}
-                      value={supplierForm.email}
-                      onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
-                      placeholder="e.g. invoices@supplier.ca"
-                    />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Address</label>
-                    <input
-                      type="text"
-                      className={styles.input}
-                      value={supplierForm.address}
-                      onChange={(e) => setSupplierForm({ ...supplierForm, address: e.target.value })}
-                      placeholder="e.g. 9505-189th Street, Surrey, BC V4N 5L8"
-                    />
-                  </div>
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Notes</label>
-                  <textarea
-                    className={styles.input}
-                    rows={3}
-                    value={supplierForm.notes}
-                    onChange={(e) => setSupplierForm({ ...supplierForm, notes: e.target.value })}
-                    placeholder="Delivery days, account number, rep details…"
-                  />
-                </div>
-              </div>
-              <div className={styles.modalFooter}>
-                <button type="button" className="btn btn-outline" onClick={() => { setIsSupplierModalOpen(false); setEditingSupplier(null); }}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={savingSupplier}>
-                  {savingSupplier ? 'Saving...' : editingSupplier ? 'Save Changes' : 'Add Supplier'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* View Supplier Modal */}
-      {isSupplierViewOpen && viewingSupplier && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            <div className={styles.modalHeader}>
-              <h2 className={styles.modalTitle}>{viewingSupplier.name}</h2>
-              <button className={styles.closeBtn} onClick={() => setIsSupplierViewOpen(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            <div className={styles.modalBody}>
-              <div style={{ marginBottom: '1rem' }}>
-                <span className={styles.supplierBadge} style={supplierTypeStyle(viewingSupplier.type)}>
-                  {viewingSupplier.type || 'Both'}
-                </span>
-              </div>
-              {[
-                ['Contact', viewingSupplier.contact],
-                ['Phone', viewingSupplier.phone],
-                ['Email', viewingSupplier.email],
-                ['Address', viewingSupplier.address],
-                ['Notes', viewingSupplier.notes],
-                ['Added', viewingSupplier.created_at ? new Date(viewingSupplier.created_at).toLocaleDateString('en-GB') : '—']
-              ].map(([label, value]) => (
-                <div key={label} style={{ display: 'flex', gap: '12px', padding: '8px 0', borderBottom: '1px solid var(--color-border)', fontSize: '13.5px' }}>
-                  <span style={{ width: 90, color: 'var(--color-text-secondary)', flexShrink: 0 }}>{label}</span>
-                  <span style={{ color: 'var(--color-text)' }}>{value || '—'}</span>
-                </div>
-              ))}
-            </div>
-            <div className={styles.modalFooter}>
-              <button type="button" className="btn btn-outline" onClick={() => setIsSupplierViewOpen(false)}>Close</button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => { const s = viewingSupplier; setIsSupplierViewOpen(false); openEditSupplier(s); }}
-              >
-                Edit
-              </button>
             </div>
           </div>
         </div>

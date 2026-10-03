@@ -43,17 +43,8 @@ export default function DashboardPage() {
           supabase.from('parts').select('*').order('part_number', { ascending: true })
         ]);
 
-        const parseArr = (v) => {
-          if (Array.isArray(v)) return v;
-          try { const p = JSON.parse(v || '[]'); return Array.isArray(p) ? p : []; } catch { return []; }
-        };
-        const invoiceByWO = Object.fromEntries((invRes.data || []).map((i) => [i.work_order_id, i]));
-
         // 1. Process Live Work Orders from Supabase
         const loadedJobs = (woRes.data || []).map(wo => {
-          const parts = parseArr(wo.parts);
-          const labour = parseArr(wo.labour);
-
           let partsStatus = 'Parts Ready';
           let partsVariant = 'success';
           if (wo.status === 'waiting_parts') {
@@ -61,22 +52,11 @@ export default function DashboardPage() {
             partsVariant = 'warning';
           }
 
-          // Real financials from the parts[]/labour[] JSON, not the estimated_cost / 65% default.
-          const partsCost = parts.reduce((s, p) => s + (parseFloat(p.cost) || 0) * (parseFloat(p.qty) || 1), 0);
-          const partsSell = parts.reduce(
-            (s, p) => (p.sell == null || p.sell === undefined) ? s : s + (parseFloat(p.sell) || 0) * (parseFloat(p.qty) || 1), 0
-          );
-          const labourValue = labour.reduce((s, l) => s + (parseFloat(l.hours) || 0) * (parseFloat(l.rate) || 0), 0);
-          const revenue = partsSell + labourValue;
-          const marginPct = revenue > 0 ? ((revenue - partsCost) / revenue) * 100 : null;
+          let marginStatus = 'good';
+          if ((wo.margin || 65) < 60) marginStatus = 'warn';
 
-          // Keep the numeric timer for aggregation; only the display copy is formatted.
-          const timerSeconds = wo.timer || 0;
-          const hours = Math.floor(timerSeconds / 3600);
-          const mins = Math.floor((timerSeconds % 3600) / 60);
-
-          const inv = invoiceByWO[wo.id];
-          const billedAmount = inv ? (parseFloat(inv.total) || 0) : revenue;
+          const hours = Math.floor((wo.timer || 0) / 3600);
+          const mins = Math.floor(((wo.timer || 0) % 3600) / 60);
 
           return {
             ...wo,
@@ -84,18 +64,13 @@ export default function DashboardPage() {
             customer: wo.customer_name || 'Fleet Customer',
             issue: wo.complaint || 'Heavy Duty Mechanical Service',
             tech: wo.tech_name || 'Unassigned',
-            timerSeconds,
             timer: `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m`,
             partsStatus,
             partsVariant,
-            marginPct,
-            margin: marginPct != null ? `${Math.round(marginPct)}%` : '—',
-            revenue,
-            partsCost,
-            billedAmount,
-            marginStatus: marginPct == null ? 'na' : (marginPct < 60 ? 'warn' : 'good'),
-            billedLabor: `$${billedAmount.toFixed(2)} CAD`,
-            clockedLabor: `${(timerSeconds / 3600).toFixed(2)} hrs`
+            margin: `${wo.margin || 65}%`,
+            marginStatus,
+            billedLabor: `$${(parseFloat(wo.estimated_cost) || 0).toFixed(2)} CAD`,
+            clockedLabor: `${(hours + mins / 60).toFixed(2)} hrs`
           };
         });
         setJobs(loadedJobs);
@@ -125,31 +100,26 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
-  const TERMINAL = ['invoiced', 'paid', 'cancelled'];
-  const openJobs = jobs.filter(j => !TERMINAL.includes(j.status));
-
   const filteredJobs = filter === 'all'
-    ? openJobs
-    : openJobs.filter((j) => j.status === filter || (filter === 'in_progress' && (j.status === 'repairing' || j.status === 'diagnosing')));
+    ? jobs
+    : jobs.filter((j) => j.status === filter || (filter === 'in_progress' && (j.status === 'repairing' || j.status === 'diagnosing')));
 
   // Live Metric Aggregations
-  const activeJobsCount = openJobs.length;
-  const totalInvoiced = invoices.reduce((sum, i) => sum + (parseFloat(i.total) || 0), 0);
-  const totalClocked = jobs.reduce((sum, j) => sum + ((j.timerSeconds || 0) / 3600), 0);
+  const activeJobsCount = jobs.filter(j => !['invoiced', 'paid'].includes(j.status)).length;
+  const totalBilled = jobs.reduce((sum, j) => sum + (parseFloat(j.estimated_cost) || 0), 0);
+  const totalClocked = jobs.reduce((sum, j) => sum + ((j.timer || 0) / 3600), 0);
   const activeTechsCount = technicians.filter(t => (t.status || '').toLowerCase() === 'active').length;
-  const margins = openJobs.map(j => j.marginPct).filter(m => m != null);
-  const avgMargin = margins.length ? margins.reduce((s, m) => s + m, 0) / margins.length : null;
 
   // Live Sections Filtered Data
-  const activeBayJobs = openJobs.filter(j => ['repairing', 'diagnosing'].includes(j.status));
-  const pendingEstimates = openJobs.filter(j => !j.authorized || j.status === 'estimate' || j.status === 'new');
-  const lowStockParts = parts.filter(p => (p.qty_on_hand ?? p.qtyOnHand) != null && Number(p.qty_on_hand ?? 0) <= Number(p.min_stock ?? 0));
+  const activeBayJobs = jobs.filter(j => ['repairing', 'diagnosing'].includes(j.status));
+  const pendingEstimates = jobs.filter(j => !j.authorized || j.status === 'estimate' || j.status === 'new');
+  const lowStockParts = parts.filter(p => (p.qty_on_hand || p.qtyOnHand || 0) <= (p.min_stock || p.minStock || 5));
   const unbilledInvoices = invoices.filter(inv => inv.status !== 'paid');
-  const readyToInvoiceJobs = openJobs.filter(j => j.status === 'ready_invoice' || j.status === 'ready_to_invoice');
-  const waitingPartsJobs = openJobs.filter(j => j.status === 'waiting_parts');
+  const readyToInvoiceJobs = jobs.filter(j => j.status === 'ready_to_invoice');
+  const waitingPartsJobs = jobs.filter(j => j.status === 'waiting_parts');
 
   // Dynamic Live Activity derived from real data
-  const liveActivities = openJobs.slice(0, 3).map((job, idx) => ({
+  const liveActivities = jobs.slice(0, 3).map((job, idx) => ({
     id: idx,
     title: job.authorized ? 'Customer Authorized' : `Status: ${(job.status || 'Active').replace('_', ' ').toUpperCase()}`,
     desc: `${job.customer || 'Fleet Customer'} · ${job.unit || 'Unit'} (${job.billedLabor || '$0.00 CAD'}).`,
@@ -208,27 +178,27 @@ export default function DashboardPage() {
 
             <div className={styles.kpiCard}>
               <div className={styles.kpiHeader}>
-                <span className={styles.kpiLabel}>Invoiced Revenue</span>
+                <span className={styles.kpiLabel}>Today's Est. Revenue</span>
                 <div className={styles.kpiIconWrapper}>
                   <DollarSign size={18} />
                 </div>
               </div>
-              <div className={styles.kpiValue}>${Math.floor(totalInvoiced).toLocaleString()} <span className={styles.kpiUnit}>CAD</span></div>
+              <div className={styles.kpiValue}>${Math.floor(totalBilled).toLocaleString()} <span className={styles.kpiUnit}>CAD</span></div>
               <div className={styles.kpiMeta}>
-                <span className={styles.greenText}>Real</span> from {invoices.length} invoices
+                <span className={styles.greenText}>Live</span> tracking from Work Orders
               </div>
             </div>
 
             <div className={styles.kpiCard}>
               <div className={styles.kpiHeader}>
-                <span className={styles.kpiLabel}>Avg Gross Margin</span>
+                <span className={styles.kpiLabel}>Est. Gross Profit Margin</span>
                 <div className={styles.kpiIconWrapper}>
                   <TrendingUp size={18} />
                 </div>
               </div>
-              <div className={styles.kpiValue}>{avgMargin != null ? `${Math.round(avgMargin)}%` : '--'}</div>
+              <div className={styles.kpiValue}>{jobs.length > 0 ? `${Math.round(jobs.reduce((s, j) => s + parseFloat(j.margin || 65), 0) / jobs.length)}%` : '--'}</div>
               <div className={styles.kpiMeta}>
-                <span className={styles.greenText}>{avgMargin != null ? 'Target: >60%' : 'No priced jobs yet'}</span>
+                <span className={styles.greenText}>{jobs.length > 0 ? 'Target: >60%' : 'No active jobs'}</span>
               </div>
             </div>
           </div>
@@ -258,12 +228,12 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <div className={styles.windowBody}>
-                  {openJobs.length === 0 ? (
+                  {jobs.length === 0 ? (
                     <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.74rem' }}>
                       No active work orders
                     </div>
                   ) : (
-                    openJobs.slice(0, 2).map((j, i) => (
+                    jobs.slice(0, 2).map((j, i) => (
                       <div key={i} className={styles.windowRow}>
                         <div>
                           <div className={styles.windowRowMain}>{j.unit}</div>
@@ -277,7 +247,7 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <div className={styles.windowFooter}>
-                  <span>Open Work Orders ({openJobs.length})</span>
+                  <span>Open Work Orders ({jobs.length})</span>
                   <ChevronRight size={13} />
                 </div>
               </Link>
@@ -473,7 +443,7 @@ export default function DashboardPage() {
                     onClick={() => setFilter('all')}
                     className={`${styles.filterBtn} ${filter === 'all' ? styles.filterBtnActive : ''}`}
                   >
-                    All Jobs ({openJobs.length})
+                    All Jobs ({jobs.length})
                   </button>
                   <button
                     onClick={() => setFilter('in_progress')}

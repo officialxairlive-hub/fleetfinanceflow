@@ -137,7 +137,7 @@ export default function DashboardPage() {
   const totalInvoiced = invoices.reduce((sum, i) => sum + (parseFloat(i.total) || 0), 0);
   const totalClocked = jobs.reduce((sum, j) => sum + ((j.timerSeconds || 0) / 3600), 0);
   const activeTechsCount = technicians.filter(t => (t.status || '').toLowerCase() === 'active').length;
-  const margins = openJobs.map(j => j.marginPct).filter(m => m != null);
+  const margins = jobs.map(j => j.marginPct).filter(m => m != null);
   const avgMargin = margins.length ? margins.reduce((s, m) => s + m, 0) / margins.length : null;
 
   // Live Sections Filtered Data
@@ -258,12 +258,12 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <div className={styles.windowBody}>
-                  {openJobs.length === 0 ? (
+                  {jobs.length === 0 ? (
                     <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.74rem' }}>
                       No active work orders
                     </div>
                   ) : (
-                    openJobs.slice(0, 2).map((j, i) => (
+                    jobs.slice(0, 2).map((j, i) => (
                       <div key={i} className={styles.windowRow}>
                         <div>
                           <div className={styles.windowRowMain}>{j.unit}</div>
@@ -277,7 +277,7 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <div className={styles.windowFooter}>
-                  <span>Open Work Orders ({openJobs.length})</span>
+                  <span>Open Work Orders ({jobs.length})</span>
                   <ChevronRight size={13} />
                 </div>
               </Link>
@@ -473,7 +473,7 @@ export default function DashboardPage() {
                     onClick={() => setFilter('all')}
                     className={`${styles.filterBtn} ${filter === 'all' ? styles.filterBtnActive : ''}`}
                   >
-                    All Jobs ({openJobs.length})
+                    All Jobs ({jobs.length})
                   </button>
                   <button
                     onClick={() => setFilter('in_progress')}

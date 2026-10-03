@@ -779,7 +779,7 @@ export default function CreateWorkOrderPage() {
                     {vinLoading ? <Loader2 size={14} className={wz.spin} /> : null} Lookup
                   </button>
                 </div>
-                <div className={wz.helper}>
+                <div className={vinMsg ? wz.helper : wz.helper}>
                   {vinMsg || 'Enter the 17-character VIN — lookup can fill year, make, and model.'}
                 </div>
               </div>

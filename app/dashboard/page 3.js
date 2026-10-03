@@ -125,31 +125,26 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
-  const TERMINAL = ['invoiced', 'paid', 'cancelled'];
-  const openJobs = jobs.filter(j => !TERMINAL.includes(j.status));
-
   const filteredJobs = filter === 'all'
-    ? openJobs
-    : openJobs.filter((j) => j.status === filter || (filter === 'in_progress' && (j.status === 'repairing' || j.status === 'diagnosing')));
+    ? jobs
+    : jobs.filter((j) => j.status === filter || (filter === 'in_progress' && (j.status === 'repairing' || j.status === 'diagnosing')));
 
   // Live Metric Aggregations
-  const activeJobsCount = openJobs.length;
-  const totalInvoiced = invoices.reduce((sum, i) => sum + (parseFloat(i.total) || 0), 0);
-  const totalClocked = jobs.reduce((sum, j) => sum + ((j.timerSeconds || 0) / 3600), 0);
+  const activeJobsCount = jobs.filter(j => !['invoiced', 'paid'].includes(j.status)).length;
+  const totalBilled = jobs.reduce((sum, j) => sum + (parseFloat(j.estimated_cost) || 0), 0);
+  const totalClocked = jobs.reduce((sum, j) => sum + ((j.timer || 0) / 3600), 0);
   const activeTechsCount = technicians.filter(t => (t.status || '').toLowerCase() === 'active').length;
-  const margins = openJobs.map(j => j.marginPct).filter(m => m != null);
-  const avgMargin = margins.length ? margins.reduce((s, m) => s + m, 0) / margins.length : null;
 
   // Live Sections Filtered Data
-  const activeBayJobs = openJobs.filter(j => ['repairing', 'diagnosing'].includes(j.status));
-  const pendingEstimates = openJobs.filter(j => !j.authorized || j.status === 'estimate' || j.status === 'new');
-  const lowStockParts = parts.filter(p => (p.qty_on_hand ?? p.qtyOnHand) != null && Number(p.qty_on_hand ?? 0) <= Number(p.min_stock ?? 0));
+  const activeBayJobs = jobs.filter(j => ['repairing', 'diagnosing'].includes(j.status));
+  const pendingEstimates = jobs.filter(j => !j.authorized || j.status === 'estimate' || j.status === 'new');
+  const lowStockParts = parts.filter(p => (p.qty_on_hand || p.qtyOnHand || 0) <= (p.min_stock || p.minStock || 5));
   const unbilledInvoices = invoices.filter(inv => inv.status !== 'paid');
-  const readyToInvoiceJobs = openJobs.filter(j => j.status === 'ready_invoice' || j.status === 'ready_to_invoice');
-  const waitingPartsJobs = openJobs.filter(j => j.status === 'waiting_parts');
+  const readyToInvoiceJobs = jobs.filter(j => j.status === 'ready_to_invoice');
+  const waitingPartsJobs = jobs.filter(j => j.status === 'waiting_parts');
 
   // Dynamic Live Activity derived from real data
-  const liveActivities = openJobs.slice(0, 3).map((job, idx) => ({
+  const liveActivities = jobs.slice(0, 3).map((job, idx) => ({
     id: idx,
     title: job.authorized ? 'Customer Authorized' : `Status: ${(job.status || 'Active').replace('_', ' ').toUpperCase()}`,
     desc: `${job.customer || 'Fleet Customer'} · ${job.unit || 'Unit'} (${job.billedLabor || '$0.00 CAD'}).`,
@@ -208,27 +203,27 @@ export default function DashboardPage() {
 
             <div className={styles.kpiCard}>
               <div className={styles.kpiHeader}>
-                <span className={styles.kpiLabel}>Invoiced Revenue</span>
+                <span className={styles.kpiLabel}>Today's Est. Revenue</span>
                 <div className={styles.kpiIconWrapper}>
                   <DollarSign size={18} />
                 </div>
               </div>
-              <div className={styles.kpiValue}>${Math.floor(totalInvoiced).toLocaleString()} <span className={styles.kpiUnit}>CAD</span></div>
+              <div className={styles.kpiValue}>${Math.floor(totalBilled).toLocaleString()} <span className={styles.kpiUnit}>CAD</span></div>
               <div className={styles.kpiMeta}>
-                <span className={styles.greenText}>Real</span> from {invoices.length} invoices
+                <span className={styles.greenText}>Live</span> tracking from Work Orders
               </div>
             </div>
 
             <div className={styles.kpiCard}>
               <div className={styles.kpiHeader}>
-                <span className={styles.kpiLabel}>Avg Gross Margin</span>
+                <span className={styles.kpiLabel}>Est. Gross Profit Margin</span>
                 <div className={styles.kpiIconWrapper}>
                   <TrendingUp size={18} />
                 </div>
               </div>
-              <div className={styles.kpiValue}>{avgMargin != null ? `${Math.round(avgMargin)}%` : '--'}</div>
+              <div className={styles.kpiValue}>{jobs.length > 0 ? `${Math.round(jobs.reduce((s, j) => s + parseFloat(j.margin || 65), 0) / jobs.length)}%` : '--'}</div>
               <div className={styles.kpiMeta}>
-                <span className={styles.greenText}>{avgMargin != null ? 'Target: >60%' : 'No priced jobs yet'}</span>
+                <span className={styles.greenText}>{jobs.length > 0 ? 'Target: >60%' : 'No active jobs'}</span>
               </div>
             </div>
           </div>
@@ -258,12 +253,12 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <div className={styles.windowBody}>
-                  {openJobs.length === 0 ? (
+                  {jobs.length === 0 ? (
                     <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.74rem' }}>
                       No active work orders
                     </div>
                   ) : (
-                    openJobs.slice(0, 2).map((j, i) => (
+                    jobs.slice(0, 2).map((j, i) => (
                       <div key={i} className={styles.windowRow}>
                         <div>
                           <div className={styles.windowRowMain}>{j.unit}</div>
@@ -277,7 +272,7 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <div className={styles.windowFooter}>
-                  <span>Open Work Orders ({openJobs.length})</span>
+                  <span>Open Work Orders ({jobs.length})</span>
                   <ChevronRight size={13} />
                 </div>
               </Link>
@@ -473,7 +468,7 @@ export default function DashboardPage() {
                     onClick={() => setFilter('all')}
                     className={`${styles.filterBtn} ${filter === 'all' ? styles.filterBtnActive : ''}`}
                   >
-                    All Jobs ({openJobs.length})
+                    All Jobs ({jobs.length})
                   </button>
                   <button
                     onClick={() => setFilter('in_progress')}

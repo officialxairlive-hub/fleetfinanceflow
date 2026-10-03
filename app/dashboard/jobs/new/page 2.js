@@ -4,9 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Upload, ArrowLeft, Save, Plus, X, Building2,
-  Search, Send, Copy, Check, ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
-  Link2, Loader2, AlertTriangle
+  Upload, ArrowLeft, Save, Plus, X, Truck, Building2, User, MapPin,
+  Search, Send, Copy, Check, ChevronLeft, ChevronRight, Wrench, Link2, Loader2
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { getDefaultShopRateString, fetchShopSettings } from '../../../lib/shopConfig';
@@ -15,64 +14,6 @@ import wz from './intake.module.css';
 
 const EMPTY_CONTACT = { name: '', phone: '', email: '' };
 const NEW_CUSTOMER_COLS = ['usdot', 'billing_street', 'billing_city', 'billing_state', 'billing_zip', 'billing_country'];
-const NEW_UNIT_COLS = ['vehicle_type', 'plate_state'];
-
-const VEHICLE_TYPES = [
-  'Trailer', 'Semi Truck', 'Heavy Equipment', 'Dump Truck', 'Pickup', 'Car',
-  'Box Truck', 'Reefer Unit', 'Machinery', 'Generator / Compressor', 'Forklift', 'Other'
-];
-
-const REGIONS = [
-  'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT',
-  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL',
-  'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT',
-  'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI',
-  'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
-];
-
-/** Roller-digit odometer. Stores km as a string; empty means "not recorded". */
-function Odometer({ value, onChange, digits = 7 }) {
-  const padded = String(value || '').replace(/\D/g, '').padStart(digits, '0').slice(-digits);
-
-  const setDigit = (idx, d) => {
-    const arr = padded.split('');
-    arr[idx] = String(d);
-    const next = arr.join('').replace(/^0+(?=\d)/, '');
-    onChange(next === '0'.repeat(digits) ? '' : next);
-  };
-
-  const bump = (delta) => {
-    const cur = parseInt(padded, 10) || 0;
-    const next = Math.max(0, Math.min(9999999, cur + delta));
-    onChange(next === 0 ? '' : String(next));
-  };
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center' }}>
-      <div className={wz.odo}>
-        {padded.split('').map((d, i) => (
-          <div
-            key={i}
-            className={wz.odoDigit}
-            onClick={() => setDigit(i, (parseInt(d, 10) + 1) % 10)}
-            title="Click to increase · scroll to adjust"
-            onWheel={(e) => { e.preventDefault(); setDigit(i, (parseInt(d, 10) + (e.deltaY > 0 ? 1 : 9)) % 10); }}
-            style={{ cursor: 'pointer' }}
-          >
-            <div className={wz.odoStrip} style={{ transform: `translateY(-${parseInt(d, 10) * 30}px)` }}>
-              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((n, k) => <span key={k}>{n}</span>)}
-            </div>
-          </div>
-        ))}
-        <span className={wz.odoUnit}>km</span>
-      </div>
-      <div className={wz.odoBtns}>
-        <button type="button" onClick={() => bump(1)} aria-label="Increase odometer"><ChevronUp size={12} /></button>
-        <button type="button" onClick={() => bump(-1)} aria-label="Decrease odometer"><ChevronDown size={12} /></button>
-      </div>
-    </div>
-  );
-}
 
 const STEPS = [
   { n: 1, title: 'Customer Details', sub: 'Who is this for?' },
@@ -120,14 +61,13 @@ export default function CreateWorkOrderPage() {
   const [error, setError] = useState(null);
   const [defaultShopRate, setDefaultShopRate] = useState(() => getDefaultShopRateString());
 
-  // vehicle (new-vehicle form on the Vehicle step)
+  // quick add unit
+  const [showAddUnitModal, setShowAddUnitModal] = useState(false);
+  const [savingUnit, setSavingUnit] = useState(false);
   const [unitForm, setUnitForm] = useState({
-    unitNumber: '', vin: '', make: '', model: '', year: '',
-    vehicleType: '', plate: '', plateState: 'AB', odometer: '', engine: ''
+    unitNumber: '', vin: '', make: 'Freightliner', model: 'Cascadia',
+    year: '2023', plate: '', mileage: '185000', engine: 'Detroit DD15'
   });
-  const [vinLoading, setVinLoading] = useState(false);
-  const [vinMsg, setVinMsg] = useState('');
-  const [partsInvoiceOnly, setPartsInvoiceOnly] = useState(false);
 
   // send intake link
   const [showIntake, setShowIntake] = useState(false);
@@ -301,9 +241,9 @@ export default function CreateWorkOrderPage() {
 
   /* ---------- navigation ---------- */
   const validateStep = (n) => {
-    if (n === 2 && !selectedUnit && !unitForm.unitNumber.trim()) {
-      setError('Unit Number is required — enter one to attach this vehicle to the job, or pick an existing unit.');
-      return false;
+    if (n === 1) {
+      if (customerMode === 'existing' && !selectedCustomer) { setError('Select an existing customer or switch to "New Customer".'); return false; }
+      if (customerMode === 'new' && !custForm.company.trim()) { setError('Company name is required for a new customer.'); return false; }
     }
     setError(null);
     return true;
@@ -314,83 +254,49 @@ export default function CreateWorkOrderPage() {
     setStep((s) => Math.min(3, s + 1));
   };
   const goBack = () => { setError(null); setStep((s) => Math.max(1, s - 1)); };
-  const goTo = (n) => {
-    if (n <= step) { setError(null); setStep(n); return; }
-    if (step === n - 1) { goNext(); return; }
-    if (validateStep(step)) setStep((s) => Math.min(3, s + 1));
-  };
 
-  /* ---------- VIN lookup (NHTSA vPIC, keyless) ---------- */
-  const lookupVIN = async () => {
-    const vin = unitForm.vin.trim().toUpperCase();
-    if (vin.length !== 17) { setVinMsg('Enter a 17-character VIN first.'); return; }
-    setVinLoading(true);
-    setVinMsg('');
+  /* ---------- quick add unit ---------- */
+  const handleQuickAddUnit = async (e) => {
+    e.preventDefault();
+    if (!unitForm.unitNumber.trim()) return;
+    if (!selectedCustomer) { alert('Select or create a customer first.'); return; }
+
+    setSavingUnit(true);
     try {
-      const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${vin}?format=json`);
-      const json = await res.json();
-      const r = json?.Results?.[0] || {};
-      const year = (r.ModelYear || '').trim();
-      const make = (r.Make || '').trim();
-      const model = (r.Model || '').trim();
-      if (!year && !make && !model) { setVinMsg('No match found for that VIN — enter details manually.'); return; }
-      setUnitForm((f) => ({ ...f, year: year || f.year, make: make || f.make, model: model || f.model }));
-      setVinMsg(`Decoded: ${[year, make, model].filter(Boolean).join(' ')}`);
+      const payload = {
+        id: `UNIT-${Date.now().toString().slice(-4)}`,
+        customer_id: selectedCustomer,
+        unit_number: unitForm.unitNumber,
+        vin: unitForm.vin,
+        make: unitForm.make,
+        model: unitForm.model,
+        year: parseInt(unitForm.year) || 2023,
+        plate: unitForm.plate,
+        mileage: parseInt(unitForm.mileage) || 0,
+        engine_type: unitForm.engine,
+        status: 'active'
+      };
+      if (shopId) payload.shop_id = shopId;
+
+      const { data, error: unitErr } = await supabase.from('units').insert([payload]).select().single();
+      if (unitErr) throw unitErr;
+
+      const created = data || payload;
+      setUnits((prev) => [...prev, created]);
+      setSelectedUnit(created.id);
+      setShowAddUnitModal(false);
+      setUnitForm({ unitNumber: '', vin: '', make: 'Freightliner', model: 'Cascadia', year: '2023', plate: '', mileage: '185000', engine: 'Detroit DD15' });
     } catch (err) {
-      setVinMsg('VIN lookup unavailable — enter details manually.');
+      alert(`Error creating unit: ${err.message}`);
     } finally {
-      setVinLoading(false);
+      setSavingUnit(false);
     }
   };
-
-  /* ---------- create the vehicle for this job ---------- */
-  async function createUnitForJob(customerId) {
-    const payload = {
-      id: `UNIT-${Date.now().toString().slice(-4)}`,
-      customer_id: customerId,
-      unit_number: unitForm.unitNumber.trim(),
-      vin: unitForm.vin.trim().toUpperCase(),
-      make: unitForm.make.trim(),
-      model: unitForm.model.trim(),
-      year: parseInt(unitForm.year) || null,
-      plate: unitForm.plate.trim().toUpperCase(),
-      mileage: parseInt(unitForm.odometer) || 0,
-      engine_type: unitForm.engine.trim(),
-      vehicle_type: unitForm.vehicleType || '',
-      plate_state: unitForm.plateState || '',
-      status: 'active'
-    };
-    if (shopId) payload.shop_id = shopId;
-
-    let attempt = payload;
-    for (let i = 0; i < 2; i++) {
-      const { data, error } = await supabase.from('units').insert([attempt]).select().single();
-      if (!error) { setUnits((prev) => [...prev, data]); return data; }
-      const msg = ((error.message || '') + (error.details || '')).toLowerCase();
-      if (i === 0 && NEW_UNIT_COLS.some((c) => attempt[c] !== undefined && msg.includes(c))) {
-        const reduced = { ...attempt };
-        NEW_UNIT_COLS.forEach((c) => delete reduced[c]);
-        attempt = reduced;
-        console.warn('units: vehicle_type/plate_state missing — run the intake migration.');
-        continue;
-      }
-      throw error;
-    }
-    return { ...attempt };
-  }
 
   /* ---------- submit ---------- */
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    if (customerMode === 'existing' && !selectedCustomer) {
-      setError('Select an existing customer (or switch to New Customer) before creating the job.'); setStep(1); return;
-    }
-    if (customerMode === 'new' && !custForm.company.trim()) {
-      setError('Company name is required before creating the job.'); setStep(1); return;
-    }
-    if (!selectedUnit && !unitForm.unitNumber.trim()) {
-      setError('Unit Number is required — enter one, or pick an existing unit.'); setStep(2); return;
-    }
+    if (!validateStep(1)) { setStep(1); return; }
     if (!complaint.trim()) { setError('Enter the customer complaint / reason for service.'); setStep(3); return; }
 
     setIsLoading(true);
@@ -400,11 +306,7 @@ export default function CreateWorkOrderPage() {
       let custObj = selectedCustObj;
       if (customerMode === 'new') custObj = await createCustomer();
 
-      let unitObj = units.find((u) => u.id === selectedUnit) || null;
-      if (!unitObj && unitForm.unitNumber.trim()) {
-        unitObj = await createUnitForJob(custObj?.id || selectedCustomer);
-        setSelectedUnit(unitObj.id);
-      }
+      const unitObj = units.find((u) => u.id === selectedUnit);
       const techObj = technicians.find((t) => t.id === selectedTech);
       const newWoId = `WO-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -412,8 +314,8 @@ export default function CreateWorkOrderPage() {
         id: newWoId,
         customer_id: custObj?.id || selectedCustomer,
         customer_name: custObj?.company || custObj?.company_name || 'Customer',
-        unit_id: unitObj?.id || null,
-        unit_display: unitObj ? `#${unitObj.unit_number} - ${unitObj.make || ''} ${unitObj.model || ''}`.trim() : 'Unassigned Unit',
+        unit_id: selectedUnit || null,
+        unit_display: unitObj ? `#${unitObj.unit_number} - ${unitObj.make} ${unitObj.model}` : 'Unassigned Unit',
         trailer: trailer || null,
         complaint,
         internal_notes: internalNotes || null,
@@ -424,29 +326,15 @@ export default function CreateWorkOrderPage() {
         is_emergency: isEmergency,
         is_roadside: isRoadside,
         authorized: isAuthorized,
-        parts_invoice_only: partsInvoiceOnly,
         status: 'new',
         labour: [], parts: [], photos: [], estimated_cost: 0, margin: 65.0
       };
       if (shopId) payload.shop_id = shopId;
 
-      let woAttempt = payload;
-      let woData = null;
-      for (let i = 0; i < 2; i++) {
-        const { data, error } = await supabase.from('work_orders').insert([woAttempt]).select().single();
-        if (!error) { woData = data; break; }
-        const msg = ((error.message || '') + (error.details || '')).toLowerCase();
-        if (i === 0 && msg.includes('parts_invoice_only')) {
-          const { parts_invoice_only, ...reduced } = woAttempt;
-          woAttempt = reduced;
-          console.warn('work_orders: parts_invoice_only missing — run the intake migration.');
-          continue;
-        }
-        throw error;
-      }
-      if (!woData) throw new Error('Failed to create work order.');
+      const { data, error: insertErr } = await supabase.from('work_orders').insert([payload]).select().single();
+      if (insertErr) throw insertErr;
 
-      router.push(`/dashboard/jobs/${woData.id}`);
+      router.push(`/dashboard/jobs/${data.id}`);
     } catch (err) {
       console.error('Error creating work order:', err);
       setError(err.message || 'Failed to create work order.');
@@ -533,7 +421,7 @@ export default function CreateWorkOrderPage() {
             <button
               type="button"
               className={`${wz.stepItem} ${step === s.n ? wz.stepActive : ''} ${step > s.n ? wz.stepDone : ''}`}
-              onClick={() => goTo(s.n)}
+              onClick={() => { if (s.n < step || validateStep(step)) setStep(s.n); }}
             >
               <span className={wz.stepNum}>{step > s.n ? <Check size={14} /> : s.n}</span>
               <span className={wz.stepLabel}>
@@ -718,137 +606,33 @@ export default function CreateWorkOrderPage() {
         </div>
       )}
 
-      {/* STEP 2 — Vehicle */}
+      {/* STEP 2 */}
       {step === 2 && (
         <div className={styles.card}>
-          <div className={wz.stepHead}>
-            <h2 className={styles.cardTitle} style={{ margin: 0 }}>Vehicle Information</h2>
-            <label className={`${wz.partsToggle} ${partsInvoiceOnly ? wz.partsToggleOn : ''}`}>
-              <input type="checkbox" checked={partsInvoiceOnly} onChange={(e) => setPartsInvoiceOnly(e.target.checked)} />
-              Parts Invoice Only
-            </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 className={styles.cardTitle} style={{ margin: 0 }}>Vehicle</h2>
+            <button type="button" className="btn btn-outline" style={{ padding: '4px 10px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+              onClick={() => { if (!selectedCustomer) { setError('Select a customer first.'); setStep(1); return; } setShowAddUnitModal(true); }}>
+              <Truck size={13} /> + New Unit
+            </button>
           </div>
-
-          {!selectedCustomer && (
-            <div className={wz.notice}>
-              <AlertTriangle size={16} style={{ flex: 'none', marginTop: 1 }} />
-              <span>No company selected yet. You can enter vehicle details now — a company is required before the job is created.</span>
-            </div>
-          )}
-
-          {selectedCustomer && filteredTrucks.length > 0 && (
-            <>
-              <div className={wz.sectionLabel}>Existing Unit</div>
-              <select className={styles.select} value={selectedUnit} onChange={(e) => setSelectedUnit(e.target.value)}>
-                <option value="">— Add a new vehicle below —</option>
-                {filteredTrucks.map((t) => (
-                  <option key={t.id} value={t.id}>#{t.unit_number} - {t.make} {t.model} {t.plate ? `(${t.plate})` : ''}</option>
-                ))}
-              </select>
-              <div className={wz.sectionLabel}>{selectedUnit ? 'New vehicle (not used)' : 'Or add a new vehicle'}</div>
-            </>
-          )}
-
-          <fieldset
-            disabled={!!selectedUnit}
-            style={{ border: 'none', padding: 0, margin: 0, opacity: selectedUnit ? 0.45 : 1 }}
-          >
+          <div className={styles.formSection}>
             <div className={wz.grid2}>
               <div className={styles.formGroup}>
-                <label className={styles.label}>Unit Number *</label>
-                <input
-                  className={styles.input}
-                  placeholder="Enter unit number"
-                  value={unitForm.unitNumber}
-                  onChange={(e) => setUnitForm((f) => ({ ...f, unitNumber: e.target.value }))}
-                />
-                <div className={wz.helperError}>Required — enter a unit number to attach this vehicle to the job.</div>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>VIN (17 characters)</label>
-                <div className={wz.vinRow}>
-                  <input
-                    className={styles.input}
-                    placeholder="VIN"
-                    maxLength={17}
-                    value={unitForm.vin}
-                    onChange={(e) => { setUnitForm((f) => ({ ...f, vin: e.target.value.toUpperCase() })); setVinMsg(''); }}
-                  />
-                  <button type="button" className={wz.lookupBtn} onClick={lookupVIN} disabled={vinLoading}>
-                    {vinLoading ? <Loader2 size={14} className={wz.spin} /> : null} Lookup
-                  </button>
-                </div>
-                <div className={wz.helper}>
-                  {vinMsg || 'Enter the 17-character VIN — lookup can fill year, make, and model.'}
-                </div>
-              </div>
-            </div>
-
-            <div className={wz.grid3}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Year</label>
-                <input className={styles.input} placeholder="Year" value={unitForm.year}
-                  onChange={(e) => setUnitForm((f) => ({ ...f, year: e.target.value }))} />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Make</label>
-                <input className={styles.input} placeholder="Make" value={unitForm.make}
-                  onChange={(e) => setUnitForm((f) => ({ ...f, make: e.target.value }))} />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Model</label>
-                <input className={styles.input} placeholder="Model" value={unitForm.model}
-                  onChange={(e) => setUnitForm((f) => ({ ...f, model: e.target.value }))} />
-              </div>
-            </div>
-
-            <div className={wz.sectionLabel}>Vehicle Type</div>
-            <div className={wz.typeWrap}>
-              {VEHICLE_TYPES.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  className={`${wz.typeChip} ${unitForm.vehicleType === t ? wz.typeChipOn : ''}`}
-                  onClick={() => setUnitForm((f) => ({ ...f, vehicleType: f.vehicleType === t ? '' : t }))}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-            <div className={wz.typeHint}>Arrows loop through all types · scroll or click to select or deselect</div>
-
-            <div className={wz.grid2} style={{ marginTop: 18 }}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Odometer (kilometers)</label>
-                <Odometer value={unitForm.odometer} onChange={(v) => setUnitForm((f) => ({ ...f, odometer: v }))} />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>License Plate</label>
-                <div className={wz.plateRow}>
-                  <select className={styles.select} value={unitForm.plateState}
-                    onChange={(e) => setUnitForm((f) => ({ ...f, plateState: e.target.value }))}>
-                    {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                  <input className={styles.input} placeholder="e.g. ABC1234" value={unitForm.plate}
-                    onChange={(e) => setUnitForm((f) => ({ ...f, plate: e.target.value.toUpperCase() }))} />
-                </div>
-              </div>
-            </div>
-
-            <div className={wz.grid2} style={{ marginTop: 4 }}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Engine Type (Optional)</label>
-                <input className={styles.input} placeholder="e.g. Detroit DD15 / Cummins X15" value={unitForm.engine}
-                  onChange={(e) => setUnitForm((f) => ({ ...f, engine: e.target.value }))} />
+                <label className={styles.label}>Unit / Truck</label>
+                <select className={styles.select} value={selectedUnit} onChange={(e) => setSelectedUnit(e.target.value)} disabled={!selectedCustomer}>
+                  <option value="">{selectedCustomer ? (filteredTrucks.length > 0 ? 'Select Unit...' : 'No units for this customer — click "+ New Unit"') : 'Select Customer First'}</option>
+                  {filteredTrucks.map((t) => (
+                    <option key={t.id} value={t.id}>#{t.unit_number} - {t.make} {t.model} {t.plate ? `(${t.plate})` : ''}</option>
+                  ))}
+                </select>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Trailer (Optional)</label>
-                <input className={styles.input} placeholder="Trailer #" value={trailer}
-                  onChange={(e) => setTrailer(e.target.value)} />
+                <input type="text" className={styles.input} placeholder="Trailer #" value={trailer} onChange={(e) => setTrailer(e.target.value)} />
               </div>
             </div>
-          </fieldset>
+          </div>
         </div>
       )}
 
@@ -999,6 +783,71 @@ export default function CreateWorkOrderPage() {
         </div>
       )}
 
+      {/* ---- Quick Add Unit modal (unchanged) ---- */}
+      {showAddUnitModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)', padding: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: '12px', width: '100%', maxWidth: '560px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Truck size={20} color="var(--color-primary)" /> Quick Add Unit / Truck
+              </h2>
+              <button onClick={() => setShowAddUnitModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)' }}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleQuickAddUnit}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Unit / Fleet # *</label>
+                    <input type="text" required placeholder="e.g. Unit 2049" value={unitForm.unitNumber}
+                      onChange={(e) => setUnitForm({ ...unitForm, unitNumber: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>License Plate</label>
+                    <input type="text" placeholder="e.g. AB-8921" value={unitForm.plate}
+                      onChange={(e) => setUnitForm({ ...unitForm, plate: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }} />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                  {[['Year', 'year', '2023'], ['Make', 'make', 'Freightliner'], ['Model', 'model', 'Cascadia']].map(([lbl, key, ph]) => (
+                    <div key={key}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>{lbl}</label>
+                      <input type="text" placeholder={ph} value={unitForm[key]}
+                        onChange={(e) => setUnitForm({ ...unitForm, [key]: e.target.value })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }} />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>VIN (17 Digits)</label>
+                    <input type="text" placeholder="e.g. 1FUJGLDR5NLAA9821" value={unitForm.vin}
+                      onChange={(e) => setUnitForm({ ...unitForm, vin: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Mileage (km)</label>
+                    <input type="number" placeholder="185000" value={unitForm.mileage}
+                      onChange={(e) => setUnitForm({ ...unitForm, mileage: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Engine Type</label>
+                  <input type="text" placeholder="e.g. Detroit DD15 / Cummins X15" value={unitForm.engine}
+                    onChange={(e) => setUnitForm({ ...unitForm, engine: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowAddUnitModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={savingUnit}>{savingUnit ? 'Adding...' : 'Save & Select Unit'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

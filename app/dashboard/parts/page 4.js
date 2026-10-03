@@ -11,8 +11,6 @@ const CATEGORIES = ['All', 'Brakes', 'Engine', 'Drivetrain', 'Air System', 'Susp
 export default function PartsPage() {
   const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' | 'requests'
 
-  const [shopId, setShopId] = useState(null);
-
   const [parts, setParts] = useState([]);
   const [partRequests, setPartRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -121,16 +119,6 @@ export default function PartsPage() {
 
   useEffect(() => {
     fetchPartsAndRequests();
-    // best-effort: current shop for linking new rows
-    try {
-      supabase.auth.getUser().then(({ data: auth }) => {
-        if (auth?.user) {
-          supabase.from('profiles').select('shop_id').eq('id', auth.user.id).maybeSingle().then(({ data: profile }) => {
-            if (profile?.shop_id) setShopId(profile.shop_id);
-          });
-        }
-      });
-    } catch { /* profile lookup optional */ }
   }, []);
 
   const handleSort = (key) => {
@@ -226,8 +214,7 @@ export default function PartsPage() {
         phone: supplierForm.phone.trim(),
         email: supplierForm.email.trim(),
         address: supplierForm.address.trim(),
-        notes: supplierForm.notes.trim(),
-        ...(shopId ? { shop_id: shopId } : {})
+        notes: supplierForm.notes.trim()
       };
 
       if (editingSupplier) {
@@ -247,10 +234,7 @@ export default function PartsPage() {
       const supRes = await supabase.from('suppliers').select('*').order('name', { ascending: true });
       if (!supRes.error) setSuppliers(supRes.data || []);
     } catch (err) {
-      const msg = `${err.message || ''} ${err.details || ''}`;
-      alert(/schema cache|does not exist/i.test(msg)
-        ? 'The suppliers table is not set up yet. Run supabase/migrations/20261003090000_intake_flow.sql in your Supabase SQL editor.'
-        : `Error saving supplier: ${err.message}`);
+      alert(`Error saving supplier: ${err.message}`);
     } finally {
       setSavingSupplier(false);
     }
@@ -263,10 +247,7 @@ export default function PartsPage() {
       if (error) throw error;
       setSuppliers((prev) => prev.filter(x => x.id !== s.id));
     } catch (err) {
-      const msg = `${err.message || ''} ${err.details || ''}`;
-      alert(/schema cache|does not exist/i.test(msg)
-        ? 'The suppliers table is not set up yet. Run supabase/migrations/20261003090000_intake_flow.sql in your Supabase SQL editor.'
-        : `Error deleting supplier: ${err.message}`);
+      alert(`Error deleting supplier: ${err.message}`);
     }
   };
 
@@ -381,49 +362,51 @@ export default function PartsPage() {
       const partNumber = partForm.partNumber?.trim() || `PART-${Date.now().toString().slice(-6)}`;
       const binLocation = partForm.binLocation?.trim() || '-';
 
-      // Link to a supplier record when the typed name matches one; text stays as fallback.
-      const typedSupplier = (partForm.supplier || '').trim();
-      const matchedSupplier = suppliers.find(
-        (s) => (s.name || '').trim().toLowerCase() === typedSupplier.toLowerCase()
-      );
-      const supplierId = matchedSupplier?.id;
+      if (isEditModalOpen && selectedPart) {
+        // Update part
+        const { error } = await supabase
+          .from('parts')
+          .update({
+            part_number: partNumber,
+            category: partForm.category,
+            description: partForm.description,
+            supplier: partForm.supplier,
+            bin_location: binLocation,
+            cost: cost,
+            sell: sell,
+            markup: markup,
+            min_stock: parseInt(partForm.minStock) || 0,
+            max_stock: parseInt(partForm.maxStock) || 0,
+            core_charge: parseFloat(partForm.coreCharge) || 0
+          })
+          .eq('id', selectedPart.id);
 
-      const basePayload = {
-        part_number: partNumber,
-        category: partForm.category,
-        description: partForm.description,
-        supplier: typedSupplier,
-        bin_location: binLocation,
-        cost: cost,
-        sell: sell,
-        markup: markup,
-        min_stock: parseInt(partForm.minStock) || 0,
-        max_stock: parseInt(partForm.maxStock) || 0,
-        core_charge: parseFloat(partForm.coreCharge) || 0
-      };
+        if (error) throw error;
+        alert('Part updated successfully!');
+      } else {
+        // Add new part
+        const newId = `PART-${Date.now().toString().slice(-6)}`;
+        const { error } = await supabase
+          .from('parts')
+          .insert([{
+            id: newId,
+            part_number: partNumber,
+            category: partForm.category,
+            description: partForm.description,
+            supplier: partForm.supplier,
+            bin_location: binLocation,
+            cost: cost,
+            sell: sell,
+            markup: markup,
+            qty_on_hand: parseInt(partForm.initialQty) || 0,
+            min_stock: parseInt(partForm.minStock) || 0,
+            max_stock: parseInt(partForm.maxStock) || 0,
+            core_charge: parseFloat(partForm.coreCharge) || 0
+          }]);
 
-      // supplier_id only exists once the suppliers migration has been applied — retry without it.
-      const runWithFallback = async (withId) => {
-        const payload = { ...basePayload };
-        if (withId) payload.supplier_id = supplierId;
-        if (isEditModalOpen && selectedPart) {
-          return supabase.from('parts').update(payload).eq('id', selectedPart.id);
-        }
-        return supabase.from('parts').insert([{
-          id: `PART-${Date.now().toString().slice(-6)}`,
-          ...payload,
-          qty_on_hand: parseInt(partForm.initialQty) || 0
-        }]);
-      };
-
-      let { error } = await runWithFallback(!!supplierId);
-      if (error && /supplier_id/i.test(`${error.message || ''} ${error.details || ''}`)) {
-        console.warn('parts.supplier_id missing — run the suppliers migration.');
-        ({ error } = await runWithFallback(false));
+        if (error) throw error;
+        alert(`Part ${partNumber} added to inventory!`);
       }
-      if (error) throw error;
-
-      alert(isEditModalOpen && selectedPart ? 'Part updated successfully!' : `Part ${partNumber} added to inventory!`);
 
       setIsAddModalOpen(false);
       setIsEditModalOpen(false);
@@ -1534,19 +1517,10 @@ Total Invoice: $690.00
                     <input
                       type="text"
                       className={styles.input}
-                      list="supplier-options"
                       value={partForm.supplier}
                       onChange={(e) => setPartForm({ ...partForm, supplier: e.target.value })}
                       placeholder="e.g. Alliance Truck Parts"
                     />
-                    <datalist id="supplier-options">
-                      {suppliers.map((s) => <option key={s.id} value={s.name} />)}
-                    </datalist>
-                    {suppliers.length > 0 && (
-                      <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                        Pick a saved vendor to link this part, or type any name.
-                      </div>
-                    )}
                   </div>
                   <div className={styles.formGroup}>
                     <label className={styles.label}>Bin / Shelf Location <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(Optional)</span></label>
