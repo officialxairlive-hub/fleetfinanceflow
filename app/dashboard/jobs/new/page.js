@@ -189,6 +189,64 @@ export default function CreateWorkOrderPage() {
     : units;
 
   const selectedCustObj = customers.find((c) => c.id === selectedCustomer) || null;
+  const selectedUnitObj = units.find((u) => u.id === selectedUnit) || null;
+  const showCustomerForm = customerMode === 'new' || (customerMode === 'existing' && !!selectedCustObj);
+
+  /* ---------- existing customer → editable form ---------- */
+  const EMPTY_UNIT_FORM = {
+    unitNumber: '', vin: '', make: '', model: '', year: '',
+    vehicleType: '', plate: '', plateState: 'AB', odometer: '', engine: ''
+  };
+
+  const customerToForm = (c) => ({
+    company: c.company || c.company_name || '',
+    usdot: c.usdot || '',
+    contacts: [{ name: c.contact || '', phone: c.phone || '', email: c.email || '' }],
+    street: c.billing_street || c.address || '',
+    city: c.billing_city || '',
+    state: c.billing_state || '',
+    zip: c.billing_zip || '',
+    paymentTerms: c.payment_terms || 'Net 30',
+    labourRate: c.labour_rate != null && c.labour_rate !== '' ? String(c.labour_rate) : getDefaultShopRateString(),
+    pstNumber: /^PST#/i.test(c.tax_setting || '') ? String(c.tax_setting).replace(/^PST#\s*/i, '') : ''
+  });
+
+  const unitToForm = (u) => ({
+    unitNumber: u.unit_number || '',
+    vin: u.vin || '',
+    make: u.make || '',
+    model: u.model || '',
+    year: u.year != null ? String(u.year) : '',
+    vehicleType: u.vehicle_type || '',
+    plate: u.plate || '',
+    plateState: u.plate_state || 'AB',
+    odometer: u.mileage != null && u.mileage !== 0 ? String(u.mileage) : '',
+    engine: u.engine_type || ''
+  });
+
+  const selectExistingCustomer = async (c) => {
+    setSelectedCustomer(c.id);
+    setSelectedUnit('');
+    setUnitForm({ ...EMPTY_UNIT_FORM });
+    setCustForm(customerToForm(c));
+    try {
+      const { data: cts } = await supabase
+        .from('customer_contacts').select('*').eq('customer_id', c.id);
+      if (cts && cts.length) {
+        const ordered = [...cts].sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0));
+        setCustForm((f) => ({
+          ...f,
+          contacts: ordered.map((x) => ({ name: x.name || '', phone: x.phone || '', email: x.email || '' }))
+        }));
+      }
+    } catch { /* customer_contacts optional */ }
+  };
+
+  const selectExistingUnit = (unitId) => {
+    setSelectedUnit(unitId);
+    const u = units.find((x) => x.id === unitId);
+    setUnitForm(u ? unitToForm(u) : { ...EMPTY_UNIT_FORM });
+  };
 
   /* ---------- address autocomplete (OpenStreetMap, keyless) ---------- */
   const lookupAddress = useCallback(async (q) => {
@@ -379,6 +437,144 @@ export default function CreateWorkOrderPage() {
     return { ...attempt };
   }
 
+  /* ---------- persist edits to an existing customer ---------- */
+  async function saveCustomerEdits(cust) {
+    if (!cust) return cust;
+
+    const orig = customerToForm(cust);
+    const same = (a, b) => String(a ?? '') === String(b ?? '');
+    const contactsEqual =
+      (custForm.contacts || []).length === (orig.contacts || []).length &&
+      (custForm.contacts || []).every((c, i) => {
+        const o = orig.contacts[i] || {};
+        return same(c.name, o.name) && same(c.phone, o.phone) && same(c.email, o.email);
+      });
+    const unchanged =
+      same(custForm.company.trim(), orig.company) &&
+      same(custForm.usdot.trim(), orig.usdot) &&
+      same(custForm.street.trim(), orig.street) &&
+      same(custForm.city.trim(), orig.city) &&
+      same(custForm.state.trim(), orig.state) &&
+      same(custForm.zip.trim(), orig.zip) &&
+      same(custForm.paymentTerms, orig.paymentTerms) &&
+      same(String(custForm.labourRate), String(orig.labourRate)) &&
+      same(custForm.pstNumber, orig.pstNumber) &&
+      contactsEqual;
+    if (unchanged) return cust;
+
+    const contacts = custForm.contacts.filter((c) => c.name || c.phone || c.email);
+    const primary = contacts[0] || {};
+    const addressLine = [custForm.street, custForm.city, custForm.state, custForm.zip].filter(Boolean).join(', ');
+
+    const base = {
+      contact: primary.name || custForm.company.trim() || cust.contact,
+      phone: primary.phone || '',
+      email: primary.email || '',
+      address: addressLine,
+      payment_terms: custForm.paymentTerms || 'Net 30',
+      labour_rate: parseFloat(custForm.labourRate) || cust.labour_rate,
+      tax_setting: custForm.pstNumber ? `PST# ${custForm.pstNumber}` : cust.tax_setting,
+      notes: custForm.pstNumber ? `PST / Tax Exemption #: ${custForm.pstNumber}` : cust.notes
+    };
+    if (custForm.company.trim()) base.company = custForm.company.trim();
+
+    const newCols = {
+      usdot: custForm.usdot.trim(),
+      billing_street: custForm.street.trim(),
+      billing_city: custForm.city.trim(),
+      billing_state: custForm.state.trim(),
+      billing_zip: custForm.zip.trim()
+    };
+
+    let attempt = { ...base, ...newCols };
+    for (let i = 0; i < 2; i++) {
+      const { error } = await supabase.from('customers').update(attempt).eq('id', cust.id);
+      if (!error) break;
+      const msg = ((error.message || '') + (error.details || '')).toLowerCase();
+      if (i === 0 && NEW_CUSTOMER_COLS.some((c) => attempt[c] !== undefined && msg.includes(c))) {
+        const reduced = { ...attempt };
+        NEW_CUSTOMER_COLS.forEach((c) => delete reduced[c]);
+        attempt = reduced;
+        console.warn('customers: new columns missing — saved legacy fields only.');
+        continue;
+      }
+      throw error;
+    }
+
+    // refresh the saved contacts for this customer (best effort)
+    if (contacts.length) {
+      const { error: delErr } = await supabase.from('customer_contacts').delete().eq('customer_id', cust.id);
+      if (!delErr) {
+        await supabase.from('customer_contacts').insert(
+          contacts.map((c, i) => ({
+            id: `CC-${Date.now().toString(36).toUpperCase()}-${i}`,
+            customer_id: cust.id,
+            shop_id: cust.shop_id || shopId || null,
+            name: c.name || '',
+            phone: c.phone || '',
+            email: c.email || '',
+            is_primary: i === 0
+          }))
+        );
+      }
+    }
+
+    const updated = { ...cust, ...attempt };
+    setCustomers((prev) => prev.map((c) => (c.id === cust.id ? updated : c)));
+    return updated;
+  }
+
+  /* ---------- persist edits to an existing unit ---------- */
+  async function saveUnitEdits(unit) {
+    if (!unit) return unit;
+
+    const orig = unitToForm(unit);
+    const same = (a, b) => String(a ?? '') === String(b ?? '');
+    const unchanged =
+      same(unitForm.unitNumber.trim(), orig.unitNumber) &&
+      same(unitForm.vin.trim().toUpperCase(), orig.vin) &&
+      same(unitForm.make.trim(), orig.make) &&
+      same(unitForm.model.trim(), orig.model) &&
+      same(unitForm.year, orig.year) &&
+      same(unitForm.vehicleType, orig.vehicleType) &&
+      same(unitForm.plate.trim().toUpperCase(), orig.plate) &&
+      same(unitForm.plateState, orig.plateState) &&
+      same(unitForm.odometer, orig.odometer) &&
+      same(unitForm.engine.trim(), orig.engine);
+    if (unchanged) return unit;
+
+    const base = {
+      unit_number: unitForm.unitNumber.trim(),
+      vin: unitForm.vin.trim().toUpperCase(),
+      make: unitForm.make.trim(),
+      model: unitForm.model.trim(),
+      year: parseInt(unitForm.year) || null,
+      plate: unitForm.plate.trim().toUpperCase(),
+      mileage: parseInt(unitForm.odometer) || 0,
+      engine_type: unitForm.engine.trim()
+    };
+    const newCols = { vehicle_type: unitForm.vehicleType || '', plate_state: unitForm.plateState || '' };
+
+    let attempt = { ...base, ...newCols };
+    for (let i = 0; i < 2; i++) {
+      const { error } = await supabase.from('units').update(attempt).eq('id', unit.id);
+      if (!error) break;
+      const msg = ((error.message || '') + (error.details || '')).toLowerCase();
+      if (i === 0 && NEW_UNIT_COLS.some((c) => attempt[c] !== undefined && msg.includes(c))) {
+        const reduced = { ...attempt };
+        NEW_UNIT_COLS.forEach((c) => delete reduced[c]);
+        attempt = reduced;
+        console.warn('units: vehicle_type/plate_state missing — saved base fields only.');
+        continue;
+      }
+      throw error;
+    }
+
+    const updated = { ...unit, ...attempt };
+    setUnits((prev) => prev.map((u) => (u.id === unit.id ? updated : u)));
+    return updated;
+  }
+
   /* ---------- submit ---------- */
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -399,8 +595,10 @@ export default function CreateWorkOrderPage() {
     try {
       let custObj = selectedCustObj;
       if (customerMode === 'new') custObj = await createCustomer();
+      else if (customerMode === 'existing' && selectedCustObj) custObj = await saveCustomerEdits(selectedCustObj);
 
       let unitObj = units.find((u) => u.id === selectedUnit) || null;
+      if (unitObj) unitObj = await saveUnitEdits(unitObj);
       if (!unitObj && unitForm.unitNumber.trim()) {
         unitObj = await createUnitForJob(custObj?.id || selectedCustomer);
         setSelectedUnit(unitObj.id);
@@ -578,7 +776,7 @@ export default function CreateWorkOrderPage() {
                   </div>
                 )}
                 {filteredCustomers.slice(0, 40).map((c) => (
-                  <button key={c.id} type="button" className={wz.searchResult} onClick={() => { setSelectedCustomer(c.id); setSelectedUnit(''); }}>
+                  <button key={c.id} type="button" className={wz.searchResult} onClick={() => selectExistingCustomer(c)}>
                     <span>
                       <div className={wz.searchResultCompany}>{c.company || c.company_name}</div>
                       <div className={wz.searchResultMeta}>{[c.contact, c.phone, c.email].filter(Boolean).join(' · ')}</div>
@@ -602,8 +800,13 @@ export default function CreateWorkOrderPage() {
             </div>
           )}
 
-          {customerMode === 'new' && (
+          {showCustomerForm && (
             <div className={styles.formSection}>
+              {customerMode === 'existing' && (
+                <p className={wz.helper} style={{ marginBottom: 12 }}>
+                  Editing {selectedCustObj?.company || selectedCustObj?.company_name || 'this customer'}&apos;s details — changes are saved to the customer record when you create the job.
+                </p>
+              )}
               <div className={wz.sectionLabel}>Company Information</div>
               <div className={wz.grid2}>
                 <div className={styles.formGroup}>
@@ -739,19 +942,24 @@ export default function CreateWorkOrderPage() {
           {selectedCustomer && filteredTrucks.length > 0 && (
             <>
               <div className={wz.sectionLabel}>Existing Unit</div>
-              <select className={styles.select} value={selectedUnit} onChange={(e) => setSelectedUnit(e.target.value)}>
+              <select className={styles.select} value={selectedUnit} onChange={(e) => selectExistingUnit(e.target.value)}>
                 <option value="">— Add a new vehicle below —</option>
                 {filteredTrucks.map((t) => (
                   <option key={t.id} value={t.id}>#{t.unit_number} - {t.make} {t.model} {t.plate ? `(${t.plate})` : ''}</option>
                 ))}
               </select>
-              <div className={wz.sectionLabel}>{selectedUnit ? 'New vehicle (not used)' : 'Or add a new vehicle'}</div>
+              <div className={wz.sectionLabel}>{selectedUnit ? 'Editing this vehicle' : 'Or add a new vehicle'}</div>
             </>
           )}
 
+          {selectedUnit && selectedUnitObj && (
+            <p className={wz.helper} style={{ marginBottom: 12 }}>
+              Editing unit #{selectedUnitObj.unit_number} — changes are saved to the vehicle record when you create the job.
+            </p>
+          )}
+
           <fieldset
-            disabled={!!selectedUnit}
-            style={{ border: 'none', padding: 0, margin: 0, opacity: selectedUnit ? 0.45 : 1 }}
+            style={{ border: 'none', padding: 0, margin: 0 }}
           >
             <div className={wz.grid2}>
               <div className={styles.formGroup}>
