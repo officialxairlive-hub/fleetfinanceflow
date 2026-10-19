@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import styles from './settings.module.css';
 import { supabase } from '../../lib/supabaseClient';
+import { getShopAuthHeaders } from '../../lib/shopConfig';
 import { shopSettings, labourRateTypes } from '../../lib/demoData';
 import { 
   DEFAULT_MARKUP_TIERS, 
@@ -66,16 +67,16 @@ export default function SettingsPage() {
   const [shopSaveSuccess, setShopSaveSuccess] = useState(false);
 
   const [shopForm, setShopForm] = useState({
-    companyName: 'Road Ready',
-    ownerName: 'Harman Buttar',
+    companyName: '',
+    ownerName: '',
     streetAddress: '18983 72a Avenue',
     city: 'Surrey',
     province: 'BC',
     postalCode: 'V4N 0B2',
-    phone: '(604) 555-0100',
-    email: 'service@roadreadyrepair.ca',
+    phone: '',
+    email: '',
     website: 'www.fleetfinanceflow.com',
-    taxNumber: 'GST # 783920194 RT0001',
+    taxNumber: '',
     defaultLabourRate: 145,
     defaultPartsMarkup: 35,
     shopSupplyRate: 5,
@@ -145,7 +146,8 @@ export default function SettingsPage() {
 
       // 3. Fetch cloud persisted shop info
       try {
-        const res = await fetch(`/api/settings/shop?shopId=${shopId || 'default'}`);
+        const url = shopId ? `/api/settings/shop?shopId=${encodeURIComponent(shopId)}` : '/api/settings/shop';
+        const res = await fetch(url, { headers: await getShopAuthHeaders() });
         if (res.ok) {
           const data = await res.json();
           if (data.shopInfo) {
@@ -405,7 +407,7 @@ export default function SettingsPage() {
       // 2. Save in cloud storage via API
       const res = await fetch('/api/settings/shop', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getShopAuthHeaders()) },
         body: JSON.stringify({
           shopId: shopId || 'default',
           shopInfo: shopForm
@@ -613,7 +615,7 @@ export default function SettingsPage() {
                       className={styles.input} 
                       value={shopForm.companyName} 
                       onChange={e => setShopForm({ ...shopForm, companyName: e.target.value })} 
-                      placeholder="e.g. Road Ready"
+                      placeholder="Your shop name"
                     />
                   </div>
                   <div className={styles.formGroup}>
@@ -623,7 +625,7 @@ export default function SettingsPage() {
                       className={styles.input} 
                       value={shopForm.ownerName} 
                       onChange={e => setShopForm({ ...shopForm, ownerName: e.target.value })} 
-                      placeholder="e.g. Harman Buttar"
+                      placeholder="Owner name"
                     />
                   </div>
 
@@ -702,7 +704,7 @@ export default function SettingsPage() {
                       className={styles.input} 
                       value={shopForm.phone} 
                       onChange={e => setShopForm({ ...shopForm, phone: e.target.value })} 
-                      placeholder="e.g. (604) 555-0100"
+                      placeholder="(xxx) xxx-xxxx"
                     />
                   </div>
 
@@ -713,7 +715,7 @@ export default function SettingsPage() {
                       className={styles.input} 
                       value={shopForm.email} 
                       onChange={e => setShopForm({ ...shopForm, email: e.target.value })} 
-                      placeholder="e.g. service@roadreadyrepair.ca"
+                      placeholder="service@yourshop.com"
                     />
                   </div>
 
@@ -735,7 +737,7 @@ export default function SettingsPage() {
                       className={styles.input} 
                       value={shopForm.taxNumber} 
                       onChange={e => setShopForm({ ...shopForm, taxNumber: e.target.value })} 
-                      placeholder="e.g. GST # 783920194 RT0001"
+                      placeholder="e.g. GST # 123456789 RT0001"
                     />
                   </div>
 

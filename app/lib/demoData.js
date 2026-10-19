@@ -550,8 +550,8 @@ export const labourRateTypes = [
 export const shopSettings = {
   name: 'Thompson Diesel Repair',
   address: '14800 Industrial Way, Surrey, BC V3S 8C4',
-  phone: '(604) 555-0100',
-  email: 'service@thompsondiesel.com',
+  phone: '',
+  email: '',
   website: 'www.thompsondiesel.com',
   owner: 'Vince Pallotta',
   taxConfig: {

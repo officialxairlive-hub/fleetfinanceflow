@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
+import { getShopAuthHeaders } from '../../lib/shopConfig';
 import { Plus, Search, Eye, Send, CheckCircle, Printer, X, Receipt, Mail, Paperclip, RotateCcw } from 'lucide-react';
 import styles from './invoices.module.css';
 
@@ -34,9 +35,9 @@ export default function InvoicesList() {
   });
 
   const [shop, setShop] = useState({
-    companyName: 'Road Ready',
-    phone: '(604) 555-0100',
-    email: 'service@roadreadyrepair.ca'
+    companyName: '',
+    phone: '',
+    email: ''
   });
 
   const fetchInvoices = async () => {
@@ -81,7 +82,7 @@ export default function InvoicesList() {
 
     async function fetchShop() {
       try {
-        const res = await fetch('/api/settings/shop');
+        const res = await fetch('/api/settings/shop', { headers: await getShopAuthHeaders() });
         if (res.ok) {
           const data = await res.json();
           if (data.shopInfo) {
@@ -486,7 +487,7 @@ Email: ${shop.email}`;
                     onChange={e => setEmailForm({ ...emailForm, ccShop: e.target.checked })}
                     style={{ width: '16px', height: '16px', cursor: 'pointer', margin: 0 }}
                   />
-                  <span>CC Your Shop Email: <strong style={{ color: 'var(--color-primary)' }}>{shop.email || 'service@roadreadyrepair.ca'}</strong></span>
+                  <span>CC Your Shop Email: <strong style={{ color: 'var(--color-primary)' }}>{shop.email || ''}</strong></span>
                 </label>
               </div>
 

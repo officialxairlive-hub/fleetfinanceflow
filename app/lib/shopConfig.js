@@ -1,4 +1,65 @@
 import { shopSettings } from './demoData';
+import { supabase } from './supabaseClient';
+
+/** Auth header for shop-settings API calls (scopes the request to the caller's shop). */
+export async function getShopAuthHeaders() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Resolves the signed-in user's shop id (used to scope all shop settings). */
+export async function getCurrentShopId() {
+  try {
+    const { data } = await supabase.auth.getUser();
+    if (!data?.user) return null;
+    const { data: profile } = await supabase
+      .from('profiles').select('shop_id').eq('id', data.user.id).maybeSingle();
+    return profile?.shop_id || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetches this shop's own settings and caches them in localStorage.
+ * Never reads another shop's record.
+ */
+export async function fetchShopSettings(shopId) {
+  if (typeof window !== 'undefined') {
+    try {
+      const sid = shopId || (await getCurrentShopId());
+      const headers = await getShopAuthHeaders();
+      const url = sid
+        ? `/api/settings/shop?shopId=${encodeURIComponent(sid)}`
+        : '/api/settings/shop';
+      const res = await fetch(url, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.shopInfo) {
+          localStorage.setItem('shop_info', JSON.stringify(data.shopInfo));
+          const rate = parseFloat(data.shopInfo.defaultLabourRate) || 145.00;
+          const types = Array.isArray(data.shopInfo.labourRateTypes) && data.shopInfo.labourRateTypes.length > 0
+            ? data.shopInfo.labourRateTypes
+            : DEFAULT_LABOUR_RATE_TYPES.map(t => t.id === 'shop' ? { ...t, rate } : t);
+          return {
+            ...shopSettings,
+            ...data.shopInfo,
+            defaultLabourRate: rate,
+            labourRateTypes: types
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch cloud shop settings, using cached:', err);
+    }
+  }
+  return getCachedShopSettings();
+}
 
 export const DEFAULT_LABOUR_RATE_TYPES = [
   { id: 'shop', name: 'Standard Shop Labour', rate: 145.00 },
@@ -52,35 +113,4 @@ export function getDefaultShopRate() {
  */
 export function getDefaultShopRateString() {
   return getDefaultShopRate().toFixed(2);
-}
-
-/**
- * Asynchronously fetches cloud-persisted shop settings from the API
- * and updates localStorage cache.
- */
-export async function fetchShopSettings(shopId = 'default') {
-  if (typeof window !== 'undefined') {
-    try {
-      const res = await fetch(`/api/settings/shop?shopId=${shopId}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.shopInfo) {
-          localStorage.setItem('shop_info', JSON.stringify(data.shopInfo));
-          const rate = parseFloat(data.shopInfo.defaultLabourRate) || 145.00;
-          const types = Array.isArray(data.shopInfo.labourRateTypes) && data.shopInfo.labourRateTypes.length > 0
-            ? data.shopInfo.labourRateTypes
-            : DEFAULT_LABOUR_RATE_TYPES.map(t => t.id === 'shop' ? { ...t, rate } : t);
-          return {
-            ...shopSettings,
-            ...data.shopInfo,
-            defaultLabourRate: rate,
-            labourRateTypes: types
-          };
-        }
-      }
-    } catch (err) {
-      console.warn('Could not fetch cloud shop settings, using cached:', err);
-    }
-  }
-  return getCachedShopSettings();
 }

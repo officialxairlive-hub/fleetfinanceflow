@@ -14,17 +14,18 @@ function getAdminClient() {
   });
 }
 
-const DEFAULT_SHOP_INFO = {
-  companyName: 'Road Ready',
-  ownerName: 'Harman Buttar',
-  streetAddress: '18983 72a Avenue',
-  city: 'Surrey',
-  province: 'BC',
-  postalCode: 'V4N 0B2',
-  phone: '(604) 555-0100',
-  email: 'service@roadreadyrepair.ca',
-  website: 'www.fleetfinanceflow.com',
-  taxNumber: 'GST # 783920194 RT0001',
+// Neutral placeholders — never another shop's real contact details.
+const BLANK_SHOP_INFO = {
+  companyName: '',
+  ownerName: '',
+  streetAddress: '',
+  city: '',
+  province: '',
+  postalCode: '',
+  phone: '',
+  email: '',
+  website: '',
+  taxNumber: '',
   defaultLabourRate: 145,
   defaultPartsMarkup: 35,
   labourRateTypes: [
@@ -43,103 +44,111 @@ const DEFAULT_SHOP_INFO = {
   ]
 };
 
-// GET: Retrieve saved shop information
+/**
+ * Resolve the shop for this request. Prefers an explicit shopId, otherwise
+ * derives it from the caller's session (Authorization: Bearer <access_token>).
+ * Never falls back to a shared global record.
+ */
+async function resolveShopId(supabase, request, provided) {
+  if (provided && provided !== 'default') return provided;
+
+  const auth = request.headers.get('authorization') || '';
+  const token = auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : '';
+  if (!token) return null;
+
+  try {
+    const { data: userData } = await supabase.auth.getUser(token);
+    const uid = userData?.user?.id;
+    if (!uid) return null;
+    const { data: profile } = await supabase
+      .from('profiles').select('shop_id').eq('id', uid).maybeSingle();
+    return profile?.shop_id || null;
+  } catch {
+    return null;
+  }
+}
+
+// Per-shop storage object name.
+const shopFile = (shopId) => `shop-info-${shopId}.json`;
+
+// GET: Retrieve saved shop information for ONE shop
 export async function GET(request) {
+  const supabase = getAdminClient();
   try {
     const { searchParams } = new URL(request.url);
-    const shopId = searchParams.get('shopId') || 'default';
-    const supabase = getAdminClient();
+    const shopId = await resolveShopId(supabase, request, searchParams.get('shopId'));
 
-    // 1. Try to download from storage bucket
-    const filename = `shop-info-${shopId}.json`;
+    // No shop to scope to — return blanks, never another shop's details.
+    if (!shopId) {
+      return NextResponse.json({ success: true, shopInfo: null, needsSetup: true });
+    }
+
     const { data: fileData, error: fileError } = await supabase
-      .storage
-      .from('shop-assets')
-      .download(filename);
+      .storage.from('shop-assets').download(shopFile(shopId));
 
+    let saved = null;
     if (!fileError && fileData) {
-      const text = await fileData.text();
-      const json = JSON.parse(text);
-      return NextResponse.json({ success: true, shopInfo: json });
+      try { saved = JSON.parse(await fileData.text()); } catch { saved = null; }
     }
 
-    // 2. Also check global default if specific shopId wasn't found
-    if (shopId !== 'default') {
-      const { data: defaultData, error: defErr } = await supabase
-        .storage
-        .from('shop-assets')
-        .download('shop-info-default.json');
-      if (!defErr && defaultData) {
-        const text = await defaultData.text();
-        const json = JSON.parse(text);
-        return NextResponse.json({ success: true, shopInfo: json });
-      }
-    }
+    // Seed the company name from the shops table so the owner sees their own name
+    // even before saving settings.
+    let shopName = '';
+    try {
+      const { data: shopRow } = await supabase
+        .from('shops').select('name').eq('id', shopId).maybeSingle();
+      shopName = shopRow?.name || '';
+    } catch { /* optional */ }
 
-    // 3. Fallback to default shop info
     return NextResponse.json({
       success: true,
-      shopInfo: DEFAULT_SHOP_INFO
+      shopId,
+      shopInfo: { ...BLANK_SHOP_INFO, companyName: shopName, ...(saved || {}) }
     });
   } catch (err) {
     return NextResponse.json(
-      { success: false, error: err.message, shopInfo: DEFAULT_SHOP_INFO },
+      { success: false, error: err.message, shopInfo: null },
       { status: 200 }
     );
   }
 }
 
-// POST: Save or update shop information
+// POST: Save or update shop information for ONE shop
 export async function POST(request) {
+  const supabase = getAdminClient();
   try {
-    const supabase = getAdminClient();
     const body = await request.json();
-    const shopId = body.shopId || 'default';
+    const shopId = await resolveShopId(supabase, request, body.shopId);
+
+    if (!shopId) {
+      return NextResponse.json(
+        { success: false, error: 'Could not determine which shop to save. Sign in again and retry.' },
+        { status: 400 }
+      );
+    }
+
     const shopInfo = {
-      ...DEFAULT_SHOP_INFO,
-      ...(body.shopInfo || body),
+      ...BLANK_SHOP_INFO,
+      ...(body.shopInfo || {}),
       updatedAt: new Date().toISOString()
     };
 
-    // 1. Save JSON to Supabase Storage bucket
     const payloadBuffer = Buffer.from(JSON.stringify(shopInfo, null, 2));
-    
-    // Save under shop-specific name
-    await supabase
-      .storage
-      .from('shop-assets')
-      .upload(`shop-info-${shopId}.json`, payloadBuffer, {
-        contentType: 'application/json',
-        upsert: true
-      });
+    const { error: upErr } = await supabase
+      .storage.from('shop-assets')
+      .upload(shopFile(shopId), payloadBuffer, { contentType: 'application/json', upsert: true });
+    if (upErr) throw new Error(upErr.message || 'Upload failed');
 
-    // Also save under default to ensure global fallback
-    if (shopId !== 'default') {
-      await supabase
-        .storage
-        .from('shop-assets')
-        .upload('shop-info-default.json', payloadBuffer, {
-          contentType: 'application/json',
-          upsert: true
-        });
-    }
-
-    // 2. Update shops table in Supabase if shopId is a valid UUID
-    if (shopId && shopId !== 'default') {
+    // Keep the shops table name in sync.
+    if (shopInfo.companyName) {
       try {
-        await supabase
-          .from('shops')
-          .update({ name: shopInfo.companyName })
-          .eq('id', shopId);
+        await supabase.from('shops').update({ name: shopInfo.companyName }).eq('id', shopId);
       } catch (dbErr) {
         console.warn('Could not update shops table name:', dbErr);
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      shopInfo
-    });
+    return NextResponse.json({ success: true, shopId, shopInfo });
   } catch (err) {
     console.error('Error saving shop information:', err);
     return NextResponse.json(

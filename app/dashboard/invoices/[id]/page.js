@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
+import { getShopAuthHeaders } from '../../../lib/shopConfig';
 import { shopSettings } from '../../../lib/demoData';
 import { Mail, DollarSign, Printer, Download, CheckCircle, X, ArrowLeft, RefreshCw, FileText, Wrench, Package, Send, Paperclip, RotateCcw, Edit, ExternalLink } from 'lucide-react';
 import styles from '../invoices.module.css';
@@ -13,13 +14,13 @@ export default function InvoiceDetail() {
   const invoiceId = params.id;
   
   const [shop, setShop] = useState({
-    companyName: 'Road Ready',
-    ownerName: 'Harman Buttar',
-    address: '18983 72a Avenue, Surrey, BC V4N 0B2',
-    phone: '(604) 555-0100',
-    email: 'service@roadreadyrepair.ca',
-    website: 'www.fleetfinanceflow.com',
-    taxNumber: 'GST # 783920194 RT0001'
+    companyName: '',
+    ownerName: '',
+    address: '',
+    phone: '',
+    email: '',
+    website: '',
+    taxNumber: ''
   });
 
   const [invoice, setInvoice] = useState(null);
@@ -197,28 +198,14 @@ export default function InvoiceDetail() {
     if (typeof window !== 'undefined') {
       const localLogo = localStorage.getItem('shop_invoice_logo');
       const localPrefs = localStorage.getItem('shop_invoice_preferences');
-      const localShop = localStorage.getItem('shop_info');
       if (localLogo) setLogoUrl(localLogo);
       if (localPrefs) {
         try {
           setLogoPreferences(prev => ({ ...prev, ...JSON.parse(localPrefs) }));
         } catch (_) {}
       }
-      if (localShop) {
-        try {
-          const s = JSON.parse(localShop);
-          const fullAddr = [s.streetAddress, s.city, s.province, s.postalCode].filter(Boolean).join(', ');
-          setShop({
-            companyName: s.companyName || 'Road Ready',
-            ownerName: s.ownerName || 'Harman Buttar',
-            address: fullAddr || s.address || '18983 72a Avenue, Surrey, BC V4N 0B2',
-            phone: s.phone || '(604) 555-0100',
-            email: s.email || 'service@roadreadyrepair.ca',
-            website: s.website || 'www.fleetfinanceflow.com',
-            taxNumber: s.taxNumber || 'GST # 783920194 RT0001'
-          });
-        } catch (_) {}
-      }
+      // Drop the legacy global shop cache — it was previously shared across shops.
+      try { localStorage.removeItem('shop_info'); } catch (_) {}
     }
 
     // 2. Cloud storage fetch
@@ -235,24 +222,21 @@ export default function InvoiceDetail() {
       }
 
       try {
-        const shopRes = await fetch('/api/settings/shop');
+        const shopRes = await fetch('/api/settings/shop', { headers: await getShopAuthHeaders() });
         if (shopRes.ok) {
           const sData = await shopRes.json();
           if (sData.shopInfo) {
             const s = sData.shopInfo;
             const fullAddr = [s.streetAddress, s.city, s.province, s.postalCode].filter(Boolean).join(', ');
             setShop({
-              companyName: s.companyName || 'Road Ready',
-              ownerName: s.ownerName || 'Harman Buttar',
-              address: fullAddr || s.address || '18983 72a Avenue, Surrey, BC V4N 0B2',
-              phone: s.phone || '(604) 555-0100',
-              email: s.email || 'service@roadreadyrepair.ca',
-              website: s.website || 'www.fleetfinanceflow.com',
-              taxNumber: s.taxNumber || 'GST # 783920194 RT0001'
+              companyName: s.companyName || '',
+              ownerName: s.ownerName || '',
+              address: fullAddr || s.address || '',
+              phone: s.phone || '',
+              email: s.email || '',
+              website: s.website || '',
+              taxNumber: s.taxNumber || ''
             });
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('shop_info', JSON.stringify(sData.shopInfo));
-            }
           }
         }
       } catch (err) {
@@ -705,7 +689,7 @@ Address: ${shop.address}`;
       let y = 36;
 
       // ─── 1. TOP HEADER ──────────────────────────────────────────
-      const shopName = (shop?.companyName || 'Road Ready').toUpperCase();
+      const shopName = (shop?.companyName || '').toUpperCase();
       writeText(shopName, ML, y + 14, { size: 15, bold: true, color: C.title });
       writeText('COMMERCIAL FLEET MAINTENANCE & REPAIR SERVICES', ML, y + 26, { size: 7, bold: true, color: C.muted });
       writeText(shop?.address || '', ML, y + 38, { size: 8, color: C.body });
@@ -928,7 +912,7 @@ Address: ${shop.address}`;
       drawRect(ML, y, remW, 105, C.fillCard, C.border, 0.5);
       writeText('PAYMENT TERMS & REMITTANCE', ML + 10, y + 13, { size: 7.5, bold: true, color: C.title });
       writeText('Payment Terms: Net 30 Days from Invoice Date', ML + 10, y + 27, { size: 8, bold: true, color: C.body });
-      writeText(`Please make cheques payable to: ${shop?.companyName || 'Road Ready'}`, ML + 10, y + 40, { size: 8, color: C.body });
+      writeText(`Please make cheques payable to: ${shop?.companyName || ''}`, ML + 10, y + 40, { size: 8, color: C.body });
       if (shop?.email) {
         writeText(`Interac e-Transfer / Inquiries: ${shop.email}`, ML + 10, y + 53, { size: 8, color: C.body });
       }
@@ -972,7 +956,7 @@ Address: ${shop.address}`;
       // ─── 6. PINNED FOOTER ────────────────────────────────────────
       const footY = PH - 42;
       drawHLine(ML, footY, rightX, C.lightBorder, 0.75);
-      const footerShopStr = `${shop?.companyName || 'Road Ready'}  •  ${shop?.address || ''}  •  ${shop?.phone || ''}`;
+      const footerShopStr = `${shop?.companyName || ''}  •  ${shop?.address || ''}  •  ${shop?.phone || ''}`;
       writeText(footerShopStr, ML, footY + 14, { size: 7, color: C.muted });
       writeText(`Page 1 of 1  •  Official Invoice Record  •  ${new Date().toLocaleDateString('en-CA')}`, rightX, footY + 14, { size: 7, color: C.muted, align: 'right' });
 
@@ -1561,7 +1545,7 @@ Address: ${shop.address}`;
                     onChange={e => setEmailForm({ ...emailForm, ccShop: e.target.checked })}
                     style={{ width: '16px', height: '16px', cursor: 'pointer', margin: 0 }}
                   />
-                  <span>CC Your Shop Email: <strong style={{ color: 'var(--color-primary)' }}>{shop.email || 'service@roadreadyrepair.ca'}</strong></span>
+                  <span>CC Your Shop Email: <strong style={{ color: 'var(--color-primary)' }}>{shop.email || ''}</strong></span>
                 </label>
               </div>
 
